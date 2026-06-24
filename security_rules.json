@@ -1,0 +1,27 @@
+{
+  "rules": {
+    "settings": {
+      ".read": "true",
+      ".write": "true"
+    },
+    "prices": {
+      ".read": "true",
+      ".write": "true"
+    },
+    "allocations": {
+      ".read": "true",
+      ".write": "true"
+    },
+    "distributors": {
+      ".read": "true",
+      ".write": "true"
+    },
+    "users": {
+      ".read": "false",
+      "$username": {
+        ".read": "true",
+        ".write": "true"
+      }
+    }
+  }
+}

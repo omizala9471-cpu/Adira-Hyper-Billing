@@ -2,6 +2,8 @@ import os
 import re
 import json
 import urllib.request
+import hashlib
+import secrets
 
 CONFIG_PATH = 'firebase-config.js'
 DB_PATH = 'db.json'
@@ -36,6 +38,10 @@ with open(DB_PATH, 'r', encoding='utf-8') as f:
 
 print(f"Targeting Firebase Database: {database_url}")
 print(f"Seeding settings, users ({len(db_data.get('users', []))}), allocations ({len(db_data.get('allocations', []))}), distributors ({len(db_data.get('distributors', []))})...")
+
+# PBKDF2 SHA-256 Hashing helper
+def hash_password(password: str, salt: str) -> str:
+    return hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 10000, 32).hex()
 
 # Transform data to support slashes and match Firebase expectations
 transformed_data = {}
@@ -75,13 +81,25 @@ if isinstance(distributors, list):
             key = re.sub(r'[.#$\[\]]', '_', item['AD Name'])
             transformed_data['distributors'][key] = item
 
-# 5. Users
+# 5. Users with Secure PBKDF2 Hashed Passwords
 transformed_data['users'] = {}
 users = db_data.get('users', [])
 if isinstance(users, list):
     for item in users:
         if 'Username' in item:
-            transformed_data['users'][item['Username']] = item
+            username = item['Username']
+            plain_password = item.get('Password', '')
+            
+            # Generate a secure random salt (16 hex chars)
+            salt = secrets.token_hex(8)
+            hashed_password = hash_password(plain_password, salt)
+            
+            # Store credentials securely
+            secure_user = item.copy()
+            secure_user['Password'] = hashed_password
+            secure_user['Salt'] = salt
+            
+            transformed_data['users'][username] = secure_user
 
 payload = json.dumps(transformed_data, indent=2).encode('utf-8')
 
@@ -102,7 +120,7 @@ try:
         status = response.status
         response_body = response.read().decode('utf-8')
         if status == 200:
-            print("\n[Success] Default database successfully seeded to Firebase Realtime Database.")
+            print("\n[Success] Default database successfully seeded with hashed credentials to Firebase Realtime Database.")
             print("You can now open the database in the Firebase Console to view the tables.")
         else:
             print(f"\n[Error] Seeding Database (Status Code: {status}):")
