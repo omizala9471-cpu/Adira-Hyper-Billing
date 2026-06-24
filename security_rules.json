@@ -17,6 +17,10 @@
       ".write": "true"
     },
     "users": {
+      ".read": "true",
+      ".write": "true"
+    },
+    "userSecrets": {
       ".read": "false",
       "$username": {
         ".read": "true",

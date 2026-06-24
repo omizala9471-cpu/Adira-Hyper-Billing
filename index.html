@@ -1785,26 +1785,34 @@
               const self = this;
               const userKey = username.trim().toLowerCase();
               if (database) {
-                database.ref('users/' + userKey).once('value').then(async (snapshot) => {
+                database.ref('userSecrets/' + userKey).once('value').then(async (snapshot) => {
                   if (snapshot.exists()) {
-                    const match = snapshot.val();
-                    // Fallback to plain password verification for legacy accounts, otherwise hash check
-                    let isValid = false;
-                    if (match.Salt) {
-                      const hashedInput = await hashPassword(password, match.Salt);
-                      isValid = (match.Password === hashedInput);
-                    } else {
-                      isValid = (match.Password === password);
-                    }
-                    
-                    if (isValid) {
-                      if (self.success) self.success({
-                        success: true,
-                        user: { username: match.Username, role: match.Role, fullName: match.FullName, area: match.Area }
-                      });
-                    } else {
-                      if (self.success) self.success({ success: false, message: 'Invalid Username or Password' });
-                    }
+                    const matchSecrets = snapshot.val();
+                    // Load profile details from public node
+                    database.ref('users/' + userKey).once('value').then(async (profileSnap) => {
+                      const matchProfile = profileSnap.val() || {};
+                      let isValid = false;
+                      if (matchSecrets.Salt) {
+                        const hashedInput = await hashPassword(password, matchSecrets.Salt);
+                        isValid = (matchSecrets.Password === hashedInput);
+                      } else {
+                        isValid = (matchSecrets.Password === password);
+                      }
+
+                      if (isValid) {
+                        if (self.success) self.success({
+                          success: true,
+                          user: { 
+                            username: matchProfile.Username || userKey, 
+                            role: matchProfile.Role || 'ad', 
+                            fullName: matchProfile.FullName || userKey, 
+                            area: matchProfile.Area || 'Gujarat' 
+                          }
+                        });
+                      } else {
+                        if (self.success) self.success({ success: false, message: 'Invalid Username or Password' });
+                      }
+                    }).catch(err => { if (self.failure) self.failure(err); });
                   } else {
                     if (self.success) self.success({ success: false, message: 'Invalid Username or Password' });
                   }
@@ -1844,10 +1852,7 @@
                   const list = [];
                   snapshot.forEach(child => {
                     const u = child.val();
-                    const uCopy = { ...u };
-                    delete uCopy.Password;
-                    delete uCopy.Salt;
-                    list.push(uCopy);
+                    list.push(u);
                   });
                   if (self.success) self.success({ success: true, users: list });
                 }).catch(err => { if (self.failure) self.failure(err); });
@@ -1867,18 +1872,42 @@
             saveUser: function(userObj) {
               const self = this;
               const username = userObj.Username.trim().toLowerCase();
-              
-              const doSave = () => {
+
+              const doSave = (passwordHash, salt) => {
                 if (database) {
-                  database.ref('users/' + username).set(userObj).then(() => {
-                    if (self.success) self.success({ success: true });
+                  const profileObj = {
+                    Username: userObj.Username,
+                    Role: userObj.Role,
+                    FullName: userObj.FullName,
+                    Area: userObj.Area
+                  };
+                  database.ref('users/' + username).set(profileObj).then(() => {
+                    if (passwordHash && salt) {
+                      database.ref('userSecrets/' + username).set({
+                        Password: passwordHash,
+                        Salt: salt
+                      }).then(() => {
+                        if (self.success) self.success({ success: true });
+                      }).catch(err => { if (self.failure) self.failure(err); });
+                    } else {
+                      if (self.success) self.success({ success: true });
+                    }
                   }).catch(err => { if (self.failure) self.failure(err); });
                 } else {
+                  const localObj = { ...userObj };
+                  if (passwordHash && salt) {
+                    localObj.Password = passwordHash;
+                    localObj.Salt = salt;
+                  }
                   const idx = localDB.users.findIndex(u => u.Username.toLowerCase() === username);
                   if (idx > -1) {
-                    localDB.users[idx] = userObj;
+                    if (!localObj.Password) {
+                      localObj.Password = localDB.users[idx].Password;
+                      localObj.Salt = localDB.users[idx].Salt;
+                    }
+                    localDB.users[idx] = localObj;
                   } else {
-                    localDB.users.push(userObj);
+                    localDB.users.push(localObj);
                   }
                   saveLocalDB();
                   if (self.success) self.success({ success: true });
@@ -1887,21 +1916,21 @@
 
               // Encrypt password if new password is added
               if (userObj.Password && userObj.isNewPassword) {
-                userObj.Salt = generateSalt();
-                hashPassword(userObj.Password, userObj.Salt).then(hash => {
-                  userObj.Password = hash;
+                const salt = generateSalt();
+                hashPassword(userObj.Password, salt).then(hash => {
                   delete userObj.isNewPassword;
-                  doSave();
+                  doSave(hash, salt);
                 });
               } else {
-                // If editing and password was untouched, load existing credentials
-                const existing = localDB.users.find(u => u.Username.toLowerCase() === username);
-                if (existing && !userObj.Password) {
-                  userObj.Password = existing.Password;
-                  userObj.Salt = existing.Salt;
-                }
                 delete userObj.isNewPassword;
-                doSave();
+                if (database) {
+                  database.ref('userSecrets/' + username).once('value').then(snap => {
+                    const existingSecrets = snap.val() || {};
+                    doSave(existingSecrets.Password, existingSecrets.Salt);
+                  }).catch(err => { if (self.failure) self.failure(err); });
+                } else {
+                  doSave();
+                }
               }
             },
 
@@ -1910,7 +1939,9 @@
               const userKey = username.trim().toLowerCase();
               if (database) {
                 database.ref('users/' + userKey).remove().then(() => {
-                  if (self.success) self.success({ success: true });
+                  database.ref('userSecrets/' + userKey).remove().then(() => {
+                    if (self.success) self.success({ success: true });
+                  }).catch(err => { if (self.failure) self.failure(err); });
                 }).catch(err => { if (self.failure) self.failure(err); });
               } else {
                 const idx = localDB.users.findIndex(u => u.Username.toLowerCase() === userKey);
@@ -2039,7 +2070,10 @@
                         const salt = generateSalt();
                         const hashedPass = await hashPassword("ad123", salt);
                         database.ref('users/' + userCode).set({
-                          Username: userCode, Password: hashedPass, Salt: salt, Role: "ad", FullName: item.adName, Area: "Gujarat"
+                          Username: userCode, Role: "ad", FullName: item.adName, Area: "Gujarat"
+                        });
+                        database.ref('userSecrets/' + userCode).set({
+                          Password: hashedPass, Salt: salt
                         });
                       }
                     });
@@ -2091,7 +2125,10 @@
                         const salt = generateSalt();
                         const hashedPass = await hashPassword("ad123", salt);
                         database.ref('users/' + userCode).set({
-                          Username: userCode, Password: hashedPass, Salt: salt, Role: "ad", FullName: item.adName, Area: item.area || 'Gujarat'
+                          Username: userCode, Role: "ad", FullName: item.adName, Area: item.area || 'Gujarat'
+                        });
+                        database.ref('userSecrets/' + userCode).set({
+                          Password: hashedPass, Salt: salt
                         });
                       }
                     });

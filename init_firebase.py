@@ -83,6 +83,7 @@ if isinstance(distributors, list):
 
 # 5. Users with Secure PBKDF2 Hashed Passwords
 transformed_data['users'] = {}
+transformed_data['userSecrets'] = {}
 users = db_data.get('users', [])
 if isinstance(users, list):
     for item in users:
@@ -94,12 +95,19 @@ if isinstance(users, list):
             salt = secrets.token_hex(8)
             hashed_password = hash_password(plain_password, salt)
             
-            # Store credentials securely
+            # Store profile securely (exclude password and salt from public node)
             secure_user = item.copy()
-            secure_user['Password'] = hashed_password
-            secure_user['Salt'] = salt
-            
+            if 'Password' in secure_user:
+                del secure_user['Password']
+            if 'Salt' in secure_user:
+                del secure_user['Salt']
             transformed_data['users'][username] = secure_user
+            
+            # Store secret credentials under userSecrets node
+            transformed_data['userSecrets'][username] = {
+                'Password': hashed_password,
+                'Salt': salt
+            }
 
 payload = json.dumps(transformed_data, indent=2).encode('utf-8')
 
