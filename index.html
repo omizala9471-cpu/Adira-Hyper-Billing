@@ -1374,6 +1374,26 @@
               </form>
             </div>
 
+            <!-- Bulk Operations Panel -->
+            <div class="glass-panel" style="margin-bottom: 24px;">
+              <h3 style="margin-bottom: 16px;"><i data-lucide="file-spreadsheet"></i> Bulk User Operations (Excel)</h3>
+              <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+                <button class="btn-action" style="padding: 10px 20px;" onclick="downloadUserTemplate()">
+                  <i data-lucide="download"></i> Download Excel Template
+                </button>
+                <button class="btn-action info" style="padding: 10px 20px;" onclick="exportUsersToExcel()">
+                  <i data-lucide="download-cloud"></i> Export All Users
+                </button>
+                <div style="flex-grow: 1;"></div>
+                <div class="file-upload-wrapper" style="margin-top: 0; min-width: 250px;">
+                  <label for="excelUserFile" class="btn-submit" style="margin-top: 0; width: 100%; text-align: center; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <i data-lucide="upload-cloud"></i> Import Users from Excel
+                  </label>
+                  <input type="file" id="excelUserFile" accept=".xlsx, .xls" style="display: none;" onchange="parseExcel('users', this); this.value='';" />
+                </div>
+              </div>
+            </div>
+
             <div class="glass-panel">
               <h3 style="margin-bottom: 16px;"><i data-lucide="users"></i> Custom Users & Credentials</h3>
               <div class="table-container">
@@ -2737,6 +2757,16 @@
           hideLoader();
           if (res.success) {
             alert(`User "${username}" successfully saved!`);
+            // Dynamically update UI if editing oneself
+            if (username.toLowerCase() === currentUser.username.toLowerCase()) {
+              currentUser.fullName = fullName;
+              currentUser.area = area;
+              currentUser.role = role;
+              document.getElementById('sidebarUserName').innerText = fullName;
+              document.getElementById('sidebarAvatar').innerText = fullName.charAt(0).toUpperCase();
+              document.getElementById('sidebarUserRole').innerText = role.toUpperCase();
+              document.getElementById('sidebarUserRole').className = `role-pill ${role}`;
+            }
             resetUserForm();
             loadUsersTable();
           } else {
@@ -2759,6 +2789,13 @@
       document.getElementById('userPassword').placeholder = 'Leave blank to keep current password';
       document.getElementById('userRole').value = role;
       document.getElementById('userArea').value = area;
+      
+      // Disable role modification for self or primary admin to prevent lockout
+      if (username.toLowerCase() === currentUser.username.toLowerCase() || username.toLowerCase() === 'admin') {
+        document.getElementById('userRole').disabled = true;
+      } else {
+        document.getElementById('userRole').disabled = false;
+      }
     }
 
     function confirmDeleteUser(username) {
@@ -2794,6 +2831,7 @@
       document.getElementById('userPassword').value = '';
       document.getElementById('userPassword').placeholder = 'Enter password...';
       document.getElementById('userRole').value = 'ad';
+      document.getElementById('userRole').disabled = false;
       document.getElementById('userArea').value = 'Gujarat';
     }
 
@@ -3658,6 +3696,8 @@
             processAllocationsExcel(json);
           } else if (type === 'balances') {
             processBalancesExcel(json);
+          } else if (type === 'users') {
+            processUsersExcel(json);
           }
         } catch (error) {
           hideLoader();
@@ -3966,6 +4006,213 @@
           refreshDashboard();
         }, 500);
       }
+    }
+
+    // --- EXCEL USER OPERATIONS (BULK IMPORT/EXPORT) ---
+    function downloadUserTemplate() {
+      const templateData = [
+        {
+          "Username": "ad_ahmedabad_101",
+          "FullName": "KP Agencies Ahmedabad",
+          "Role": "ad",
+          "Area": "Ahmedabad",
+          "Password": "ad123"
+        },
+        {
+          "Username": "sales_manager_guj",
+          "FullName": "Suresh Patel",
+          "Role": "sales",
+          "Area": "Gujarat",
+          "Password": "sales123"
+        },
+        {
+          "Username": "wh_central_hub",
+          "FullName": "Central Dispatch Warehouse",
+          "Role": "warehouse",
+          "Area": "Gujarat",
+          "Password": "wh123"
+        }
+      ];
+      
+      const ws = XLSX.utils.json_to_sheet(templateData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Users Template");
+      
+      ws['!cols'] = [
+        { wch: 20 }, // Username
+        { wch: 30 }, // Full Name
+        { wch: 12 }, // Role
+        { wch: 15 }, // Area
+        { wch: 15 }  // Password
+      ];
+      
+      XLSX.writeFile(wb, "Adira_Users_Import_Template.xlsx");
+    }
+
+    function exportUsersToExcel() {
+      showLoader("Exporting Users", "Preparing user records...");
+      
+      google.script.run
+        .withSuccessHandler(res => {
+          hideLoader();
+          if (res.success && res.users) {
+            const dataToExport = res.users.map(u => ({
+              "Username": u.Username,
+              "FullName": u.FullName,
+              "Role": u.Role,
+              "Area": u.Area
+            }));
+            
+            const ws = XLSX.utils.json_to_sheet(dataToExport);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Users");
+            
+            ws['!cols'] = [
+              { wch: 20 }, // Username
+              { wch: 30 }, // Full Name
+              { wch: 12 }, // Role
+              { wch: 15 }  // Area
+            ];
+            
+            XLSX.writeFile(wb, "Adira_Hyper_Billing_Users.xlsx");
+          } else {
+            alert("Failed to export user records.");
+          }
+        })
+        .withFailureHandler(err => {
+          hideLoader();
+          alert("Export failed: " + err.toString());
+        })
+        .getUsersList();
+    }
+
+    function processUsersExcel(rows) {
+      if (!rows || rows.length === 0) {
+        hideLoader();
+        alert("No rows found in Excel sheet.");
+        return;
+      }
+      
+      showLoader("Importing Users", `Processing ${rows.length} rows...`);
+      
+      const savePromises = [];
+      
+      rows.forEach(row => {
+        const usernameKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'username' || k.trim().toLowerCase() === 'ad code' || k.trim().toLowerCase() === 'adcode' || k.trim().toLowerCase() === 'login id' || k.trim().toLowerCase() === 'loginid');
+        const fullNameKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'fullname' || k.trim().toLowerCase() === 'full name' || k.trim().toLowerCase() === 'ad name' || k.trim().toLowerCase() === 'adname' || k.trim().toLowerCase() === 'name');
+        const roleKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'role' || k.trim().toLowerCase() === 'role type' || k.trim().toLowerCase() === 'roletype');
+        const areaKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'area' || k.trim().toLowerCase() === 'region' || k.trim().toLowerCase() === 'city');
+        const passwordKey = Object.keys(row).find(k => k.trim().toLowerCase() === 'password' || k.trim().toLowerCase() === 'pass');
+
+        const rawUsername = usernameKey ? row[usernameKey] : '';
+        const rawFullName = fullNameKey ? row[fullNameKey] : '';
+        const rawRole = roleKey ? row[roleKey] : '';
+        const rawArea = areaKey ? row[areaKey] : 'Gujarat';
+        const rawPassword = passwordKey ? row[passwordKey] : '';
+
+        if (!rawUsername || !rawFullName || !rawRole) {
+          return;
+        }
+
+        const username = rawUsername.toString().trim().toLowerCase();
+        const fullName = rawFullName.toString().trim();
+        const role = rawRole.toString().trim().toLowerCase();
+        const area = rawArea.toString().trim();
+        
+        if (!['ad', 'sales', 'warehouse', 'admin'].includes(role)) {
+          return;
+        }
+
+        const promise = new Promise((resolve) => {
+          const userPayload = {
+            Username: username,
+            FullName: fullName,
+            Role: role,
+            Area: area
+          };
+
+          const handleSave = (passHash, saltVal) => {
+            if (database) {
+              const profileObj = {
+                Username: username,
+                Role: role,
+                FullName: fullName,
+                Area: area
+              };
+              database.ref('users/' + username).set(profileObj).then(() => {
+                if (passHash && saltVal) {
+                  database.ref('userSecrets/' + username).set({
+                    Password: passHash,
+                    Salt: saltVal
+                  }).then(() => resolve(true)).catch(() => resolve(false));
+                } else {
+                  resolve(true);
+                }
+              }).catch(() => resolve(false));
+            } else {
+              const localObj = { ...userPayload };
+              if (passHash && saltVal) {
+                localObj.Password = passHash;
+                localObj.Salt = saltVal;
+              }
+              const idx = localDB.users.findIndex(u => u.Username.toLowerCase() === username);
+              if (idx > -1) {
+                if (!localObj.Password) {
+                  localObj.Password = localDB.users[idx].Password;
+                  localObj.Salt = localDB.users[idx].Salt;
+                }
+                localDB.users[idx] = localObj;
+              } else {
+                localDB.users.push(localObj);
+              }
+              saveLocalDB();
+              resolve(true);
+            }
+          };
+
+          if (rawPassword) {
+            const passStr = rawPassword.toString().trim();
+            const salt = generateSalt();
+            hashPassword(passStr, salt).then(hash => {
+              handleSave(hash, salt);
+            });
+          } else {
+            if (database) {
+              database.ref('userSecrets/' + username).once('value').then(snap => {
+                if (snap.exists()) {
+                  handleSave();
+                } else {
+                  const defaultPass = role + "123";
+                  const salt = generateSalt();
+                  hashPassword(defaultPass, salt).then(hash => {
+                    handleSave(hash, salt);
+                  });
+                }
+              }).catch(() => resolve(false));
+            } else {
+              const existing = localDB.users.find(u => u.Username.toLowerCase() === username);
+              if (existing) {
+                handleSave();
+              } else {
+                const defaultPass = role + "123";
+                const salt = generateSalt();
+                hashPassword(defaultPass, salt).then(hash => {
+                  handleSave(hash, salt);
+                });
+              }
+            }
+          }
+        });
+
+        savePromises.push(promise);
+      });
+
+      Promise.all(savePromises).then(results => {
+        hideLoader();
+        const successCount = results.filter(r => r === true).length;
+        alert(`Successfully imported/synced ${successCount} user profiles!`);
+        loadUsersTable();
+      });
     }
 
     // --- TEMPLATE EXPORTS ---
