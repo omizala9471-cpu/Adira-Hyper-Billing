@@ -1761,6 +1761,8 @@
 
   <!-- SCRIPTS -->
   <script>
+    const isGoogleAppsScript = (typeof google !== 'undefined' && typeof google.script !== 'undefined');
+
     // CRYPTOGRAPHIC SHA-256 PBKDF2 PASSWORD SECURITY
     function generateSalt() {
       const arr = new Uint8Array(16);
@@ -2401,7 +2403,7 @@
         console.warn("localStorage is blocked or unavailable in sandbox:", e.message);
       }
 
-      if (!isGoogleAppsScript) {
+      if (!isGoogleAppsScript && !database) {
         document.getElementById('simulatorBanner').style.display = 'flex';
       } else {
         document.getElementById('simulatorBanner').style.display = 'none';
