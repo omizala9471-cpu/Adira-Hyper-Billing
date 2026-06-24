@@ -1,0 +1,3189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Adira Telecom PO Allocator & Portal</title>
+  
+  <!-- Modern Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- SheetJS for Excel Parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  
+  <!-- Chart.js for beautiful charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* DESIGN SYSTEM & GLOBAL STYLES */
+    :root {
+      --bg-dark: #090d16;
+      --bg-card: rgba(18, 26, 47, 0.88);
+      --bg-card-hover: rgba(26, 38, 68, 0.95);
+      --border-color: rgba(255, 255, 255, 0.08);
+      
+      --color-primary: #ffc83b; /* Realme Yellow */
+      --color-primary-rgb: 255, 200, 59;
+      --color-secondary: #00f2fe; /* Cyan Accent */
+      --color-success: #10b981; /* Green */
+      --color-warning: #f59e0b; /* Amber */
+      --color-danger: #ef4444; /* Red */
+      --color-info: #8b5cf6; /* Purple (Dispatch) */
+      --color-text-main: #f3f4f6;
+      --color-text-muted: #9ca3af;
+      
+      --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      --transition-smooth: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--color-text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: var(--bg-dark);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    /* GLASSMORPHIC CONTAINER */
+    .glass-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      box-shadow: var(--glass-shadow);
+      padding: 24px;
+      transition: var(--transition-smooth);
+    }
+
+    .glass-panel:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    /* SIMULATOR ALERT */
+    .simulator-banner {
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      color: white;
+      text-align: center;
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+      z-index: 1000;
+    }
+
+    .simulator-banner button {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-weight: bold;
+      transition: var(--transition-smooth);
+    }
+
+    .simulator-banner button:hover {
+      background: white;
+      color: #3b82f6;
+    }
+
+    /* TOP HEADER & NAVBAR */
+    header {
+      border-bottom: 1px solid var(--border-color);
+      padding: 16px 32px;
+      background: rgba(9, 13, 22, 0.85);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, var(--color-primary), #ffa800);
+      color: #000;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1.4rem;
+      box-shadow: 0 0 15px rgba(255, 200, 59, 0.4);
+    }
+
+    .logo-text h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      background: linear-gradient(to right, #ffffff, #e2e8f0);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo-text span {
+      font-size: 0.75rem;
+      color: var(--color-primary);
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .nav-profile {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .role-indicator {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      padding: 6px 12px;
+      border-radius: 30px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .role-indicator.admin { color: var(--color-primary); border-color: rgba(255, 200, 59, 0.2); }
+    .role-indicator.sales { color: var(--color-secondary); border-color: rgba(0, 242, 254, 0.2); }
+    .role-indicator.ad { color: var(--color-success); border-color: rgba(16, 185, 129, 0.2); }
+    .role-indicator.warehouse { color: var(--color-info); border-color: rgba(139, 92, 246, 0.2); }
+
+    .btn-logout {
+      background: transparent;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--color-danger);
+      cursor: pointer;
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition-smooth);
+    }
+
+    .btn-logout:hover {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: var(--color-danger);
+    }
+
+    /* VIEW LAYOUTS */
+    main {
+      flex: 1;
+      padding: 32px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .view-container {
+      display: none;
+      animation: fadeIn 0.4s ease;
+    }
+
+    .view-container.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* LOGIN SCREEN */
+    .login-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 70vh;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      text-align: center;
+    }
+
+    .login-card h2 {
+      margin-bottom: 8px;
+      font-size: 1.75rem;
+      font-weight: 700;
+    }
+
+    .login-card p {
+      color: var(--color-text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+      text-align: left;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--color-text-muted);
+    }
+
+    .input-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .input-wrapper i {
+      position: absolute;
+      left: 14px;
+      color: var(--color-text-muted);
+      width: 18px;
+      height: 18px;
+    }
+
+    .form-control {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px 14px 12px 42px;
+      color: white;
+      font-size: 0.95rem;
+      transition: var(--transition-smooth);
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(255, 200, 59, 0.15);
+    }
+
+    .btn-submit {
+      width: 100%;
+      background: linear-gradient(135deg, var(--color-primary), #ffa800);
+      color: black;
+      border: none;
+      padding: 12px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: var(--transition-smooth);
+      box-shadow: 0 4px 15px rgba(255, 200, 59, 0.2);
+    }
+
+    .btn-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 200, 59, 0.35);
+    }
+
+    .mock-accounts-box {
+      margin-top: 24px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px dashed var(--border-color);
+      border-radius: 10px;
+      padding: 12px;
+      text-align: left;
+    }
+
+    .mock-accounts-box h4 {
+      font-size: 0.8rem;
+      color: var(--color-primary);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .mock-account-item {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      margin-bottom: 4px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .mock-account-item:hover {
+      color: white;
+    }
+
+    /* GRID & DASHBOARD CARDS */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    .kpi-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .kpi-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .kpi-info h3 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-top: 4px;
+    }
+
+    .kpi-info p {
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ADMIN CONTROLS */
+    .admin-sections {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    @media (max-width: 1024px) {
+      .admin-sections {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .upload-zone {
+      border: 2px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 30px;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      background: rgba(255, 255, 255, 0.01);
+    }
+
+    .upload-zone:hover {
+      border-color: var(--color-primary);
+      background: rgba(255, 200, 59, 0.03);
+    }
+
+    .upload-zone i {
+      width: 40px;
+      height: 40px;
+      color: var(--color-primary);
+      margin-bottom: 12px;
+    }
+
+    .upload-zone h4 {
+      font-size: 1rem;
+      margin-bottom: 6px;
+    }
+
+    .upload-zone p {
+      font-size: 0.8rem;
+      color: var(--color-text-muted);
+    }
+
+    /* DEADLINE PICKERS & MEMOS */
+    .settings-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .settings-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--color-primary);
+    }
+
+    /* TABLES STYLE */
+    .table-container {
+      overflow-x: auto;
+      margin-top: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    th {
+      padding: 14px 16px;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--color-text-muted);
+      border-bottom: 1px solid var(--border-color);
+      font-weight: 700;
+    }
+
+    td {
+      padding: 14px 16px;
+      font-size: 0.9rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* BADGES */
+    .badge {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .badge.pending { background: rgba(245, 158, 11, 0.15); color: var(--color-warning); }
+    .badge.confirmed { background: rgba(0, 242, 254, 0.15); color: var(--color-secondary); }
+    .badge.approved { background: rgba(16, 185, 129, 0.15); color: var(--color-success); }
+    .badge.paid { background: rgba(139, 92, 246, 0.15); color: #c084fc; }
+    .badge.completed { background: rgba(16, 185, 129, 0.25); color: white; border: 1px solid var(--color-success); }
+    .badge.dispatched { background: rgba(139, 92, 246, 0.25); color: #e9d5ff; border: 1px solid var(--color-info); }
+    .badge.rejected { background: rgba(239, 68, 68, 0.15); color: var(--color-danger); }
+
+    /* ACTION BUTTONS */
+    .btn-action {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: white;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition-smooth);
+    }
+
+    .btn-action:hover {
+      background: var(--color-primary);
+      color: black;
+      border-color: var(--color-primary);
+    }
+
+    .btn-action.success:hover {
+      background: var(--color-success);
+      color: white;
+      border-color: var(--color-success);
+    }
+
+    .btn-action.info:hover {
+      background: var(--color-info);
+      color: white;
+      border-color: var(--color-info);
+    }
+
+    .btn-action.danger:hover {
+      background: var(--color-danger);
+      color: white;
+      border-color: var(--color-danger);
+    }
+
+    /* AD PORTAL INTERACTIVE PANEL */
+    .ad-layout {
+      display: grid;
+      grid-template-columns: 2fr 1.2fr;
+      gap: 32px;
+    }
+
+    @media (max-width: 900px) {
+      .ad-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .announcement-banner {
+      background: linear-gradient(135deg, rgba(255, 200, 59, 0.12), rgba(0, 242, 254, 0.05));
+      border: 1px solid rgba(255, 200, 59, 0.25);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 16px;
+    }
+
+    .announcement-banner i {
+      color: var(--color-primary);
+      width: 28px;
+      height: 28px;
+      flex-shrink: 0;
+    }
+
+    .countdown-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .countdown-card {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .countdown-title {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .countdown-timer {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--color-primary);
+      font-family: monospace;
+    }
+
+    .countdown-timer.expired {
+      color: var(--color-danger);
+    }
+
+    .input-qty {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-color);
+      color: white;
+      padding: 6px 10px;
+      border-radius: 6px;
+      width: 80px;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .input-qty:focus {
+      border-color: var(--color-primary);
+      outline: none;
+    }
+
+    .distributor-summary-card {
+      position: sticky;
+      top: 100px;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .summary-row.total {
+      border-bottom: none;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--color-primary);
+    }
+
+    /* MODAL WINDOWS */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(5px);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      animation: fadeIn 0.25s ease;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #0e1626;
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 28px;
+      width: 90%;
+      max-width: 550px;
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: transparent;
+      border: none;
+      color: var(--color-text-muted);
+      cursor: pointer;
+    }
+
+    .modal-close:hover {
+      color: white;
+    }
+
+    .modal-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* DEADLINE LOCKED SCREEN */
+    .locked-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(9, 13, 22, 0.95);
+      border-radius: 16px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .locked-overlay i {
+      color: var(--color-danger);
+      width: 64px;
+      height: 64px;
+      margin-bottom: 16px;
+    }
+
+    .locked-overlay h3 {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+
+    .locked-overlay p {
+      color: var(--color-text-muted);
+      margin-bottom: 24px;
+      max-width: 320px;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 300px;
+      margin-bottom: 24px;
+    }
+
+    /* PRINT CHALLAN STYLES */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #printChallanArea, #printChallanArea * {
+        visibility: visible;
+      }
+      #printChallanArea {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        color: black !important;
+        background: white !important;
+      }
+    }
+
+    .challan-container {
+      color: #1e293b;
+      background: #f8fafc;
+      padding: 30px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SIMULATOR STATE HEADER -->
+  <div class="simulator-banner" id="simulatorBanner">
+    <i data-lucide="info"></i>
+    <span><strong>Local Simulator Active:</strong> Test authentication, excel parsing, deadlines, payments, and warehouse dispatch offline.</span>
+    <button onclick="resetSimulatorData()">Reset Simulated Database</button>
+  </div>
+
+  <!-- MAIN HEADER -->
+  <header>
+    <div class="logo-container">
+      <div class="logo-badge">R</div>
+      <div class="logo-text">
+        <h1>Adira Telecom</h1>
+        <span>Realme Gujarat ZD Portal</span>
+      </div>
+    </div>
+    
+    <div class="nav-profile" id="navProfile" style="display: none;">
+      <span class="role-indicator" id="navRoleBadge">
+        <i data-lucide="user"></i> <span id="navRoleName">Role</span>
+      </span>
+      <button class="btn-logout" onclick="logout()">
+        <i data-lucide="log-out"></i> Logout
+      </button>
+    </div>
+  </header>
+
+  <!-- PORTALS CONTAINER -->
+  <main>
+    
+    <!-- 1. LOGIN SCREEN -->
+    <div class="view-container active" id="viewLogin">
+      <div class="login-container">
+        <div class="glass-panel login-card">
+          <div style="display: inline-flex; justify-content: center; margin-bottom: 16px;">
+            <div class="logo-badge" style="width: 54px; height: 54px; border-radius: 12px; font-size: 1.8rem;">R</div>
+          </div>
+          <h2>Sign In</h2>
+          <p>Access the Realme allocation dashboard</p>
+          
+          <div class="form-group">
+            <label for="loginUser">Username / ID</label>
+            <div class="input-wrapper">
+              <i data-lucide="user"></i>
+              <input type="text" id="loginUser" class="form-control" placeholder="Enter username...">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="loginPass">Password</label>
+            <div class="input-wrapper">
+              <i data-lucide="lock"></i>
+              <input type="password" id="loginPass" class="form-control" placeholder="Enter password...">
+            </div>
+          </div>
+          
+          <button class="btn-submit" onclick="handleLogin()">Sign In</button>
+          
+
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. BILLING ADMIN PORTAL -->
+    <div class="view-container" id="viewAdmin">
+      <!-- KPI Stats -->
+      <div class="dashboard-grid">
+        <div class="glass-panel kpi-card">
+          <div class="kpi-info">
+            <p>Total Allocated</p>
+            <h3 id="adminStatAllocated">₹0</h3>
+          </div>
+          <div class="kpi-icon" style="background: rgba(255, 200, 59, 0.1); color: var(--color-primary);">
+            <i data-lucide="bar-chart-2"></i>
+          </div>
+        </div>
+        <div class="glass-panel kpi-card">
+          <div class="kpi-info">
+            <p>Confirmed POs</p>
+            <h3 id="adminStatConfirmed">₹0</h3>
+          </div>
+          <div class="kpi-icon" style="background: rgba(0, 242, 254, 0.1); color: var(--color-secondary);">
+            <i data-lucide="check-circle-2"></i>
+          </div>
+        </div>
+        <div class="glass-panel kpi-card">
+          <div class="kpi-info">
+            <p>Payments Pending</p>
+            <h3 id="adminStatPending">0 ADs</h3>
+          </div>
+          <div class="kpi-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--color-warning);">
+            <i data-lucide="clock"></i>
+          </div>
+        </div>
+        <div class="glass-panel kpi-card">
+          <div class="kpi-info">
+            <p>Verified / Completed</p>
+            <h3 id="adminStatVerified">₹0</h3>
+          </div>
+          <div class="kpi-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--color-success);">
+            <i data-lucide="credit-card"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Panel & Memos -->
+      <div class="admin-sections">
+        <!-- Excel Upload & Settings -->
+        <div class="glass-panel" style="display: flex; flex-direction: column; gap: 24px;">
+          <h3 class="settings-title"><i data-lucide="database"></i> Data Synchronizer</h3>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+            <div class="upload-zone" onclick="document.getElementById('filePrices').click()">
+              <i data-lucide="file-spreadsheet"></i>
+              <h4>Upload Model Prices</h4>
+              <p>xlsx or csv containing model name & pricing</p>
+              <input type="file" id="filePrices" style="display: none;" accept=".xlsx, .xls, .csv" onchange="parseExcel('prices', this)">
+            </div>
+            
+            <div class="upload-zone" onclick="document.getElementById('fileAllocations').click()">
+              <i data-lucide="truck"></i>
+              <h4>Upload Allocations</h4>
+              <p>Upload allocations row-wise or matrix sheet (.xlsb, .xlsx)</p>
+              <input type="file" id="fileAllocations" style="display: none;" accept=".xlsx, .xls, .xlsb, .csv" onchange="parseExcel('allocations', this)">
+            </div>
+
+            <div class="upload-zone" onclick="document.getElementById('fileBalances').click()">
+              <i data-lucide="landmark"></i>
+              <h4>Upload AD Balances</h4>
+              <p>Upload outstanding ledger balances & credit limits</p>
+              <input type="file" id="fileBalances" style="display: none;" accept=".xlsx, .xls, .csv" onchange="parseExcel('balances', this)">
+            </div>
+          </div>
+          
+          <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            <button class="btn-action" onclick="downloadTemplate('prices')"><i data-lucide="download"></i> Price Template</button>
+            <button class="btn-action" onclick="downloadTemplate('allocations')"><i data-lucide="download"></i> Allocation Template</button>
+            <button class="btn-action" onclick="downloadTemplate('balances')"><i data-lucide="download"></i> Balance Template</button>
+          </div>
+        </div>
+        
+        <!-- Deadlines & Announcements -->
+        <div class="glass-panel settings-panel">
+          <h3 class="settings-title"><i data-lucide="settings"></i> Allocation Schemes & Deadlines</h3>
+          
+          <div class="form-group">
+            <label for="inputDeadlineConfirm">Confirmation Deadline</label>
+            <input type="datetime-local" id="inputDeadlineConfirm" class="form-control" style="padding-left: 12px;">
+          </div>
+          
+          <div class="form-group">
+            <label for="inputDeadlinePayment">Payment Deadline</label>
+            <input type="datetime-local" id="inputDeadlinePayment" class="form-control" style="padding-left: 12px;">
+          </div>
+          
+          <div class="form-group">
+            <label for="inputAdminMemo">Custom AD Announcement Banner</label>
+            <textarea id="inputAdminMemo" class="form-control" style="padding-left: 12px; min-height: 80px;" placeholder="Add details like delivery schedules, scheme rules, payment bank details..."></textarea>
+          </div>
+          
+          <button class="btn-submit" style="margin-top: 0;" onclick="saveAdminSettings()">Save Scheme Parameters</button>
+        </div>
+      </div>
+
+      <!-- Live Track Table -->
+      <div class="glass-panel" style="margin-bottom: 32px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+          <h3 style="font-weight: 700;">Live AD Allocations Status</h3>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-action" onclick="filterTable('all')">All</button>
+            <button class="btn-action" onclick="filterTable('Pending')">Pending</button>
+            <button class="btn-action" onclick="filterTable('Confirmed')">Confirmed</button>
+            <button class="btn-action" onclick="filterTable('Completed')">Completed</button>
+            <button class="btn-action" onclick="filterTable('Dispatched')">Dispatched</button>
+          </div>
+        </div>
+        
+        <div class="table-container">
+          <table id="adminTrackTable">
+            <thead>
+              <tr>
+                <th>AD Name</th>
+                <th>Area</th>
+                <th>Model</th>
+                <th>Allocated Qty</th>
+                <th>Confirmed Qty</th>
+                <th>Total Value</th>
+                <th>PO Status</th>
+                <th>Approval</th>
+                <th>Payment proof</th>
+                <th>Action Dispatch</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Injected by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Charts dashboard -->
+      <div class="glass-panel">
+        <h3 style="margin-bottom: 20px;">Sales Analytics</h3>
+        <div class="chart-container">
+          <canvas id="adminChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. DISTRIBUTOR PORTAL (AD) -->
+    <div class="view-container" id="viewAD">
+      <div class="announcement-banner">
+        <i data-lucide="megaphone"></i>
+        <div>
+          <h4 style="color: var(--color-primary); font-weight: 700; margin-bottom: 4px;">Important Note from Adira Billing:</h4>
+          <p id="adAnnouncementText">Welcome to Adira Telecom Allocation Portal. Please confirm your allocations before the deadline.</p>
+        </div>
+      </div>
+
+      <!-- Live Shipping Details Banner (if dispatched) -->
+      <div class="announcement-banner" id="adShippingBanner" style="display: none; border-color: var(--color-info); background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(0, 0, 0, 0.2));">
+        <i data-lucide="truck" style="color: var(--color-info);"></i>
+        <div>
+          <h4 style="color: #c084fc; font-weight: 700; margin-bottom: 4px;">🚚 Dispatch & Tracking Confirmation</h4>
+          <p id="adShippingText">Your PO has been successfully dispatched from Gujarat Warehouse!</p>
+        </div>
+      </div>
+
+      <!-- Countdowns Grid -->
+      <div class="countdown-grid">
+        <div class="countdown-card">
+          <div class="countdown-title">Order Confirmation Countdown</div>
+          <div class="countdown-timer" id="timerConfirm">00h 00m 00s</div>
+        </div>
+        <div class="countdown-card">
+          <div class="countdown-title">Payment Settlement Countdown</div>
+          <div class="countdown-timer" id="timerPayment">00h 00m 00s</div>
+        </div>
+      </div>
+
+      <!-- Main Interaction -->
+      <div class="ad-layout">
+        <!-- Stock checklist -->
+        <div class="glass-panel" style="position: relative;">
+          <!-- Lock overlay if deadline passed -->
+          <div class="locked-overlay" id="adLockedOverlay">
+            <i data-lucide="lock"></i>
+            <h3 id="lockTitle">Portal Blocked</h3>
+            <p id="lockText">The confirmation deadline has elapsed. Please contact the Billing Admin at Adira Telecom to request modifications.</p>
+            <button class="btn-action" onclick="window.open('https://wa.me/919999999999?text=Hi%20Billing%20Department,%20need%20extension%20for%20allocations', '_blank')">
+              <i data-lucide="message-square"></i> Request Support
+            </button>
+          </div>
+
+          <h3 style="margin-bottom: 16px;">Model Wise Allocation Summary</h3>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Model Name</th>
+                  <th>Allocated Qty</th>
+                  <th>Dealer Price (DP)</th>
+                  <th>Base Total</th>
+                  <th>Confirm Qty</th>
+                  <th>PO Total</th>
+                </tr>
+              </thead>
+              <tbody id="adAllocationRows">
+                <!-- Dynamic AD Rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Confirm and Pay summary panel -->
+        <div class="glass-panel distributor-summary-card">
+          <h3 style="border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 16px;">PO Invoice Detail</h3>
+          
+          <div class="summary-row">
+            <span>Total Models Allocated</span>
+            <span id="adSummaryModels">0</span>
+          </div>
+          <div class="summary-row">
+            <span>Allocated Value</span>
+            <span id="adSummaryAllocatedVal">₹0</span>
+          </div>
+          <div class="summary-row">
+            <span>Adjusted PO Value</span>
+            <span id="adSummaryPOVal">₹0</span>
+          </div>
+          <div class="summary-row total">
+            <span>Final PO Total</span>
+            <span id="adSummaryTotal">₹0</span>
+          </div>
+          <div class="summary-row" style="border-top:1px dashed rgba(255,255,255,0.08); margin-top:8px; padding-top:8px;">
+            <span>Credit Limit</span>
+            <span id="adSummaryCreditLimit">₹0</span>
+          </div>
+          <div class="summary-row">
+            <span>Outstanding Balance</span>
+            <span id="adSummaryOutstanding">₹0</span>
+          </div>
+          <div class="summary-row" style="border-bottom:1px dashed rgba(255,255,255,0.08); padding-bottom:8px;">
+            <span>Available Credit</span>
+            <span id="adSummaryAvailableCredit" style="color:var(--color-secondary); font-weight:700;">₹0</span>
+          </div>
+          <div id="adCreditWarning" style="display:none; margin-top:12px; padding:12px; border-radius:10px; background:rgba(239,68,68,0.15); border:1px solid var(--color-danger); color:#fca5a5; font-size:0.8rem; text-align:center;">
+            ⚠️ <strong>Credit Limit Exceeded:</strong> Your PO exceeds available credit by <span id="adCreditWarningAmount">₹0</span>. Please clear outstanding dues or upload a payment receipt.
+          </div>
+
+          <div style="margin: 24px 0 16px 0;">
+            <h4 style="font-size: 0.85rem; color: var(--color-text-muted); text-transform: uppercase; margin-bottom: 12px;">Payment Settlement Info</h4>
+            
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label for="adUtrNumber">UTR Number / Payment reference ID</label>
+              <input type="text" id="adUtrNumber" class="form-control" placeholder="Enter bank reference number" style="padding-left: 12px;">
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 0;">
+              <label for="adPaymentProof">Upload Bank Receipt / Screenshot</label>
+              <input type="file" id="adPaymentProof" class="form-control" style="padding-left: 12px; font-size:0.8rem; padding-top:6px;" accept="image/*,.pdf">
+            </div>
+          </div>
+
+          <button class="btn-submit" id="btnConfirmAD" onclick="submitADSelections()">Confirm PO & Submit Payment</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. SALES HEAD PORTAL -->
+    <div class="view-container" id="viewSales">
+      <!-- Grid Summary -->
+      <div class="dashboard-grid">
+        <div class="glass-panel kpi-card">
+          <div class="kpi-info">
+            <p>Region Assigned</p>
+            <h3 id="salesStatRegion">Gujarat</h3>
+          </div>
+          <div class="kpi-icon" style="background: rgba(0, 242, 254, 0.1); color: var(--color-secondary);">
+            <i data-lucide="map-pin"></i>
+          </div>
+        </div>
+        <div class="glass-panel kpi-card">
+          <div class="kpi-info">
+            <p>Pending Approvals</p>
+            <h3 id="salesStatPendingCount">0</h3>
+          </div>
+          <div class="kpi-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--color-warning);">
+            <i data-lucide="hourglass"></i>
+          </div>
+        </div>
+        <div class="glass-panel kpi-card">
+          <div class="kpi-info">
+            <p>Total Sales Value</p>
+            <h3 id="salesStatTotalValue">₹0</h3>
+          </div>
+          <div class="kpi-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--color-success);">
+            <i data-lucide="banknote"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Approvals Queue -->
+      <div class="glass-panel">
+        <h3 style="margin-bottom: 16px;">AD Quantity Adjustments Queue</h3>
+        <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: 20px;">Below are order quantity changes requested by Distributors. Your approval is required to update their final PO amount.</p>
+        
+        <div class="table-container">
+          <table id="salesApprovalsTable">
+            <thead>
+              <tr>
+                <th>AD Name</th>
+                <th>Model</th>
+                <th>Allocated Qty</th>
+                <th>Requested Qty</th>
+                <th>DP Rate</th>
+                <th>Value Difference</th>
+                <th>Decision Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Dynamic approvals injected by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. WAREHOUSE DISPATCH PORTAL -->
+    <div class="view-container" id="viewWarehouse">
+      <!-- KPI Stats -->
+      <div class="dashboard-grid">
+        <div class="glass-panel kpi-card">
+          <div class="kpi-info">
+            <p>Ready to Dispatch</p>
+            <h3 id="whStatPending">0 Orders</h3>
+          </div>
+          <div class="kpi-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--color-success);">
+            <i data-lucide="package-check"></i>
+          </div>
+        </div>
+        <div class="glass-panel kpi-card">
+          <div class="kpi-info">
+            <p>Total Units Dispatched</p>
+            <h3 id="whStatUnits">0 Units</h3>
+          </div>
+          <div class="kpi-icon" style="background: rgba(139, 92, 246, 0.1); color: var(--color-info);">
+            <i data-lucide="truck"></i>
+          </div>
+        </div>
+        <div class="glass-panel kpi-card">
+          <div class="kpi-info">
+            <p>Completed POs</p>
+            <h3 id="whStatCompleted">0 Orders</h3>
+          </div>
+          <div class="kpi-icon" style="background: rgba(255, 200, 59, 0.1); color: var(--color-primary);">
+            <i data-lucide="clipboard-check"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ready to Load Queue -->
+      <div class="glass-panel" style="margin-bottom: 32px;">
+        <h3 style="margin-bottom: 12px; font-weight: 700;">Orders Awaiting Warehouse Dispatch</h3>
+        <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: 20px;">The orders below have verified payments and are approved for loading. Enter transporter details and LR numbers to dispatch.</p>
+        
+        <div class="table-container">
+          <table id="whPendingTable">
+            <thead>
+              <tr>
+                <th>AD Name</th>
+                <th>Area</th>
+                <th>Model</th>
+                <th>Dispatch Qty</th>
+                <th>Payment Status</th>
+                <th>Transporter / Carrier</th>
+                <th>Lorry Receipt (LR) No.</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Dynamic lines loaded in JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Dispatched logs -->
+      <div class="glass-panel">
+        <h3 style="margin-bottom: 16px; font-weight: 700;">Dispatched Shipments History</h3>
+        <div class="table-container">
+          <table id="whHistoryTable">
+            <thead>
+              <tr>
+                <th>AD Name</th>
+                <th>Model Name</th>
+                <th>Qty</th>
+                <th>Carrier</th>
+                <th>LR Number</th>
+                <th>Dispatch Date</th>
+                <th>Status</th>
+                <th>Challan / Notify</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Dynamic history lines -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- DIALOG MODALS -->
+  <!-- 1. WHATSAPP SHARE MODAL -->
+  <div class="modal" id="modalWhatsApp">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeModal('modalWhatsApp')"><i data-lucide="x"></i></button>
+      <h3 class="modal-title" style="color: var(--color-primary);"><i data-lucide="message-square"></i> WhatsApp Dispatch Link</h3>
+      <div class="form-group">
+        <label>Pre-formatted message to send to AD:</label>
+        <textarea id="whatsappMsgText" class="form-control" style="padding-left:12px; min-height: 180px; font-size: 0.85rem; font-family: monospace;"></textarea>
+      </div>
+      <div style="display:flex; justify-content: flex-end; gap: 12px; margin-top: 16px;">
+        <button class="btn-action" onclick="copyWhatsAppMessage()"><i data-lucide="copy"></i> Copy Message</button>
+        <button class="btn-submit" style="margin-top:0; width:auto; padding: 10px 20px;" onclick="sendWhatsAppDirect()"><i data-lucide="external-link"></i> Launch WhatsApp Web</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. printable Delivery Challan modal -->
+  <div class="modal" id="modalChallan">
+    <div class="modal-content" style="max-width: 700px;">
+      <button class="modal-close" onclick="closeModal('modalChallan')"><i data-lucide="x"></i></button>
+      <div id="printChallanArea" class="challan-container">
+        <!-- Dyn contents injected -->
+      </div>
+      <div style="display:flex; justify-content: flex-end; gap:12px; margin-top:16px;">
+        <button class="btn-action" onclick="closeModal('modalChallan')">Close</button>
+        <button class="btn-submit" style="margin-top:0; width:auto;" onclick="window.print()"><i data-lucide="printer"></i> Print Challan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. SYSTEM INSTRUCTIONS / LOADING -->
+  <div class="modal" id="modalStatus">
+    <div class="modal-content" style="max-width: 320px; text-align: center;">
+      <h3 style="margin-bottom: 12px;" id="modalStatusTitle">Synchronizing</h3>
+      <p id="modalStatusText" style="color: var(--color-text-muted); font-size: 0.9rem; margin-bottom: 20px;">Updating database. Please wait...</p>
+      <div style="width: 32px; height: 32px; border: 4px solid var(--border-color); border-top-color: var(--color-primary); border-radius: 50%; display: inline-block; animation: spin 1s linear infinite;"></div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
+
+  <!-- SCRIPTS -->
+  <script>
+    // AUTOMATIC BACKEND DETECTOR & API MAPPER
+    let database = null;
+    if (window.firebaseConfig && window.firebaseConfig.apiKey !== "YOUR_FIREBASE_API_KEY") {
+      try {
+        firebase.initializeApp(window.firebaseConfig);
+        database = firebase.database();
+        console.log("Firebase Realtime Database initialized!");
+      } catch (e) {
+        console.warn("Firebase initialization failed, running in local simulator mode:", e.message);
+      }
+    }
+
+    const isNodeOrStatic = (window.location.port === '3000' || 
+                            window.location.hostname.endsWith('.loca.lt') || 
+                            window.location.hostname.endsWith('.ngrok-free.app') || 
+                            window.location.hostname.endsWith('.lhr.life') || 
+                            window.location.hostname.endsWith('.trycloudflare.com') ||
+                            window.location.hostname.endsWith('.vercel.app') || 
+                            window.location.hostname.endsWith('.github.io') ||
+                            window.location.protocol === 'file:');
+    
+    if (isNodeOrStatic && typeof google === 'undefined') {
+      window.google = {
+        script: {
+          run: {
+            withSuccessHandler: function(cb) { this.success = cb; return this; },
+            withFailureHandler: function(cb) { this.failure = cb; return this; },
+            authenticateUser: function(username, password) {
+              const self = this;
+              if (database) {
+                database.ref('users').once('value').then(snapshot => {
+                  const users = [];
+                  snapshot.forEach(child => { users.push(child.val()); });
+                  
+                  if (users.length === 0) {
+                    const defaults = [
+                      { Username: "admin", Password: "admin123", Role: "admin", FullName: "Billing Admin", Area: "Gujarat" },
+                      { Username: "sales_gujarat", Password: "sales123", Role: "sales", FullName: "Gujarat Sales Head", Area: "Gujarat" },
+                      { Username: "ad_ahmedabad", Password: "ad123", Role: "ad", FullName: "AD Ahmedabad", Area: "Ahmedabad" },
+                      { Username: "ad_surat", Password: "ad123", Role: "ad", FullName: "AD Surat", Area: "Surat" },
+                      { Username: "warehouse", Password: "wh123", Role: "warehouse", FullName: "Gujarat Warehouse Head", Area: "Gujarat" }
+                    ];
+                    defaults.forEach(u => database.ref('users/' + u.Username).set(u));
+                    users.push(...defaults);
+                  }
+                  
+                  const match = users.find(u => u.Username.toLowerCase() === username.trim().toLowerCase() && u.Password === password);
+                  if (match) {
+                    if (self.success) self.success({
+                      success: true,
+                      user: { username: match.Username, role: match.Role, fullName: match.FullName, area: match.Area }
+                    });
+                  } else {
+                    if (self.success) self.success({ success: false, message: 'Invalid Username or Password' });
+                  }
+                }).catch(err => { if (self.failure) self.failure(err); });
+              } else {
+                setTimeout(() => {
+                  const match = localDB.users.find(u => u.Username.toLowerCase() === username.toLowerCase() && u.Password === password);
+                  if (match) {
+                    if (self.success) self.success({
+                      success: true,
+                      user: { username: match.Username, role: match.Role, fullName: match.FullName, area: match.Area }
+                    });
+                  } else {
+                    if (self.success) self.success({ success: false, message: 'Invalid Username or Password in simulator.' });
+                  }
+                }, 400);
+              }
+            },
+            getDashboardData: function(role, username) {
+              const self = this;
+              if (database) {
+                database.ref().once('value').then(snapshot => {
+                  const db = snapshot.val() || {};
+                  const settings = db.settings || {
+                    writeUp: "Welcome to Adira Telecom Allocation Portal. Note: Confirmed allocations are strictly locked and credit will only be extended post proof verification.",
+                    confirmationDeadline: "",
+                    paymentDeadline: ""
+                  };
+                  
+                  // Convert prices array to object map to support slashes in model names
+                  const prices = {};
+                  if (Array.isArray(db.prices)) {
+                    db.prices.forEach(p => { prices[p.modelName] = p.price; });
+                  } else if (db.prices) {
+                    Object.assign(prices, db.prices);
+                  } else {
+                    Object.assign(prices, {
+                      "realme C85 5G 128GB 4GB Peacock Green": 10500,
+                      "realme GT 6 12GB/256GB": 35000,
+                      "realme 13 Pro+ 5G": 28000,
+                      "realme Narzo 70 Turbo": 16000,
+                      "realme C65 5G": 10500
+                    });
+                  }
+                  
+                  let allocations = [];
+                  if (db.allocations) {
+                    allocations = Object.values(db.allocations);
+                  }
+                  if (role === 'ad') {
+                    allocations = allocations.filter(item => item["AD Name"].toLowerCase() === username.toLowerCase());
+                  }
+                  
+                  const distributors = db.distributors ? Object.values(db.distributors) : [];
+                  
+                  if (self.success) self.success({
+                    success: true,
+                    settings: settings,
+                    prices: prices,
+                    allocations: allocations,
+                    distributors: distributors
+                  });
+                }).catch(err => { if (self.failure) self.failure(err); });
+              } else {
+                setTimeout(() => {
+                  let allocations = localDB.allocations;
+                  if (role === 'ad') {
+                    allocations = allocations.filter(item => item["AD Name"].toLowerCase() === username.toLowerCase());
+                  }
+                  if (self.success) self.success({
+                    success: true,
+                    settings: localDB.settings,
+                    prices: localDB.prices,
+                    allocations: allocations,
+                    distributors: localDB.distributors
+                  });
+                }, 400);
+              }
+            },
+            setSystemSettings: function(settingsPayload) {
+              const self = this;
+              if (database) {
+                database.ref('settings').set(settingsPayload).then(() => {
+                  if (self.success) self.success({ success: true });
+                }).catch(err => { if (self.failure) self.failure(err); });
+              } else {
+                setTimeout(() => {
+                  localDB.settings = settingsPayload;
+                  saveLocalDB();
+                  if (self.success) self.success({ success: true });
+                }, 300);
+              }
+            },
+            updatePrices: function(priceList) {
+              const self = this;
+              if (database) {
+                // Store prices as an array of objects to bypass Firebase key formatting constraints
+                const list = priceList.map(item => ({
+                  modelName: item.modelName,
+                  price: Number(item.price)
+                }));
+                database.ref('prices').set(list).then(() => {
+                  if (self.success) self.success({ success: true, count: priceList.length });
+                }).catch(err => { if (self.failure) self.failure(err); });
+              } else {
+                setTimeout(() => {
+                  priceList.forEach(p => { localDB.prices[p.modelName] = p.price; });
+                  localDB.allocations.forEach(a => {
+                    if (localDB.prices[a["Model Name"]]) {
+                      a.Price = localDB.prices[a["Model Name"]];
+                      a["Allocated Value"] = a["Allocated Qty"] * a.Price;
+                      a["PO Amount"] = (a["Confirmed Qty"] || a["Allocated Qty"]) * a.Price;
+                    }
+                  });
+                  saveLocalDB();
+                  if (self.success) self.success({ success: true, count: priceList.length });
+                }, 400);
+              }
+            },
+            updateADBalances: function(balancesList) {
+              const self = this;
+              if (database) {
+                database.ref('distributors').once('value').then(snapshot => {
+                  const existing = snapshot.val() || {};
+                  const updates = {};
+                  balancesList.forEach(item => {
+                    const key = item.adName.replace(/[.#$\[\]]/g, "_");
+                    const existingMatch = Object.values(existing).find(d => d["AD Name"].toLowerCase() === item.adName.toLowerCase());
+                    const contact = existingMatch ? existingMatch["Contact Number"] : '';
+                    const area = existingMatch ? existingMatch["Area"] : 'Gujarat';
+                    
+                    updates[key] = {
+                      "AD Name": item.adName,
+                      "Contact Number": contact,
+                      "Area": area,
+                      "Outstanding Balance": Number(item.outstandingBalance),
+                      "Credit Limit": Number(item.creditLimit || 300000)
+                    };
+                    
+                    const userCode = item.adName.toLowerCase().replace(/\s+/g, '_');
+                    database.ref('users/' + userCode).once('value').then(userSnap => {
+                      if (!userSnap.exists()) {
+                        database.ref('users/' + userCode).set({
+                          Username: userCode, Password: "ad123", Role: "ad", FullName: item.adName, Area: "Gujarat"
+                        });
+                      }
+                    });
+                  });
+                  database.ref('distributors').update(updates).then(() => {
+                    if (self.success) self.success({ success: true, count: balancesList.length });
+                  });
+                }).catch(err => { if (self.failure) self.failure(err); });
+              } else {
+                setTimeout(() => {
+                  balancesList.forEach(p => {
+                    let match = localDB.distributors.find(d => d["AD Name"].toLowerCase() === p.adName.toLowerCase());
+                    if (match) {
+                      match["Outstanding Balance"] = p.outstandingBalance;
+                      if (p.creditLimit) match["Credit Limit"] = p.creditLimit;
+                    } else {
+                      localDB.distributors.push({
+                        "AD Name": p.adName, "Contact Number": "", "Area": "Gujarat",
+                        "Outstanding Balance": p.outstandingBalance, "Credit Limit": p.creditLimit || 300000
+                      });
+                    }
+                  });
+                  saveLocalDB();
+                  if (self.success) self.success({ success: true, count: balancesList.length });
+                }, 400);
+              }
+            },
+            updateAllocations: function(allocationsList) {
+              const self = this;
+              if (database) {
+                database.ref('distributors').once('value').then(snapshot => {
+                  const distributors = snapshot.val() || {};
+                  const updates = {};
+                  allocationsList.forEach((item, index) => {
+                    const id = 'AL' + (1000 + index);
+                    const allocatedValue = Number(item.allocatedQty) * Number(item.price);
+                    const distKey = item.adName.replace(/[.#$\[\]]/g, "_");
+                    const distExists = Object.values(distributors).some(d => d["AD Name"].toLowerCase() === item.adName.toLowerCase());
+                    if (!distExists && item.adName) {
+                      database.ref('distributors/' + distKey).set({
+                        "AD Name": item.adName, "Contact Number": item.contactNumber || '', "Area": item.area || 'Gujarat',
+                        "Outstanding Balance": 0, "Credit Limit": 300000
+                      });
+                    }
+                    
+                    const userCode = item.adName.toLowerCase().replace(/\s+/g, '_');
+                    database.ref('users/' + userCode).once('value').then(userSnap => {
+                      if (!userSnap.exists()) {
+                        database.ref('users/' + userCode).set({
+                          Username: userCode, Password: "ad123", Role: "ad", FullName: item.adName, Area: item.area || 'Gujarat'
+                        });
+                      }
+                    });
+                    
+                    updates[id] = {
+                      ID: id, "AD Name": item.adName, "Contact Number": item.contactNumber || '', Area: item.area || 'Gujarat',
+                      "Model Name": item.modelName, "Allocated Qty": Number(item.allocatedQty), Price: Number(item.price),
+                      "Allocated Value": allocatedValue, "Confirmed Qty": Number(item.allocatedQty), "PO Amount": allocatedValue,
+                      Status: 'Pending', "Last Updated": new Date().toISOString(), "Sales Approval": 'Approved',
+                      "UTR Number": '', "Payment Verified": 'Pending', Transporter: '', "LR Number": '', "Dispatch Date": ''
+                    };
+                  });
+                  database.ref('allocations').set(updates).then(() => {
+                    if (self.success) self.success({ success: true, count: allocationsList.length });
+                  });
+                }).catch(err => { if (self.failure) self.failure(err); });
+              } else {
+                setTimeout(() => {
+                  localDB.allocations = allocationsList.map((p, index) => {
+                    return {
+                      ID: 'AL' + (1000 + index), "AD Name": p.adName, "Contact Number": p.contactNumber, Area: p.area,
+                      "Model Name": p.modelName, "Allocated Qty": p.allocatedQty, Price: p.price, "Allocated Value": p.allocatedQty * p.price,
+                      "Confirmed Qty": p.allocatedQty, "PO Amount": p.allocatedQty * p.price, Status: "Pending", "Last Updated": "",
+                      "Sales Approval": "Approved", "UTR Number": "", "Payment Verified": "Pending", Transporter: "", "LR Number": "", "Dispatch Date": ""
+                    };
+                  });
+                  saveLocalDB();
+                  if (self.success) self.success({ success: true, count: allocationsList.length });
+                }, 400);
+              }
+            },
+            submitADConfirmation: function(username, confirmations, paymentInfo) {
+              const self = this;
+              if (database) {
+                database.ref('allocations').once('value').then(snapshot => {
+                  const allocations = snapshot.val() || {};
+                  const updates = {};
+                  let updatedCount = 0;
+                  confirmations.forEach(conf => {
+                    Object.values(allocations).forEach(alloc => {
+                      if (alloc["AD Name"].toLowerCase() === username.toLowerCase() && 
+                          alloc["Model Name"].toLowerCase() === conf.modelName.toLowerCase()) {
+                        const price = Number(alloc.Price);
+                        const newQty = Number(conf.confirmedQty);
+                        updates[`${alloc.ID}/Confirmed Qty`] = newQty;
+                        updates[`${alloc.ID}/PO Amount`] = newQty * price;
+                        updates[`${alloc.ID}/Status`] = paymentInfo ? 'Paid' : 'Confirmed';
+                        updates[`${alloc.ID}/Last Updated`] = new Date().toISOString();
+                        updates[`${alloc.ID}/Sales Approval`] = (newQty !== Number(alloc["Allocated Qty"])) ? 'Pending Approval' : 'Approved';
+                        if (paymentInfo) {
+                          updates[`${alloc.ID}/UTR Number`] = paymentInfo.utrNumber || '';
+                        }
+                        updatedCount++;
+                      }
+                    });
+                  });
+                  database.ref('allocations').update(updates).then(() => {
+                    if (self.success) self.success({ success: true, count: updatedCount });
+                  });
+                }).catch(err => { if (self.failure) self.failure(err); });
+              } else {
+                setTimeout(() => {
+                  confirmations.forEach(conf => {
+                    const match = localDB.allocations.find(a => a["AD Name"].toLowerCase() === username.toLowerCase() && a["Model Name"] === conf.modelName);
+                    if (match) {
+                      match["Confirmed Qty"] = conf.confirmedQty;
+                      match["PO Amount"] = conf.confirmedQty * match.Price;
+                      match.Status = paymentInfo ? 'Paid' : 'Confirmed';
+                      match["Last Updated"] = new Date().toISOString();
+                      match["Sales Approval"] = (conf.confirmedQty !== match["Allocated Qty"]) ? 'Pending Approval' : 'Approved';
+                      if (paymentInfo) match["UTR Number"] = paymentInfo.utrNumber;
+                    }
+                  });
+                  saveLocalDB();
+                  if (self.success) self.success({ success: true, count: confirmations.length });
+                }, 400);
+              }
+            },
+            approveAdjustment: function(id, approved) {
+              const self = this;
+              if (database) {
+                database.ref('allocations/' + id).once('value').then(snapshot => {
+                  if (!snapshot.exists()) {
+                    if (self.success) self.success({ success: false, message: 'Allocation ID not found' });
+                    return;
+                  }
+                  const alloc = snapshot.val();
+                  const updates = { "Sales Approval": approved ? 'Approved' : 'Rejected' };
+                  if (!approved) {
+                    updates["Confirmed Qty"] = alloc["Allocated Qty"];
+                    updates["PO Amount"] = alloc["Allocated Value"];
+                  }
+                  database.ref('allocations/' + id).update(updates).then(() => {
+                    if (self.success) self.success({ success: true });
+                  });
+                }).catch(err => { if (self.failure) self.failure(err); });
+              } else {
+                setTimeout(() => {
+                  const target = localDB.allocations.find(item => item.ID === id);
+                  if (target) {
+                    target["Sales Approval"] = approved ? 'Approved' : 'Rejected';
+                    if (!approved) {
+                      target["Confirmed Qty"] = target["Allocated Qty"];
+                      target["PO Amount"] = target["Allocated Value"];
+                    }
+                    saveLocalDB();
+                    if (self.success) self.success({ success: true });
+                  }
+                }, 300);
+              }
+            },
+            verifyPayment: function(id, verified) {
+              const self = this;
+              if (database) {
+                const updates = { "Payment Verified": verified ? 'Verified' : 'Rejected' };
+                if (verified) updates["Status"] = 'Completed';
+                database.ref('allocations/' + id).update(updates).then(() => {
+                  if (self.success) self.success({ success: true });
+                }).catch(err => { if (self.failure) self.failure(err); });
+              } else {
+                setTimeout(() => {
+                  const target = localDB.allocations.find(item => item.ID === id);
+                  if (target) {
+                    target["Payment Verified"] = verified ? 'Verified' : 'Rejected';
+                    if (verified) target.Status = 'Completed';
+                    saveLocalDB();
+                    if (self.success) self.success({ success: true });
+                  }
+                }, 300);
+              }
+            },
+            dispatchOrder: function(id, transporter, lrNumber) {
+              const self = this;
+              if (database) {
+                const updates = { Status: 'Dispatched', Transporter: transporter, "LR Number": lrNumber, "Dispatch Date": new Date().toISOString() };
+                database.ref('allocations/' + id).update(updates).then(() => {
+                  if (self.success) self.success({ success: true });
+                }).catch(err => { if (self.failure) self.failure(err); });
+              } else {
+                setTimeout(() => {
+                  const target = localDB.allocations.find(item => item.ID === id);
+                  if (target) {
+                    target.Status = 'Dispatched';
+                    target.Transporter = transporter;
+                    target["LR Number"] = lrNumber;
+                    target["Dispatch Date"] = new Date().toISOString();
+                    saveLocalDB();
+                    if (self.success) self.success({ success: true });
+                  }
+                }, 300);
+              }
+            }
+          }
+        }
+      };
+    }
+
+    // GLOBAL STATE
+    let currentUser = null;
+    let localDB = {
+      settings: {
+        writeUp: "Welcome to Adira Telecom Allocation Portal. Note: Confirmed allocations are strictly locked and credit will only be extended post proof verification.",
+        confirmationDeadline: "",
+        paymentDeadline: ""
+      },
+      prices: {
+        "realme C85 5G 128GB 4GB Peacock Green": 10500,
+        "realme GT 6 12GB/256GB": 35000,
+        "realme 13 Pro+ 5G": 28000,
+        "realme Narzo 70 Turbo": 16000,
+        "realme C65 5G": 10500
+      },
+      allocations: [
+        { ID: "AL1001", "AD Name": "AD Ahmedabad", "Contact Number": "919998887776", Area: "Ahmedabad", "Model Name": "realme GT 6 12GB/256GB", "Allocated Qty": 30, Price: 35000, "Allocated Value": 105000, "Confirmed Qty": 30, "PO Amount": 105000, Status: "Pending", "Last Updated": "", "Sales Approval": "Approved", "UTR Number": "", "Payment Verified": "Pending", Transporter: "", "LR Number": "", "Dispatch Date": "" },
+        { ID: "AL1002", "AD Name": "AD Ahmedabad", "Contact Number": "919998887776", Area: "Ahmedabad", "Model Name": "realme 13 Pro+ 5G", "Allocated Qty": 50, Price: 28000, "Allocated Value": 140000, "Confirmed Qty": 50, "PO Amount": 140000, Status: "Pending", "Last Updated": "", "Sales Approval": "Approved", "UTR Number": "", "Payment Verified": "Pending", Transporter: "", "LR Number": "", "Dispatch Date": "" },
+        { ID: "AL1003", "AD Name": "AD Surat", "Contact Number": "919998887777", Area: "Surat", "Model Name": "realme Narzo 70 Turbo", "Allocated Qty": 100, Price: 16000, "Allocated Value": 160000, "Confirmed Qty": 100, "PO Amount": 160000, Status: "Completed", "Last Updated": "", "Sales Approval": "Approved", "UTR Number": "UTR888777", "Payment Verified": "Verified", Transporter: "", "LR Number": "", "Dispatch Date": "" }
+      ],
+      distributors: [
+        { "AD Name": "K K ENTERPRISE", "Contact Number": "919998887771", Area: "Ahmedabad", "Outstanding Balance": 150000, "Credit Limit": 400000 },
+        { "AD Name": "TELECITY ENTERPRISES LLP", "Contact Number": "919998887772", Area: "Ahmedabad", "Outstanding Balance": 320000, "Credit Limit": 500000 },
+        { "AD Name": "SVR Enterprise", "Contact Number": "919998887773", Area: "Surat", "Outstanding Balance": 50000, "Credit Limit": 300000 },
+        { "AD Name": "Ashutosh marketing", "Contact Number": "919998887774", Area: "Rajkot", "Outstanding Balance": 0, "Credit Limit": 300000 },
+        { "AD Name": "MRIDAKSH ENTERPRISE", "Contact Number": "919998887775", Area: "Vadodara", "Outstanding Balance": 120000, "Credit Limit": 300000 },
+        { "AD Name": "AD Ahmedabad", "Contact Number": "919998887776", Area: "Ahmedabad", "Outstanding Balance": 150000, "Credit Limit": 300000 },
+        { "AD Name": "AD Surat", "Contact Number": "919998887777", Area: "Surat", "Outstanding Balance": 250000, "Credit Limit": 500000 }
+      ],
+      users: [
+        { Username: "admin", Password: "admin123", Role: "admin", FullName: "Billing Manager", Area: "Gujarat" },
+        { Username: "sales_gujarat", Password: "sales123", Role: "sales", FullName: "Gujarat Sales Head", Area: "Gujarat" },
+        { Username: "ad_ahmedabad", Password: "ad123", Role: "ad", FullName: "AD Ahmedabad", Area: "Ahmedabad" },
+        { Username: "ad_surat", Password: "ad123", Role: "ad", FullName: "AD Surat", Area: "Surat" },
+        { Username: "warehouse", Password: "wh123", Role: "warehouse", FullName: "Gujarat Warehouse Head", Area: "Gujarat" }
+      ]
+    };
+
+    let isGoogleAppsScript = (typeof google !== 'undefined' && google.script && google.script.run);
+    let chartInstance = null;
+    let countdownInterval = null;
+
+    // INITIALIZATION
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      
+      try {
+        if (localStorage.getItem('adira_db')) {
+          const loaded = JSON.parse(localStorage.getItem('adira_db'));
+          if (loaded.settings) localDB.settings = loaded.settings;
+          if (loaded.prices) localDB.prices = loaded.prices;
+          if (loaded.allocations) localDB.allocations = loaded.allocations;
+          if (loaded.distributors) localDB.distributors = loaded.distributors;
+          if (loaded.users) localDB.users = loaded.users;
+        } else {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          tomorrow.setHours(18, 0, 0, 0);
+          localDB.settings.confirmationDeadline = tomorrow.toISOString().slice(0, 16);
+          
+          const dayAfter = new Date();
+          dayAfter.setDate(dayAfter.getDate() + 2);
+          dayAfter.setHours(12, 0, 0, 0);
+          localDB.settings.paymentDeadline = dayAfter.toISOString().slice(0, 16);
+          
+          saveLocalDB();
+        }
+      } catch (e) {
+        console.warn("localStorage is blocked or unavailable in sandbox:", e.message);
+      }
+
+      if (!isGoogleAppsScript) {
+        document.getElementById('simulatorBanner').style.display = 'flex';
+      } else {
+        document.getElementById('simulatorBanner').style.display = 'none';
+      }
+    });
+
+    function saveLocalDB() {
+      try {
+        localStorage.setItem('adira_db', JSON.stringify(localDB));
+      } catch (e) {
+        console.warn("Could not save to localStorage in sandbox:", e.message);
+      }
+    }
+
+    function resetSimulatorData() {
+      try {
+        localStorage.removeItem('adira_db');
+      } catch (e) {
+        console.warn("Could not reset localStorage in sandbox:", e.message);
+      }
+      alert("Simulated Database Reset to Defaults! Refreshing page...");
+      window.location.reload();
+    }
+
+    // AUTHENTICATION
+
+    function handleLogin() {
+      const user = document.getElementById('loginUser').value;
+      const pass = document.getElementById('loginPass').value;
+      
+      if (!user || !pass) {
+        alert("Please fill in both username and password.");
+        return;
+      }
+
+      showLoader("Signing In", "Validating credentials...");
+
+      if (isGoogleAppsScript) {
+        google.script.run
+          .withSuccessHandler(res => {
+            hideLoader();
+            if (res.success) {
+              loginSuccess(res.user);
+            } else {
+              alert(res.message);
+            }
+          })
+          .withFailureHandler(err => {
+            hideLoader();
+            alert("Connection error: " + err.toString());
+          })
+          .authenticateUser(user, pass);
+      } else {
+        setTimeout(() => {
+          hideLoader();
+          const match = localDB.users.find(u => u.Username.toLowerCase() === user.toLowerCase() && u.Password === pass);
+          if (match) {
+            loginSuccess({
+              username: match.Username,
+              role: match.Role,
+              fullName: match.FullName,
+              area: match.Area
+            });
+          } else {
+            alert("Invalid Username or Password in simulator.");
+          }
+        }, 600);
+      }
+    }
+
+    function loginSuccess(user) {
+      currentUser = user;
+      document.getElementById('viewLogin').classList.remove('active');
+      document.getElementById('navProfile').style.display = 'flex';
+      
+      const roleName = document.getElementById('navRoleName');
+      roleName.innerText = user.fullName + ` (${user.role.toUpperCase()})`;
+      const badge = document.getElementById('navRoleBadge');
+      badge.className = `role-indicator ${user.role}`;
+      
+      refreshDashboard();
+    }
+
+    function logout() {
+      currentUser = null;
+      document.getElementById('navProfile').style.display = 'none';
+      
+      document.getElementById('viewAdmin').classList.remove('active');
+      document.getElementById('viewAD').classList.remove('active');
+      document.getElementById('viewSales').classList.remove('active');
+      document.getElementById('viewWarehouse').classList.remove('active');
+      
+      document.getElementById('viewLogin').classList.add('active');
+      document.getElementById('loginPass').value = '';
+      
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+      }
+    }
+
+    // MAIN ROUTER & DATA REFRESH
+    function refreshDashboard() {
+      showLoader("Loading", "Fetching live database records...");
+
+      if (isGoogleAppsScript) {
+        google.script.run
+          .withSuccessHandler(res => {
+            hideLoader();
+            if (res.success) {
+              localDB.settings = res.settings;
+              localDB.prices = res.prices;
+              localDB.allocations = res.allocations;
+              localDB.distributors = res.distributors;
+              loadRoleSpecificView();
+            } else {
+              alert("Data Sync Failed: " + res.message);
+            }
+          })
+          .withFailureHandler(err => {
+            hideLoader();
+            alert("Error connecting to sheet: " + err.toString());
+          })
+          .getDashboardData(currentUser.role, currentUser.fullName);
+      } else {
+        setTimeout(() => {
+          hideLoader();
+          loadRoleSpecificView();
+        }, 500);
+      }
+    }
+
+    function loadRoleSpecificView() {
+      document.getElementById('viewAdmin').classList.remove('active');
+      document.getElementById('viewAD').classList.remove('active');
+      document.getElementById('viewSales').classList.remove('active');
+      document.getElementById('viewWarehouse').classList.remove('active');
+
+      if (currentUser.role === 'admin') {
+        document.getElementById('viewAdmin').classList.add('active');
+        buildAdminDashboard();
+      } else if (currentUser.role === 'ad') {
+        document.getElementById('viewAD').classList.add('active');
+        buildADDashboard();
+      } else if (currentUser.role === 'sales') {
+        document.getElementById('viewSales').classList.add('active');
+        buildSalesDashboard();
+      } else if (currentUser.role === 'warehouse') {
+        document.getElementById('viewWarehouse').classList.add('active');
+        buildWarehouseDashboard();
+      }
+    }
+
+    // --- BILLING ADMIN CONTROLS ---
+    function buildAdminDashboard() {
+      document.getElementById('inputDeadlineConfirm').value = localDB.settings.confirmationDeadline || '';
+      document.getElementById('inputDeadlinePayment').value = localDB.settings.paymentDeadline || '';
+      document.getElementById('inputAdminMemo').value = localDB.settings.writeUp || '';
+      
+      calculateAdminKPIs();
+      renderAdminTable(localDB.allocations);
+      renderAdminChart();
+    }
+
+    function calculateAdminKPIs() {
+      let allocatedTotal = 0;
+      let confirmedTotal = 0;
+      let pendingPaymentADs = new Set();
+      let verifiedTotal = 0;
+
+      localDB.allocations.forEach(item => {
+        allocatedTotal += Number(item["Allocated Value"]) || 0;
+        
+        if (['Confirmed', 'Completed', 'Dispatched'].includes(item.Status)) {
+          confirmedTotal += Number(item["PO Amount"]) || 0;
+        }
+        if (item.Status === 'Confirmed') {
+          pendingPaymentADs.add(item["AD Name"]);
+        }
+        if (['Completed', 'Dispatched'].includes(item.Status) || item["Payment Verified"] === 'Verified') {
+          verifiedTotal += Number(item["PO Amount"]) || 0;
+        }
+      });
+
+      document.getElementById('adminStatAllocated').innerText = `₹${allocatedTotal.toLocaleString('en-IN')}`;
+      document.getElementById('adminStatConfirmed').innerText = `₹${confirmedTotal.toLocaleString('en-IN')}`;
+      document.getElementById('adminStatPending').innerText = `${pendingPaymentADs.size} ADs`;
+      document.getElementById('adminStatVerified').innerText = `₹${verifiedTotal.toLocaleString('en-IN')}`;
+    }
+
+    function renderAdminTable(dataList) {
+      const tbody = document.querySelector('#adminTrackTable tbody');
+      tbody.innerHTML = '';
+
+      if (dataList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; color:var(--color-text-muted)">No allocations loaded. Please upload allocations excel sheet.</td></tr>`;
+        return;
+      }
+
+      dataList.forEach(item => {
+        const tr = document.createElement('tr');
+        
+        const statusBadge = getStatusBadge(item.Status);
+        const approvalBadge = getApprovalBadge(item["Sales Approval"]);
+        
+        let paymentProofContent = '-';
+        if (item["UTR Number"]) {
+          paymentProofContent = `<div style="font-size:0.8rem;">UTR: <strong>${item["UTR Number"]}</strong></div>`;
+          if (item["Payment Verified"] === 'Pending') {
+            paymentProofContent += `
+              <div style="margin-top:4px; display:flex; gap:4px;">
+                <button class="btn-action success" style="padding:2px 6px; font-size:0.7rem;" onclick="handleVerifyPayment('${item.ID}', true)"><i data-lucide="check"></i> Approve</button>
+                <button class="btn-action danger" style="padding:2px 6px; font-size:0.7rem;" onclick="handleVerifyPayment('${item.ID}', false)"><i data-lucide="x"></i> Reject</button>
+              </div>`;
+          } else {
+            paymentProofContent += ` <span class="badge ${item["Payment Verified"] === 'Verified' ? 'approved' : 'rejected'}" style="margin-top:4px;">${item["Payment Verified"]}</span>`;
+          }
+        }
+
+        tr.innerHTML = `
+          <td><strong>${item["AD Name"]}</strong></td>
+          <td>${item.Area}</td>
+          <td>${item["Model Name"]}</td>
+          <td>${item["Allocated Qty"]}</td>
+          <td>${item["Confirmed Qty"] || '-'}</td>
+          <td>₹${(Number(item["PO Amount"]) || Number(item["Allocated Value"])).toLocaleString('en-IN')}</td>
+          <td>${statusBadge}</td>
+          <td>${approvalBadge}</td>
+          <td>${paymentProofContent}</td>
+          <td>
+            <button class="btn-action" onclick="openWhatsAppModal('${item["AD Name"]}')">
+              <i data-lucide="message-square"></i> Share
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      lucide.createIcons({ node: tbody });
+    }
+
+    function filterTable(status) {
+      if (status === 'all') {
+        renderAdminTable(localDB.allocations);
+      } else {
+        const filtered = localDB.allocations.filter(item => item.Status === status);
+        renderAdminTable(filtered);
+      }
+    }
+
+    function handleVerifyPayment(id, verified) {
+      showLoader("Payment Verification", "Processing verification in sheets...");
+      if (isGoogleAppsScript) {
+        google.script.run
+          .withSuccessHandler(res => {
+            hideLoader();
+            if (res.success) {
+              refreshDashboard();
+            } else {
+              alert(res.message);
+            }
+          })
+          .withFailureHandler(err => {
+            hideLoader();
+            alert("Verification connection failed.");
+          })
+          .verifyPayment(id, verified);
+      } else {
+        setTimeout(() => {
+          hideLoader();
+          const target = localDB.allocations.find(item => item.ID === id);
+          if (target) {
+            target["Payment Verified"] = verified ? 'Verified' : 'Rejected';
+            if (verified) {
+              target.Status = 'Completed';
+            }
+            saveLocalDB();
+            refreshDashboard();
+          }
+        }, 500);
+      }
+    }
+
+    function saveAdminSettings() {
+      const writeUp = document.getElementById('inputAdminMemo').value;
+      const confDead = document.getElementById('inputDeadlineConfirm').value;
+      const payDead = document.getElementById('inputDeadlinePayment').value;
+      
+      const payload = {
+        writeUp: writeUp,
+        confirmationDeadline: confDead,
+        paymentDeadline: payDead
+      };
+
+      showLoader("Saving Settings", "Updating settings in Sheets...");
+
+      if (isGoogleAppsScript) {
+        google.script.run
+          .withSuccessHandler(res => {
+            hideLoader();
+            if (res.success) {
+              alert("Settings updated!");
+              refreshDashboard();
+            } else {
+              alert(res.message);
+            }
+          })
+          .withFailureHandler(err => {
+            hideLoader();
+            alert("Save settings failed.");
+          })
+          .setSystemSettings(payload);
+      } else {
+        setTimeout(() => {
+          hideLoader();
+          localDB.settings = payload;
+          saveLocalDB();
+          alert("Parameters updated!");
+          refreshDashboard();
+        }, 400);
+      }
+    }
+
+    // --- AREA DISTRIBUTOR (AD) VIEW ---
+    function buildADDashboard() {
+      document.getElementById('adAnnouncementText').innerText = localDB.settings.writeUp || '';
+      
+      startCountdownTimers();
+      
+      const tbody = document.getElementById('adAllocationRows');
+      tbody.innerHTML = '';
+      
+      const adName = currentUser.fullName;
+      const myAllocations = localDB.allocations.filter(item => item["AD Name"].toLowerCase() === adName.toLowerCase());
+
+      if (myAllocations.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--color-text-muted)">No allocations loaded. Please check with Admin.</td></tr>`;
+        return;
+      }
+
+      // Check for Dispatch status to show truck tracking info
+      const dispatchedItems = myAllocations.filter(item => item.Status === 'Dispatched');
+      const shipBanner = document.getElementById('adShippingBanner');
+      const shipText = document.getElementById('adShippingText');
+      if (dispatchedItems.length > 0) {
+        shipBanner.style.display = 'flex';
+        let shipDetails = '';
+        dispatchedItems.forEach(di => {
+          const modelName = di["Model Name"];
+          const transporter = di.Transporter || 'Courier';
+          const lrNumber = di["LR Number"] || 'N/A';
+          const dispatchDate = di["Dispatch Date"] ? new Date(di["Dispatch Date"]).toLocaleDateString('en-IN') : 'Today';
+          
+          shipDetails += `<div>• <strong>${modelName}</strong> - Dispatched via <strong>${transporter}</strong> | LR Number: <strong>${lrNumber}</strong> on ${dispatchDate}</div>`;
+        });
+        shipText.innerHTML = shipDetails;
+      } else {
+        shipBanner.style.display = 'none';
+      }
+
+      myAllocations.forEach(item => {
+        const tr = document.createElement('tr');
+        const price = Number(item.Price) || localDB.prices[item["Model Name"]] || 0;
+        const allocatedQty = Number(item["Allocated Qty"]);
+        const baseVal = allocatedQty * price;
+        
+        tr.innerHTML = `
+          <td><strong>${item["Model Name"]}</strong></td>
+          <td>${allocatedQty}</td>
+          <td>₹${price.toLocaleString('en-IN')}</td>
+          <td>₹${baseVal.toLocaleString('en-IN')}</td>
+          <td>
+            <input type="number" class="input-qty" min="0" value="${item["Confirmed Qty"] || allocatedQty}" 
+              oninput="recalculateADSummary()" data-model="${item["Model Name"]}" data-price="${price}">
+          </td>
+          <td class="po-row-total" style="font-weight:700;">₹${baseVal.toLocaleString('en-IN')}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      recalculateADSummary();
+    }
+
+    function recalculateADSummary() {
+      const qtyInputs = document.querySelectorAll('#adAllocationRows .input-qty');
+      let modelsCount = 0;
+      let allocatedTotal = 0;
+      let adjustedPOTotal = 0;
+
+      qtyInputs.forEach(input => {
+        const model = input.dataset.model;
+        const price = Number(input.dataset.price);
+        const qty = Number(input.value) || 0;
+        const poRowTotal = qty * price;
+        
+        const row = input.closest('tr');
+        row.querySelector('.po-row-total').innerText = `₹${poRowTotal.toLocaleString('en-IN')}`;
+
+        const rawAlloc = localDB.allocations.find(a => a["AD Name"].toLowerCase() === currentUser.fullName.toLowerCase() && a["Model Name"] === model);
+        if (rawAlloc) {
+          allocatedTotal += Number(rawAlloc["Allocated Value"]) || 0;
+        }
+
+        if (qty > 0) modelsCount++;
+        adjustedPOTotal += poRowTotal;
+      });
+
+      document.getElementById('adSummaryModels').innerText = modelsCount;
+      document.getElementById('adSummaryAllocatedVal').innerText = `₹${allocatedTotal.toLocaleString('en-IN')}`;
+      document.getElementById('adSummaryPOVal').innerText = `₹${adjustedPOTotal.toLocaleString('en-IN')}`;
+      document.getElementById('adSummaryTotal').innerText = `₹${adjustedPOTotal.toLocaleString('en-IN')}`;
+
+      // Credit limit calculations
+      const adName = currentUser.fullName;
+      const ledger = localDB.distributors.find(d => d["AD Name"].toLowerCase() === adName.toLowerCase()) || { "Credit Limit": 300000, "Outstanding Balance": 0 };
+      const creditLimit = Number(ledger["Credit Limit"]) || 300000;
+      const outstanding = Number(ledger["Outstanding Balance"]) || 0;
+      const availableCredit = creditLimit - outstanding;
+
+      document.getElementById('adSummaryCreditLimit').innerText = `₹${creditLimit.toLocaleString('en-IN')}`;
+      document.getElementById('adSummaryOutstanding').innerText = `₹${outstanding.toLocaleString('en-IN')}`;
+      document.getElementById('adSummaryAvailableCredit').innerText = `₹${availableCredit.toLocaleString('en-IN')}`;
+
+      const warningEl = document.getElementById('adCreditWarning');
+      const warningAmtEl = document.getElementById('adCreditWarningAmount');
+      if (adjustedPOTotal > availableCredit) {
+        warningEl.style.display = 'block';
+        warningAmtEl.innerText = `₹${(adjustedPOTotal - availableCredit).toLocaleString('en-IN')}`;
+      } else {
+        warningEl.style.display = 'none';
+      }
+    }
+
+    function submitADSelections() {
+      const qtyInputs = document.querySelectorAll('#adAllocationRows .input-qty');
+      const confirmations = [];
+      
+      qtyInputs.forEach(input => {
+        confirmations.push({
+          modelName: input.dataset.model,
+          confirmedQty: Number(input.value) || 0
+        });
+      });
+
+      const utr = document.getElementById('adUtrNumber').value.trim();
+      const payloadPayment = utr ? { utrNumber: utr } : null;
+
+      showLoader("Submitting PO", "Recording PO details...");
+
+      if (isGoogleAppsScript) {
+        google.script.run
+          .withSuccessHandler(res => {
+            hideLoader();
+            if (res.success) {
+              alert("PO Confirmed!");
+              generateADWhatsAppAlert(confirmations, utr);
+              refreshDashboard();
+            } else {
+              alert(res.message);
+            }
+          })
+          .withFailureHandler(err => {
+            hideLoader();
+            alert("PO submission failed.");
+          })
+          .submitADConfirmation(currentUser.fullName, confirmations, payloadPayment);
+      } else {
+        setTimeout(() => {
+          hideLoader();
+          confirmations.forEach(conf => {
+            const match = localDB.allocations.find(a => a["AD Name"].toLowerCase() === currentUser.fullName.toLowerCase() && a["Model Name"] === conf.modelName);
+            if (match) {
+              match["Confirmed Qty"] = conf.confirmedQty;
+              match["PO Amount"] = conf.confirmedQty * match.Price;
+              match.Status = utr ? 'Paid' : 'Confirmed';
+              match["Last Updated"] = new Date().toISOString();
+              match["Sales Approval"] = (conf.confirmedQty !== match["Allocated Qty"]) ? 'Pending Approval' : 'Approved';
+              if (utr) {
+                match["UTR Number"] = utr;
+              }
+            }
+          });
+          saveLocalDB();
+          alert("PO Submissions recorded!");
+          generateADWhatsAppAlert(confirmations, utr);
+          refreshDashboard();
+        }, 500);
+      }
+    }
+
+    function generateADWhatsAppAlert(confirmations, utr) {
+      let totalPO = 0;
+      let text = `*REALME PO CONFIRMATION - ADIRA TELECOM*\n\n`;
+      text += `*Distributor:* ${currentUser.fullName}\n`;
+      text += `*Status:* ${utr ? 'PO Submitted & Paid' : 'PO Confirmed (Payment Pending)'}\n`;
+      if (utr) text += `*Bank UTR:* ${utr}\n`;
+      text += `------------------------------------\n`;
+      
+      confirmations.forEach(c => {
+        const item = localDB.allocations.find(a => a["AD Name"].toLowerCase() === currentUser.fullName.toLowerCase() && a["Model Name"] === c.modelName);
+        if (item) {
+          const itemVal = c.confirmedQty * item.Price;
+          totalPO += itemVal;
+          text += `• ${c.modelName}: ${c.confirmedQty} Qty | Value: ₹${itemVal.toLocaleString('en-IN')}\n`;
+        }
+      });
+      
+      text += `------------------------------------\n`;
+      text += `*Total Confirmed PO Amount:* ₹${totalPO.toLocaleString('en-IN')}\n\n`;
+      text += `Portal link: ${window.location.href}`;
+
+      document.getElementById('whatsappMsgText').value = text;
+      openModal('modalWhatsApp');
+    }
+
+    // --- SALES HEAD PORTAL ---
+    function buildSalesDashboard() {
+      document.getElementById('salesStatRegion').innerText = currentUser.area || "Gujarat";
+      
+      const tbody = document.querySelector('#salesApprovalsTable tbody');
+      tbody.innerHTML = '';
+
+      const pendingApprovals = localDB.allocations.filter(item => 
+        item["Sales Approval"] === 'Pending Approval' && 
+        (item.Area === currentUser.area || currentUser.area === 'Gujarat')
+      );
+
+      let totalSalesVal = 0;
+      localDB.allocations.forEach(item => {
+        if (item.Area === currentUser.area || currentUser.area === 'Gujarat') {
+          totalSalesVal += Number(item["PO Amount"]) || 0;
+        }
+      });
+
+      document.getElementById('salesStatPendingCount').innerText = pendingApprovals.length;
+      document.getElementById('salesStatTotalValue').innerText = `₹${totalSalesVal.toLocaleString('en-IN')}`;
+
+      if (pendingApprovals.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--color-text-muted)">No pending quantity adjustments require review.</td></tr>`;
+        return;
+      }
+
+      pendingApprovals.forEach(item => {
+        const tr = document.createElement('tr');
+        const allocatedVal = Number(item["Allocated Value"]) || 0;
+        const requestedVal = Number(item["PO Amount"]) || 0;
+        const diffVal = requestedVal - allocatedVal;
+        const diffText = diffVal >= 0 ? `+₹${diffVal.toLocaleString('en-IN')}` : `-₹${Math.abs(diffVal).toLocaleString('en-IN')}`;
+        const diffStyle = diffVal >= 0 ? 'color: var(--color-success)' : 'color: var(--color-danger)';
+
+        tr.innerHTML = `
+          <td><strong>${item["AD Name"]}</strong></td>
+          <td>${item["Model Name"]}</td>
+          <td>${item["Allocated Qty"]}</td>
+          <td><strong>${item["Confirmed Qty"]}</strong></td>
+          <td>₹${item.Price.toLocaleString('en-IN')}</td>
+          <td style="${diffStyle}; font-weight:700;">${diffText}</td>
+          <td>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-action success" onclick="handleSalesDecision('${item.ID}', true)"><i data-lucide="check"></i> Approve</button>
+              <button class="btn-action danger" onclick="handleSalesDecision('${item.ID}', false)"><i data-lucide="x"></i> Reject</button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      lucide.createIcons({ node: tbody });
+    }
+
+    function handleSalesDecision(id, approved) {
+      showLoader("Processing Decision", "Saving decision...");
+      if (isGoogleAppsScript) {
+        google.script.run
+          .withSuccessHandler(res => {
+            hideLoader();
+            if (res.success) {
+              refreshDashboard();
+            } else {
+              alert(res.message);
+            }
+          })
+          .withFailureHandler(err => {
+            hideLoader();
+            alert("Connection error decision.");
+          })
+          .approveAdjustment(id, approved);
+      } else {
+        setTimeout(() => {
+          hideLoader();
+          const target = localDB.allocations.find(item => item.ID === id);
+          if (target) {
+            target["Sales Approval"] = approved ? 'Approved' : 'Rejected';
+            if (!approved) {
+              target["Confirmed Qty"] = target["Allocated Qty"];
+              target["PO Amount"] = target["Allocated Value"];
+            }
+            saveLocalDB();
+            refreshDashboard();
+          }
+        }, 400);
+      }
+    }
+
+    // --- WAREHOUSE PORTAL ---
+    function buildWarehouseDashboard() {
+      // Find orders completed/paid (ready to dispatch)
+      const readyList = localDB.allocations.filter(item => 
+        (item.Status === 'Completed' || item.Status === 'Paid') && 
+        item["Payment Verified"] === 'Verified'
+      );
+      
+      const dispatchedList = localDB.allocations.filter(item => item.Status === 'Dispatched');
+
+      // KPIs
+      document.getElementById('whStatPending').innerText = `${readyList.length} Orders`;
+      
+      let dispatchedUnits = 0;
+      dispatchedList.forEach(item => dispatchedUnits += Number(item["Confirmed Qty"]) || 0);
+      document.getElementById('whStatUnits').innerText = `${dispatchedUnits} Units`;
+      
+      document.getElementById('whStatCompleted').innerText = `${dispatchedList.length} Dispatched`;
+
+      // Render Pending Dispatch Table
+      const tbodyPending = document.querySelector('#whPendingTable tbody');
+      tbodyPending.innerHTML = '';
+
+      if (readyList.length === 0) {
+        tbodyPending.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--color-text-muted)">No orders ready for loading. (Payment verification required from Billing department first).</td></tr>`;
+      } else {
+        readyList.forEach(item => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>${item["AD Name"]}</strong></td>
+            <td>${item.Area}</td>
+            <td>${item["Model Name"]}</td>
+            <td><strong>${item["Confirmed Qty"]} Pcs</strong></td>
+            <td><span class="badge approved">Payment Verified</span></td>
+            <td><input type="text" class="input-transporter form-control" style="padding:6px; min-width:120px;" placeholder="e.g. Maruti Cargo" id="trans_${item.ID}"></td>
+            <td><input type="text" class="input-lr form-control" style="padding:6px; min-width:100px;" placeholder="LR-12345" id="lr_${item.ID}"></td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                <button class="btn-action info" onclick="handleWarehouseDispatch('${item.ID}')"><i data-lucide="truck"></i> Ship</button>
+                <button class="btn-action" onclick="printDeliveryChallan('${item.ID}')"><i data-lucide="printer"></i> DC</button>
+              </div>
+            </td>
+          `;
+          tbodyPending.appendChild(tr);
+        });
+      }
+
+      // Render History Table
+      const tbodyHistory = document.querySelector('#whHistoryTable tbody');
+      tbodyHistory.innerHTML = '';
+
+      if (dispatchedList.length === 0) {
+        tbodyHistory.innerHTML = `<tr><td colspan="8" style="text-align:center; color:var(--color-text-muted)">No dispatch logs recorded.</td></tr>`;
+      } else {
+        dispatchedList.forEach(item => {
+          const tr = document.createElement('tr');
+          const dDate = item["Dispatch Date"] ? new Date(item["Dispatch Date"]).toLocaleString('en-IN') : 'N/A';
+          tr.innerHTML = `
+            <td><strong>${item["AD Name"]}</strong></td>
+            <td>${item["Model Name"]}</td>
+            <td>${item["Confirmed Qty"]} Pcs</td>
+            <td>${item.Transporter}</td>
+            <td><code>${item["LR Number"]}</code></td>
+            <td>${dDate}</td>
+            <td><span class="badge dispatched">Dispatched</span></td>
+            <td>
+              <div style="display:flex; gap:4px;">
+                <button class="btn-action" style="padding:2px 8px; font-size:0.75rem;" onclick="printDeliveryChallan('${item.ID}')"><i data-lucide="printer"></i> Challan</button>
+                <button class="btn-action success" style="padding:2px 8px; font-size:0.75rem;" onclick="notifyADDispatch('${item.ID}')"><i data-lucide="message-square"></i> WhatsApp</button>
+              </div>
+            </td>
+          `;
+          tbodyHistory.appendChild(tr);
+        });
+      }
+      lucide.createIcons({ node: tbodyPending });
+      lucide.createIcons({ node: tbodyHistory });
+    }
+
+    function handleWarehouseDispatch(id) {
+      const transporter = document.getElementById(`trans_${id}`).value.trim();
+      const lrNumber = document.getElementById(`lr_${id}`).value.trim();
+
+      if (!transporter || !lrNumber) {
+        alert("Please enter both the Transporter Name and LR Number before dispatching.");
+        return;
+      }
+
+      showLoader("Shipping PO", "Writing dispatch logs to spreadsheet...");
+
+      if (isGoogleAppsScript) {
+        google.script.run
+          .withSuccessHandler(res => {
+            hideLoader();
+            if (res.success) {
+              alert("Order marked as Dispatched!");
+              refreshDashboard();
+            } else {
+              alert(res.message);
+            }
+          })
+          .withFailureHandler(err => {
+            hideLoader();
+            alert("Dispatch writing failed.");
+          })
+          .dispatchOrder(id, transporter, lrNumber);
+      } else {
+        // Simulator dispatch
+        setTimeout(() => {
+          hideLoader();
+          const target = localDB.allocations.find(item => item.ID === id);
+          if (target) {
+            target.Status = 'Dispatched';
+            target.Transporter = transporter;
+            target["LR Number"] = lrNumber;
+            target["Dispatch Date"] = new Date().toISOString();
+            saveLocalDB();
+            alert("Simulated dispatch successful!");
+            refreshDashboard();
+          }
+        }, 500);
+      }
+    }
+
+    function printDeliveryChallan(id) {
+      const item = localDB.allocations.find(a => a.ID === id);
+      if (!item) return;
+
+      const html = `
+        <div style="text-align:center; border-bottom: 2px solid #334155; padding-bottom:15px; margin-bottom:20px;">
+          <h2 style="color:#0f172a; margin-bottom:5px;">ADIRA TELECOM</h2>
+          <p style="font-size:0.85rem; color:#64748b; margin-bottom:2px;">Realme Zone Distributor - Gujarat</p>
+          <p style="font-size:0.85rem; color:#64748b;">Office: Corporate Plaza, SG Highway, Ahmedabad, Gujarat</p>
+        </div>
+        <h3 style="text-align:center; font-size:1.15rem; margin-bottom:25px; letter-spacing:1px; text-transform:uppercase; color:#0f172a;">DELIVERY CHALLAN / LOADING SLIP</h3>
+        
+        <table style="width:100%; border:none; margin-bottom:30px; font-size:0.85rem; color:#1e293b;">
+          <tr>
+            <td style="width:50%; border:none; padding:4px 0;"><strong>Challan No:</strong> DC-${item.ID}</td>
+            <td style="width:50%; border:none; padding:4px 0; text-align:right;"><strong>Date:</strong> ${item["Dispatch Date"] ? new Date(item["Dispatch Date"]).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN')}</td>
+          </tr>
+          <tr>
+            <td style="border:none; padding:4px 0;"><strong>Consignee (AD Name):</strong> ${item["AD Name"]}</td>
+            <td style="border:none; padding:4px 0; text-align:right;"><strong>Area/Location:</strong> ${item.Area}</td>
+          </tr>
+          <tr>
+            <td style="border:none; padding:4px 0;"><strong>Transporter Name:</strong> ${item.Transporter || 'N/A'}</td>
+            <td style="border:none; padding:4px 0; text-align:right;"><strong>Lorry Receipt (LR) No:</strong> ${item["LR Number"] || 'N/A'}</td>
+          </tr>
+        </table>
+
+        <table style="width:100%; border-collapse:collapse; margin-bottom:40px; color:black; font-size:0.85rem;">
+          <thead>
+            <tr style="background:#e2e8f0;">
+              <th style="border:1px solid #cbd5e1; padding:8px; color:black;">Model Description</th>
+              <th style="border:1px solid #cbd5e1; padding:8px; text-align:center; color:black;">Quantity (Pcs)</th>
+              <th style="border:1px solid #cbd5e1; padding:8px; text-align:right; color:black;">Rate DP (₹)</th>
+              <th style="border:1px solid #cbd5e1; padding:8px; text-align:right; color:black;">Total Value (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="border:1px solid #cbd5e1; padding:10px;">${item["Model Name"]}</td>
+              <td style="border:1px solid #cbd5e1; padding:10px; text-align:center; font-weight:bold;">${item["Confirmed Qty"]}</td>
+              <td style="border:1px solid #cbd5e1; padding:10px; text-align:right;">₹${item.Price.toLocaleString('en-IN')}</td>
+              <td style="border:1px solid #cbd5e1; padding:10px; text-align:right; font-weight:bold;">₹${(item["Confirmed Qty"] * item.Price).toLocaleString('en-IN')}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div style="display:flex; justify-content:space-between; margin-top:60px; font-size:0.8rem; color:#475569;">
+          <div style="text-align:center;">
+            <div style="border-top:1px solid #94a3b8; width:150px; margin-bottom:5px;"></div>
+            <span>Prepared By (Warehouse)</span>
+          </div>
+          <div style="text-align:center;">
+            <div style="border-top:1px solid #94a3b8; width:150px; margin-bottom:5px;"></div>
+            <span>Verified By (Billing)</span>
+          </div>
+          <div style="text-align:center;">
+            <div style="border-top:1px solid #94a3b8; width:150px; margin-bottom:5px;"></div>
+            <span>Receiver's Stamp & Signature</span>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('printChallanArea').innerHTML = html;
+      openModal('modalChallan');
+    }
+
+    function notifyADDispatch(id) {
+      const item = localDB.allocations.find(a => a.ID === id);
+      if (!item) return;
+
+      const adName = item["AD Name"];
+      const adPhone = item["Contact Number"] || "919999999999";
+      
+      let text = `*REALME DISPATCH CONFIRMATION - ADIRA TELECOM*\n\n`;
+      text += `Dear *${adName}*,\n`;
+      text += `Your order has been dispatched from Gujarat Warehouse.\n\n`;
+      text += `📦 *Consignment Details:*\n`;
+      text += `------------------------------------\n`;
+      text += `• Model: ${item["Model Name"]}\n`;
+      text += `• Dispatch Qty: ${item["Confirmed Qty"]} Pcs\n`;
+      text += `• Carrier: *${item.Transporter}*\n`;
+      text += `• Lorry Receipt (LR) No: *${item["LR Number"]}*\n`;
+      text += `• Dispatch Date: ${item["Dispatch Date"] ? new Date(item["Dispatch Date"]).toLocaleDateString('en-IN') : 'Today'}\n`;
+      text += `------------------------------------\n\n`;
+      text += `Track live status on the portal: ${window.location.href}?ad=${encodeURIComponent(adName)}\n`;
+
+      document.getElementById('whatsappMsgText').value = text;
+      document.getElementById('whatsappMsgText').dataset.phone = adPhone;
+      
+      openModal('modalWhatsApp');
+    }
+
+    // --- TIMERS & COUNTDOWNS ---
+    function startCountdownTimers() {
+      if (countdownInterval) clearInterval(countdownInterval);
+
+      const updateTimers = () => {
+        const confirmDead = localDB.settings.confirmationDeadline ? new Date(localDB.settings.confirmationDeadline) : null;
+        const payDead = localDB.settings.paymentDeadline ? new Date(localDB.settings.paymentDeadline) : null;
+        const now = new Date();
+
+        const timerConfirm = document.getElementById('timerConfirm');
+        const timerPayment = document.getElementById('timerPayment');
+        const lockOverlay = document.getElementById('adLockedOverlay');
+        const btnConfirm = document.getElementById('btnConfirmAD');
+        const inputFields = document.querySelectorAll('#adAllocationRows input, #adUtrNumber, #adPaymentProof');
+
+        let isConfirmExpired = false;
+
+        if (confirmDead) {
+          const diff = confirmDead - now;
+          if (diff <= 0) {
+            timerConfirm.innerText = "EXPIRED";
+            timerConfirm.classList.add('expired');
+            isConfirmExpired = true;
+          } else {
+            timerConfirm.innerText = formatTimeDiff(diff);
+            timerConfirm.classList.remove('expired');
+          }
+        } else {
+          timerConfirm.innerText = "NO DEADLINE";
+        }
+
+        if (payDead) {
+          const diff = payDead - now;
+          if (diff <= 0) {
+            timerPayment.innerText = "EXPIRED";
+            timerPayment.classList.add('expired');
+          } else {
+            timerPayment.innerText = formatTimeDiff(diff);
+            timerPayment.classList.remove('expired');
+          }
+        } else {
+          timerPayment.innerText = "NO DEADLINE";
+        }
+
+        // Lock portal constraints if expired
+        if (isConfirmExpired) {
+          lockOverlay.style.display = 'flex';
+          btnConfirm.disabled = true;
+          btnConfirm.style.opacity = '0.5';
+          inputFields.forEach(el => el.disabled = true);
+        } else {
+          lockOverlay.style.display = 'none';
+          btnConfirm.disabled = false;
+          btnConfirm.style.opacity = '1';
+          inputFields.forEach(el => el.disabled = false);
+        }
+      };
+
+      updateTimers();
+      countdownInterval = setInterval(updateTimers, 1000);
+    }
+
+    function formatTimeDiff(ms) {
+      const hours = Math.floor(ms / (1000 * 60 * 60));
+      const mins = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+      const secs = Math.floor((ms % (1000 * 60)) / 1000);
+      return `${hours.toString().padStart(2, '0')}h ${mins.toString().padStart(2, '0')}m ${secs.toString().padStart(2, '0')}s`;
+    }
+
+    // --- WHATSAPP GENERATION FOR ADMIN ---
+    function openWhatsAppModal(adName) {
+      const items = localDB.allocations.filter(item => item["AD Name"].toLowerCase() === adName.toLowerCase());
+      if (items.length === 0) return;
+
+      const adNameClean = items[0]["AD Name"];
+      const adPhone = items[0]["Contact Number"] || "919999999999";
+      
+      const confirmDeadText = localDB.settings.confirmationDeadline ? new Date(localDB.settings.confirmationDeadline).toLocaleString('en-IN') : 'N/A';
+      const paymentDeadText = localDB.settings.paymentDeadline ? new Date(localDB.settings.paymentDeadline).toLocaleString('en-IN') : 'N/A';
+
+      let totalVal = 0;
+      let text = `*REALME STOCK ALLOCATION - ADIRA TELECOM*\n\n`;
+      text += `Dear *${adNameClean}*,\n`;
+      text += `Your realme stock allocations are ready for billing.\n\n`;
+      text += `*Allocated Models:*\n`;
+      text += `------------------------------------\n`;
+      
+      items.forEach(i => {
+        const itemVal = Number(i["Allocated Qty"]) * Number(i.Price);
+        totalVal += itemVal;
+        text += `• ${i["Model Name"]}: ${i["Allocated Qty"]} Qty | Value: ₹${itemVal.toLocaleString('en-IN')}\n`;
+      });
+      
+      text += `------------------------------------\n`;
+      text += `*Total Allocation Value:* ₹${totalVal.toLocaleString('en-IN')}\n\n`;
+      text += `⏰ *Confirmation Deadline:* ${confirmDeadText}\n`;
+      text += `💳 *Payment Deadline:* ${paymentDeadText}\n\n`;
+      if (localDB.settings.writeUp) {
+        text += `📢 *Note:* ${localDB.settings.writeUp}\n\n`;
+      }
+      text += `🔗 *Access Portal to Confirm:* ${window.location.href}?ad=${encodeURIComponent(adNameClean)}\n`;
+
+      document.getElementById('whatsappMsgText').value = text;
+      document.getElementById('whatsappMsgText').dataset.phone = adPhone;
+      
+      openModal('modalWhatsApp');
+    }
+
+    function copyWhatsAppMessage() {
+      const textarea = document.getElementById('whatsappMsgText');
+      textarea.select();
+      document.execCommand('copy');
+      alert("WhatsApp message copied to clipboard!");
+    }
+
+    function sendWhatsAppDirect() {
+      const text = encodeURIComponent(document.getElementById('whatsappMsgText').value);
+      const phone = document.getElementById('whatsappMsgText').dataset.phone || '';
+      window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
+    }
+
+    // --- EXCEL PARSING (SheetJS) ---
+    function parseExcel(type, inputEl) {
+      const file = inputEl.files[0];
+      if (!file) return;
+
+      showLoader("Parsing Excel", "Reading Excel rows client side...");
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          const json = XLSX.utils.sheet_to_json(sheet);
+
+          if (json.length === 0) {
+            throw new Error("Excel sheet is empty!");
+          }
+
+          if (type === 'prices') {
+            processPricesExcel(json);
+          } else if (type === 'allocations') {
+            processAllocationsExcel(json);
+          } else if (type === 'balances') {
+            processBalancesExcel(json);
+          }
+        } catch (error) {
+          hideLoader();
+          alert("Error parsing excel: " + error.toString());
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    function processPricesExcel(rows) {
+      const processed = [];
+      rows.forEach(row => {
+        const modelName = row["Model Name"] || row["Model"] || row["model"];
+        const price = row["Price (DP)"] || row["Price"] || row["price"] || row["DP"];
+        
+        if (modelName && price) {
+          processed.push({ modelName: modelName.toString().trim(), price: Number(price) });
+        }
+      });
+
+      if (processed.length === 0) {
+        alert("Failed to find valid pricing rows. Column headers should include 'Model Name' and 'Price'.");
+        hideLoader();
+        return;
+      }
+
+      if (isGoogleAppsScript) {
+        google.script.run
+          .withSuccessHandler(res => {
+            hideLoader();
+            if (res.success) {
+              alert(`Successfully synced ${res.count} models with pricing!`);
+              refreshDashboard();
+            } else {
+              alert(res.message);
+            }
+          })
+          .withFailureHandler(err => {
+            hideLoader();
+            alert("Price Sync failed on Sheet write.");
+          })
+          .updatePrices(processed);
+      } else {
+        setTimeout(() => {
+          hideLoader();
+          processed.forEach(p => {
+            localDB.prices[p.modelName] = p.price;
+          });
+          localDB.allocations.forEach(a => {
+            if (localDB.prices[a["Model Name"]]) {
+              a.Price = localDB.prices[a["Model Name"]];
+              a["Allocated Value"] = a["Allocated Qty"] * a.Price;
+              a["PO Amount"] = (a["Confirmed Qty"] || a["Allocated Qty"]) * a.Price;
+            }
+          });
+          saveLocalDB();
+          alert(`Simulated: Synced ${processed.length} price listings!`);
+          refreshDashboard();
+        }, 500);
+      }
+    }
+
+    function processAllocationsExcel(rows) {
+      const processed = [];
+      const firstRow = rows[0];
+      const hasModelKey = 'Model' in firstRow || 'model' in firstRow;
+      const hasADNameKey = 'AD Name' in firstRow || 'AD' in firstRow || 'Distributor' in firstRow;
+      
+      if (hasModelKey && !hasADNameKey) {
+        // MATRIX FORMAT DETECTED (like xlsb template or DSP sheets)
+        const modelKey = 'Model' in firstRow ? 'Model' : 'model';
+        const ignoreKeys = [
+          'spu', 'varient', 'dos', 'opening stock', 'openingstock', 'model', 'total', 'balance stock', 'balance_stock',
+          'material code', 'materialcode', 'series name', 'seriesname', 'spu name', 'spuname', 'color', 'sku spec', 'skuspec', 'sku name', 'skuname',
+          'goods in', 'goodsin', 'goods out', 'goodsout', 'closing stock', 'closingstock', '0',
+          'mobile', 'iot', 'total party', 'total_party', 'ok-party', 'ok-party 1', 'ok-party 2', 'ok-party 3', 'ok-party 4'
+        ];
+        
+        rows.forEach(row => {
+          const modelDescription = row[modelKey];
+          if (!modelDescription) return;
+          
+          Object.keys(row).forEach(key => {
+            const keyLower = key.trim().toLowerCase();
+            if (ignoreKeys.includes(keyLower)) return;
+            
+            const qty = Number(row[key]);
+            if (!isNaN(qty) && qty > 0) {
+              const price = localDB.prices[modelDescription.toString().trim()] || 0;
+              processed.push({
+                adName: key.trim(),
+                modelName: modelDescription.toString().trim(),
+                allocatedQty: qty,
+                contactNumber: '',
+                area: 'Gujarat',
+                price: price
+              });
+            }
+          });
+        });
+      } else {
+        // STANDARD ROW-BASED FORMAT
+        rows.forEach(row => {
+          const adName = row["AD Name"] || row["AD"] || row["Distributor"];
+          const modelName = row["Model Name"] || row["Model"];
+          const qty = row["Allocated Qty"] || row["Qty"] || row["Quantity"];
+          const contact = row["Contact Number"] || row["Contact"] || row["Phone"] || '';
+          const area = row["Area"] || row["Region"] || 'Gujarat';
+
+          if (adName && modelName && qty) {
+            const price = localDB.prices[modelName.toString().trim()] || 0;
+            processed.push({
+              adName: adName.toString().trim(),
+              modelName: modelName.toString().trim(),
+              allocatedQty: Number(qty),
+              contactNumber: contact.toString().trim(),
+              area: area.toString().trim(),
+              price: price
+            });
+          }
+        });
+      }
+
+      if (processed.length === 0) {
+        alert("Failed to parse allocations. Excel must have standard format (AD Name, Model Name, Qty) OR matrix format (Model name in 'Model' column, AD names as header columns).");
+        hideLoader();
+        return;
+      }
+
+      if (isGoogleAppsScript) {
+        google.script.run
+          .withSuccessHandler(res => {
+            hideLoader();
+            if (res.success) {
+              alert(`Successfully imported ${res.count} stock allocation rows!`);
+              refreshDashboard();
+            } else {
+              alert(res.message);
+            }
+          })
+          .withFailureHandler(err => {
+            hideLoader();
+            alert("Allocation Sync failed on Sheet write.");
+          })
+          .updateAllocations(processed);
+      } else {
+        setTimeout(() => {
+          hideLoader();
+          localDB.allocations = processed.map((p, index) => {
+            const val = p.allocatedQty * p.price;
+            
+            // Auto-create distributor ledger profile if missing in simulator
+            let distMatch = localDB.distributors.find(d => d["AD Name"].toLowerCase() === p.adName.toLowerCase());
+            if (!distMatch) {
+              localDB.distributors.push({
+                "AD Name": p.adName,
+                "Contact Number": p.contactNumber || "",
+                "Area": p.area || "Gujarat",
+                "Outstanding Balance": 0,
+                "Credit Limit": 300000
+              });
+            }
+            
+            // Auto-create user credential if missing in simulator
+            let userMatch = localDB.users.find(u => u.FullName.toLowerCase() === p.adName.toLowerCase());
+            if (!userMatch) {
+              const userCode = p.adName.toLowerCase().replace(/\s+/g, '_');
+              localDB.users.push({
+                Username: userCode,
+                Password: "ad123",
+                Role: "ad",
+                FullName: p.adName,
+                Area: p.area || "Gujarat"
+              });
+            }
+
+            return {
+              ID: 'AL' + (1000 + index),
+              "AD Name": p.adName,
+              "Contact Number": p.contactNumber,
+              Area: p.area,
+              "Model Name": p.modelName,
+              "Allocated Qty": p.allocatedQty,
+              Price: p.price,
+              "Allocated Value": val,
+              "Confirmed Qty": p.allocatedQty,
+              "PO Amount": val,
+              Status: "Pending",
+              "Last Updated": "",
+              "Sales Approval": "Approved",
+              "UTR Number": "",
+              "Payment Verified": "Pending",
+              Transporter: "",
+              "LR Number": "",
+              "Dispatch Date": ""
+            };
+          });
+          saveLocalDB();
+          alert(`Simulated: Loaded ${processed.length} allocation entries!`);
+          refreshDashboard();
+        }, 500);
+      }
+    }
+
+    function processBalancesExcel(rows) {
+      const processed = [];
+      const firstRow = rows[0];
+      
+      // Determine columns dynamically
+      let accountKey = null;
+      let balanceKey = null;
+      
+      // Look for Account, AD Name, Customer, Name
+      Object.keys(firstRow).forEach(key => {
+        const keyLower = key.trim().toLowerCase();
+        if (keyLower === 'account' || keyLower === 'ad name' || keyLower === 'distributor' || keyLower === 'customer' || keyLower === 'name') {
+          accountKey = key;
+        }
+      });
+      
+      // If not found, default to column index 1
+      if (!accountKey) {
+        accountKey = Object.keys(firstRow)[1];
+      }
+      
+      // For balance, look for a key with "balance" or outstanding, or take index 3 (4th column)
+      Object.keys(firstRow).forEach(key => {
+        const keyLower = key.trim().toLowerCase();
+        if (keyLower.includes('balance') || keyLower.includes('outstanding') || keyLower.includes('ledger') || keyLower.includes('jun') || keyLower.includes('jul') || keyLower.includes('aug') || keyLower.includes('out') || keyLower.includes('bal')) {
+          balanceKey = key;
+        }
+      });
+      
+      if (!balanceKey) {
+        balanceKey = Object.keys(firstRow)[3] || Object.keys(firstRow)[Object.keys(firstRow).length - 1];
+      }
+      
+      rows.forEach(row => {
+        const adName = row[accountKey];
+        const balanceVal = row[balanceKey];
+        
+        // Skip header or total rows if any
+        if (adName && adName.toString().toLowerCase().trim() !== 'total' && adName.toString().toLowerCase().trim() !== 'grand total' && !adName.toString().toLowerCase().startsWith('account group')) {
+          processed.push({
+            adName: adName.toString().trim(),
+            outstandingBalance: isNaN(Number(balanceVal)) ? 0 : Number(balanceVal),
+            creditLimit: 300000 // default limit
+          });
+        }
+      });
+      
+      if (processed.length === 0) {
+        alert("Failed to parse ledger balances. Verify headers contain 'Account' and balance column.");
+        hideLoader();
+        return;
+      }
+      
+      if (isGoogleAppsScript) {
+        google.script.run
+          .withSuccessHandler(res => {
+            hideLoader();
+            if (res.success) {
+              alert(`Successfully synced ${res.count} AD ledgers!`);
+              refreshDashboard();
+            } else {
+              alert(res.message);
+            }
+          })
+          .withFailureHandler(err => {
+            hideLoader();
+            alert("Ledger sync failed.");
+          })
+          .updateADBalances(processed);
+      } else {
+        setTimeout(() => {
+          hideLoader();
+          processed.forEach(p => {
+            let match = localDB.distributors.find(d => d["AD Name"].toLowerCase() === p.adName.toLowerCase());
+            if (match) {
+              match["Outstanding Balance"] = p.outstandingBalance;
+            } else {
+              localDB.distributors.push({
+                "AD Name": p.adName,
+                "Contact Number": "",
+                "Area": "Gujarat",
+                "Outstanding Balance": p.outstandingBalance,
+                "Credit Limit": p.creditLimit
+              });
+            }
+            
+            // Auto-create credentials for AD in simulator if not exists
+            let userMatch = localDB.users.find(u => u.FullName.toLowerCase() === p.adName.toLowerCase());
+            if (!userMatch) {
+              const userCode = p.adName.toLowerCase().replace(/\s+/g, '_');
+              localDB.users.push({
+                Username: userCode,
+                Password: "ad123",
+                Role: "ad",
+                FullName: p.adName,
+                Area: "Gujarat"
+              });
+            }
+          });
+          saveLocalDB();
+          alert(`Simulated: Loaded ${processed.length} ledger balances!`);
+          refreshDashboard();
+        }, 500);
+      }
+    }
+
+    // --- TEMPLATE EXPORTS ---
+    function downloadTemplate(type) {
+      let csvContent = "data:text/csv;charset=utf-8,";
+      let fileName = "";
+      
+      if (type === 'prices') {
+        csvContent += "Model Name,Price (DP)\r\n";
+        csvContent += "realme GT 6 12GB/256GB,35000\r\n";
+        csvContent += "realme 13 Pro+ 5G,28000\r\n";
+        csvContent += "realme Narzo 70 Turbo,16000\r\n";
+        csvContent += "realme C65 5G,10500\r\n";
+        fileName = "realme_price_list_template.csv";
+      } else if (type === 'balances') {
+        csvContent += "AD Name,Outstanding Balance,Credit Limit\r\n";
+        csvContent += "K K ENTERPRISE,150000,400000\r\n";
+        csvContent += "TELECITY ENTERPRISES LLP,320000,500000\r\n";
+        csvContent += "SVR Enterprise,50000,300000\r\n";
+        csvContent += "Ashutosh marketing,0,300000\r\n";
+        fileName = "adira_balances_template.csv";
+      } else {
+        csvContent += "AD Name,Contact Number,Area,Model Name,Allocated Qty\r\n";
+        csvContent += "AD Ahmedabad,919998887776,Ahmedabad,realme GT 6 12GB/256GB,15\r\n";
+        csvContent += "AD Ahmedabad,919998887776,Ahmedabad,realme 13 Pro+ 5G,30\r\n";
+        csvContent += "AD Surat,919998887777,Surat,realme Narzo 70 Turbo,50\r\n";
+        fileName = "adira_allocations_template.csv";
+      }
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // --- ANALYTICS CHART ---
+    function renderAdminChart() {
+      if (chartInstance) {
+        chartInstance.destroy();
+      }
+
+      const ctx = document.getElementById('adminChart').getContext('2d');
+      
+      const adTotals = {};
+      const adConfirmed = {};
+      
+      localDB.allocations.forEach(item => {
+        const ad = item["AD Name"];
+        adTotals[ad] = (adTotals[ad] || 0) + (Number(item["Allocated Value"]) || 0);
+        
+        if (['Confirmed', 'Completed', 'Dispatched', 'Paid'].includes(item.Status)) {
+          adConfirmed[ad] = (adConfirmed[ad] || 0) + (Number(item["PO Amount"]) || 0);
+        } else {
+          adConfirmed[ad] = adConfirmed[ad] || 0;
+        }
+      });
+
+      const labels = Object.keys(adTotals);
+      const allocatedData = Object.values(adTotals);
+      const confirmedData = labels.map(ad => adConfirmed[ad] || 0);
+
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Allocated Value (₹)',
+              data: allocatedData,
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderColor: 'rgba(255, 255, 255, 0.4)',
+              borderWidth: 1
+            },
+            {
+              label: 'Confirmed PO Value (₹)',
+              data: confirmedData,
+              backgroundColor: 'rgba(255, 200, 59, 0.7)',
+              borderColor: 'var(--color-primary)',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(255,255,255,0.05)' },
+              ticks: { color: '#9ca3af' }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { color: '#9ca3af' }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: { color: '#f3f4f6' }
+            }
+          }
+        }
+      });
+    }
+
+    // --- STATUS PILLS & BADGES HELPERS ---
+    function getStatusBadge(status) {
+      const cls = status ? status.toLowerCase() : 'pending';
+      return `<span class="badge ${cls}">${status || 'Pending'}</span>`;
+    }
+
+    // Sales Approval Status Pill
+    function getApprovalBadge(approval) {
+      let cls = 'pending';
+      if (approval === 'Approved') cls = 'approved';
+      if (approval === 'Rejected') cls = 'rejected';
+      return `<span class="badge ${cls}">${approval || 'Pending'}</span>`;
+    }
+
+    // --- MODAL & LOADER HELPERS ---
+    function openModal(id) {
+      document.getElementById(id).classList.add('active');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.remove('active');
+    }
+
+    function showLoader(title, text) {
+      document.getElementById('modalStatusTitle').innerText = title;
+      document.getElementById('modalStatusText').innerText = text;
+      openModal('modalStatus');
+    }
+
+    function hideLoader() {
+      closeModal('modalStatus');
+    }
+  </script>
+</body>
+</html>

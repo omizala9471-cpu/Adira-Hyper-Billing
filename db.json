@@ -1,0 +1,164 @@
+{
+  "settings": {
+    "writeUp": "Welcome to Adira Telecom Allocation Portal. Note: Confirmed allocations are strictly locked and credit will only be extended post proof verification.",
+    "confirmationDeadline": "",
+    "paymentDeadline": ""
+  },
+  "prices": {
+    "realme C85 5G 128GB 4GB Peacock Green": 10500,
+    "realme GT 6 12GB/256GB": 35000,
+    "realme 13 Pro+ 5G": 28000,
+    "realme Narzo 70 Turbo": 16000,
+    "realme C65 5G": 10500
+  },
+  "allocations": [
+    {
+      "ID": "AL1001",
+      "AD Name": "AD Ahmedabad",
+      "Contact Number": "919998887776",
+      "Area": "Ahmedabad",
+      "Model Name": "realme GT 6 12GB/256GB",
+      "Allocated Qty": 30,
+      "Price": 35000,
+      "Allocated Value": 1050000,
+      "Confirmed Qty": 30,
+      "PO Amount": 1050000,
+      "Status": "Pending",
+      "Last Updated": "",
+      "Sales Approval": "Approved",
+      "UTR Number": "",
+      "Payment Verified": "Pending",
+      "Transporter": "",
+      "LR Number": "",
+      "Dispatch Date": ""
+    },
+    {
+      "ID": "AL1002",
+      "AD Name": "AD Ahmedabad",
+      "Contact Number": "919998887776",
+      "Area": "Ahmedabad",
+      "Model Name": "realme 13 Pro+ 5G",
+      "Allocated Qty": 50,
+      "Price": 28000,
+      "Allocated Value": 1400000,
+      "Confirmed Qty": 50,
+      "PO Amount": 1400000,
+      "Status": "Pending",
+      "Last Updated": "",
+      "Sales Approval": "Approved",
+      "UTR Number": "",
+      "Payment Verified": "Pending",
+      "Transporter": "",
+      "LR Number": "",
+      "Dispatch Date": ""
+    },
+    {
+      "ID": "AL1003",
+      "AD Name": "AD Surat",
+      "Contact Number": "919998887777",
+      "Area": "Surat",
+      "Model Name": "realme Narzo 70 Turbo",
+      "Allocated Qty": 100,
+      "Price": 16000,
+      "Allocated Value": 1600000,
+      "Confirmed Qty": 100,
+      "PO Amount": 1600000,
+      "Status": "Completed",
+      "Last Updated": "",
+      "Sales Approval": "Approved",
+      "UTR Number": "UTR888777",
+      "Payment Verified": "Verified",
+      "Transporter": "",
+      "LR Number": "",
+      "Dispatch Date": ""
+    }
+  ],
+  "distributors": [
+    {
+      "AD Name": "K K ENTERPRISE",
+      "Contact Number": "919998887771",
+      "Area": "Ahmedabad",
+      "Outstanding Balance": 150000,
+      "Credit Limit": 400000
+    },
+    {
+      "AD Name": "TELECITY ENTERPRISES LLP",
+      "Contact Number": "919998887772",
+      "Area": "Ahmedabad",
+      "Outstanding Balance": 320000,
+      "Credit Limit": 500000
+    },
+    {
+      "AD Name": "SVR Enterprise",
+      "Contact Number": "919998887773",
+      "Area": "Surat",
+      "Outstanding Balance": 50000,
+      "Credit Limit": 300000
+    },
+    {
+      "AD Name": "Ashutosh marketing",
+      "Contact Number": "919998887774",
+      "Area": "Rajkot",
+      "Outstanding Balance": 0,
+      "Credit Limit": 300000
+    },
+    {
+      "AD Name": "MRIDAKSH ENTERPRISE",
+      "Contact Number": "919998887775",
+      "Area": "Vadodara",
+      "Outstanding Balance": 120000,
+      "Credit Limit": 300000
+    },
+    {
+      "AD Name": "AD Ahmedabad",
+      "Contact Number": "919998887776",
+      "Area": "Ahmedabad",
+      "Outstanding Balance": 150000,
+      "Credit Limit": 300000
+    },
+    {
+      "AD Name": "AD Surat",
+      "Contact Number": "919998887777",
+      "Area": "Surat",
+      "Outstanding Balance": 250000,
+      "Credit Limit": 500000
+    }
+  ],
+  "users": [
+    {
+      "Username": "admin",
+      "Password": "admin123",
+      "Role": "admin",
+      "FullName": "Billing Admin",
+      "Area": "Gujarat"
+    },
+    {
+      "Username": "sales_gujarat",
+      "Password": "sales123",
+      "Role": "sales",
+      "FullName": "Gujarat Sales Head",
+      "Area": "Gujarat"
+    },
+    {
+      "Username": "ad_ahmedabad",
+      "Password": "ad123",
+      "Role": "ad",
+      "FullName": "AD Ahmedabad",
+      "Area": "Ahmedabad"
+    },
+    {
+      "Username": "ad_surat",
+      "Password": "ad123",
+      "Role": "ad",
+      "FullName": "AD Surat",
+      "Area": "Surat"
+    },
+    {
+      "Username": "warehouse",
+      "Password": "wh123",
+      "Role": "warehouse",
+      "FullName": "Gujarat Warehouse Head",
+      "Area": "Gujarat"
+    }
+  ]
+}

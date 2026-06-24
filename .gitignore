@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Binaries
+cloudflared.exe
+cloudflared
+
+# Google Apps Script configuration and files
+.clasp.json
+appsscript.json
+Code.js
+Allocation template.xlsx
+adira_allocations_template-23-06.xlsb
+Balance Template.xls
+
+# Local server files (obsolete)
+server.js
+get_tunnel.js
+deploy_helper.js
+login_helper.js
+push_helper.js
+deploy_instructions.md
+
+# OS files
+Thumbs.db
+.DS_Store
