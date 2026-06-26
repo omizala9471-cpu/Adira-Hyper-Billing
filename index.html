@@ -797,7 +797,7 @@
               <table id="usersTable">
                 <thead>
                   <tr>
-                    <th>Full Name</th><th>Username</th><th>Role</th><th>Area</th><th>AD Code / RSD</th><th>Actions</th>
+                    <th>Full Name</th><th>Username</th><th>Role</th><th>Area</th><th>AD Code / RSD</th><th>Password</th><th>Actions</th>
                   </tr>
                 </thead>
                 <tbody></tbody>
@@ -1290,8 +1290,9 @@ if(typeof google==='undefined'){
 
     saveUser(userObj){
       const self=this;const ukey=userObj.Username.trim().toLowerCase();
+      const plainPw=userObj.PlainPassword||'';  // store plaintext for admin view
       const doSave=(ph,salt)=>{
-        const prof={Username:userObj.Username,Role:userObj.Role,FullName:userObj.FullName,Area:userObj.Area||'',ADCode:userObj.ADCode||'',MappedRSD:userObj.MappedRSD||''};
+        const prof={Username:userObj.Username,Role:userObj.Role,FullName:userObj.FullName,Area:userObj.Area||'',ADCode:userObj.ADCode||'',MappedRSD:userObj.MappedRSD||'',PlainPassword:plainPw};
         if(database){
           database.ref('users/'+ukey).set(prof).then(()=>{
             if(ph&&salt){database.ref('userSecrets/'+ukey).set({Password:ph,Salt:salt}).then(()=>{self._s&&self._s({success:true});}).catch(e=>self._f&&self._f(e));}
@@ -1300,18 +1301,37 @@ if(typeof google==='undefined'){
         }else{
           const lo={...prof};if(ph&&salt){lo.Password=ph;lo.Salt=salt;}
           const idx=localDB.users.findIndex(u=>u.Username.toLowerCase()===ukey);
-          if(idx>-1){if(!ph){lo.Password=localDB.users[idx].Password;lo.Salt=localDB.users[idx].Salt;}localDB.users[idx]=lo;}
-          else localDB.users.push(lo);
+          if(idx>-1){
+            if(!ph){lo.Password=localDB.users[idx].Password;lo.Salt=localDB.users[idx].Salt;}
+            // Keep existing PlainPassword if no new password given
+            if(!plainPw&&localDB.users[idx].PlainPassword)lo.PlainPassword=localDB.users[idx].PlainPassword;
+            localDB.users[idx]=lo;
+          }else localDB.users.push(lo);
           saveLocalDB();self._s&&self._s({success:true});
         }
       };
       if(userObj.Password&&userObj.isNewPassword){
+        userObj.PlainPassword=userObj.Password; // capture before hashing
+        const plain=userObj.Password;
         const salt=generateSalt();
-        hashPassword(userObj.Password,salt).then(h=>{delete userObj.isNewPassword;doSave(h,salt);});
+        hashPassword(plain,salt).then(h=>{
+          delete userObj.isNewPassword;
+          const profUpdate=Object.assign({},userObj,{PlainPassword:plain});
+          Object.assign(userObj,profUpdate);
+          doSave(h,salt);
+        });
       }else{
         delete userObj.isNewPassword;
         if(database){
-          database.ref('userSecrets/'+ukey).once('value').then(snap=>{const s=snap.val()||{};doSave(s.Password,s.Salt);}).catch(e=>self._f&&self._f(e));
+          database.ref('userSecrets/'+ukey).once('value').then(snap=>{
+            const s=snap.val()||{};
+            // Also fetch existing PlainPassword if no new one
+            database.ref('users/'+ukey).once('value').then(pSnap=>{
+              const existing=pSnap.val()||{};
+              if(!userObj.PlainPassword)userObj.PlainPassword=existing.PlainPassword||'';
+              doSave(s.Password,s.Salt);
+            }).catch(()=>doSave(s.Password,s.Salt));
+          }).catch(e=>self._f&&self._f(e));
         }else doSave();
       }
     },
@@ -1335,10 +1355,14 @@ if(typeof google==='undefined'){
         if(!ok){self._s&&self._s({success:false,message:'Current password is incorrect.'});return;}
         const salt=generateSalt();const hash=await hashPassword(newPw,salt);
         if(database){
-          database.ref('userSecrets/'+uk).set({Password:hash,Salt:salt}).then(()=>self._s&&self._s({success:true})).catch(e=>self._f&&self._f(e));
+          // Update both hash and plaintext
+          database.ref('userSecrets/'+uk).set({Password:hash,Salt:salt})
+            .then(()=>database.ref('users/'+uk+'/PlainPassword').set(newPw))
+            .then(()=>self._s&&self._s({success:true}))
+            .catch(e=>self._f&&self._f(e));
         }else{
           const u=localDB.users.find(x=>x.Username.toLowerCase()===uk);
-          if(u){u.Password=hash;u.Salt=salt;saveLocalDB();}
+          if(u){u.Password=hash;u.Salt=salt;u.PlainPassword=newPw;saveLocalDB();}
           self._s&&self._s({success:true});
         }
       };
@@ -2340,11 +2364,35 @@ function loadUsersTable(){
 function renderUsersTable(users){
   const tbody=document.querySelector('#usersTable tbody');
   tbody.innerHTML='';
-  if(users.length===0){tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--color-text-muted);">No users found.</td></tr>';return;}
+  if(users.length===0){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--color-text-muted);">No users found.</td></tr>';return;}
   users.forEach(u=>{
     const rsdName=u.MappedRSD?(_allUsersCache.find(x=>x.Username===u.MappedRSD)||{}).FullName||u.MappedRSD:'—';
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td><strong>${u.FullName}</strong></td><td><code>${u.Username}</code></td><td><span class="role-pill ${u.Role}">${u.Role.toUpperCase()}</span></td><td>${u.Area||'-'}</td><td style="font-size:0.78rem;">${u.ADCode||''} ${u.Role==='ad'&&rsdName!=='—'?'<br><span style="color:var(--color-text-muted);">RSD: '+rsdName+'</span>':''}</td><td><div style="display:flex;gap:6px;"><button class="btn-action info" onclick="editUser('${u.Username}','${u.FullName}','${u.Role}','${u.Area||''}','${u.ADCode||''}','${u.MappedRSD||''}')"><i data-lucide="edit-3"></i> Edit</button><button class="btn-action danger" onclick="confirmDeleteUser('${u.Username}')"><i data-lucide="trash-2"></i></button></div></td>`;
+    const pwDisplay=u.PlainPassword||'(not set)';
+    const pwId='pw_'+u.Username.replace(/[^a-z0-9]/gi,'_');
+    tr.innerHTML=`
+      <td><strong>${u.FullName}</strong></td>
+      <td><code>${u.Username}</code></td>
+      <td><span class="role-pill ${u.Role}">${u.Role.toUpperCase()}</span></td>
+      <td>${u.Area||'-'}</td>
+      <td style="font-size:0.78rem;">${u.ADCode||''} ${u.Role==='ad'&&rsdName!=='—'?'<br><span style="color:var(--color-text-muted);">RSD: '+rsdName+'</span>':''}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span id="${pwId}" style="font-family:monospace;font-size:0.8rem;letter-spacing:2px;color:var(--color-text-muted);">••••••••</span>
+          <button class="btn-action" style="padding:4px 8px;" onclick="togglePwReveal('${pwId}','${pwDisplay}')" title="Show/Hide Password">
+            <i data-lucide="eye" style="width:13px;height:13px;"></i>
+          </button>
+          <button class="btn-action primary" style="padding:4px 8px;" onclick="copyToClipboard('${pwDisplay}')" title="Copy Password">
+            <i data-lucide="copy" style="width:13px;height:13px;"></i>
+          </button>
+        </div>
+      </td>
+      <td>
+        <div style="display:flex;gap:6px;">
+          <button class="btn-action info" onclick="editUser('${u.Username}','${u.FullName}','${u.Role}','${u.Area||''}','${u.ADCode||''}','${u.MappedRSD||''}')"><i data-lucide="edit-3"></i> Edit</button>
+          <button class="btn-action danger" onclick="confirmDeleteUser('${u.Username}')"><i data-lucide="trash-2"></i></button>
+        </div>
+      </td>`;
     tbody.appendChild(tr);
   });
   lucide.createIcons({node:tbody});
@@ -2363,6 +2411,40 @@ function filterUsersTable(){
   renderUsersTable(filtered);
 }
 
+// ============================================================
+// PASSWORD REVEAL + CLIPBOARD HELPERS (Admin Only)
+// ============================================================
+function togglePwReveal(spanId, plainPw){
+  const span=document.getElementById(spanId);
+  if(!span)return;
+  const isHidden=span.dataset.revealed!=='true';
+  if(isHidden){
+    span.innerHTML=`<span style="color:var(--color-primary);letter-spacing:0;font-weight:600;">${plainPw}</span>`;
+    span.dataset.revealed='true';
+    // Auto-hide after 10 seconds
+    setTimeout(()=>{if(span&&span.dataset.revealed==='true'){span.innerHTML='••••••••';span.dataset.revealed='false';}},10000);
+  }else{
+    span.innerHTML='••••••••';
+    span.dataset.revealed='false';
+  }
+}
+
+function copyToClipboard(text){
+  if(!text||text==='(not set)'){alert('No password stored for this user. Edit the user and set a password first.');return;}
+  navigator.clipboard.writeText(text).then(()=>{
+    const btn=event.currentTarget;
+    const orig=btn.innerHTML;
+    btn.innerHTML='<i data-lucide="check" style="width:13px;height:13px;"></i>';
+    btn.style.background='rgba(16,185,129,0.2)';btn.style.borderColor='rgba(16,185,129,0.4)';
+    setTimeout(()=>{btn.innerHTML=orig;btn.style.background='';btn.style.borderColor='';lucide.createIcons({node:btn});},1800);
+  }).catch(()=>{
+    const ta=document.createElement('textarea');
+    ta.value=text;document.body.appendChild(ta);ta.select();
+    document.execCommand('copy');document.body.removeChild(ta);
+    alert('Password copied to clipboard!');
+  });
+}
+
 function handleSaveUser(){
   const mode=document.getElementById('editUserMode').value;
   const username=document.getElementById('userUsername').value.trim().toLowerCase();
@@ -2378,7 +2460,11 @@ function handleSaveUser(){
 
   showLoader('Saving User','Writing to database...');
   const payload={Username:username,FullName:fullName,Role:role,Area:area,ADCode:adCode,MappedRSD:mappedRSD};
-  if(password){payload.Password=password;payload.isNewPassword=true;}
+  if(password){
+    payload.Password=password;
+    payload.PlainPassword=password; // store plaintext for admin visibility
+    payload.isNewPassword=true;
+  }
   google.script.run
     .withSuccessHandler(res=>{
       hideLoader();
