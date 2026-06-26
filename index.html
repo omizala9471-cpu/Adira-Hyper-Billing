@@ -2488,26 +2488,37 @@ function parseExcel(type,input){
   reader.readAsArrayBuffer(file);
 }
 
+function showUploadStatus(divId, msg, isError){
+  const el=document.getElementById(divId);
+  if(!el)return;
+  el.style.display='block';
+  el.style.background=isError?'rgba(239,68,68,0.08)':'rgba(16,185,129,0.08)';
+  el.style.borderColor=isError?'rgba(239,68,68,0.25)':'rgba(16,185,129,0.25)';
+  el.style.color=isError?'#fca5a5':'var(--color-success)';
+  el.innerHTML=(isError?'⚠️ ':'✅ ')+msg;
+  setTimeout(()=>{el.style.display='none';},6000);
+}
+
 function processAllocations(data){
-  if(data.length===0){alert('File is empty.');return;}
+  if(data.length===0){showUploadStatus('allocUploadStatus','File is empty.',true);return;}
   const list=data.map(row=>({adName:row['AD Name']||row['ad_name']||'',contactNumber:String(row['Contact Number']||row['contact']||''),area:row['Area']||row['area']||'',modelName:row['Model Name']||row['model']||'',allocatedQty:Number(row['Allocated Qty']||row['qty']||0),price:Number(row['Price']||row['price']||0)})).filter(r=>r.adName&&r.modelName);
-  if(list.length===0){alert('No valid rows found. Check column headers.');return;}
+  if(list.length===0){showUploadStatus('allocUploadStatus','No valid rows found. Check column headers: AD Name, Model Name, Allocated Qty, Price',true);return;}
   showLoader('Uploading','Writing allocations to database...');
-  google.script.run.withSuccessHandler(res=>{hideLoader();if(res.success){alert(`${res.count} allocations uploaded!`);refreshDashboard();}else alert('Error.')}).withFailureHandler(e=>{hideLoader();alert('Error: '+e.toString());}).updateAllocations(list);
+  google.script.run.withSuccessHandler(res=>{hideLoader();if(res.success){showUploadStatus('allocUploadStatus',`${res.count} allocations uploaded successfully!`);refreshDashboard();}else showUploadStatus('allocUploadStatus','Upload failed.',true);}).withFailureHandler(e=>{hideLoader();showUploadStatus('allocUploadStatus','Error: '+e.toString(),true);}).updateAllocations(list);
 }
 
 function processPrices(data){
   const list=data.map(row=>({modelName:row['Model Name']||row['model']||'',price:Number(row['Price']||row['price']||0)})).filter(r=>r.modelName&&r.price);
-  if(list.length===0){alert('No valid rows found.');return;}
+  if(list.length===0){showUploadStatus('priceUploadStatus','No valid rows found. Check columns: Model Name, Price',true);return;}
   showLoader('Uploading','Writing prices...');
-  google.script.run.withSuccessHandler(res=>{hideLoader();if(res.success){alert(`${res.count} prices updated!`);refreshDashboard();}}).withFailureHandler(e=>{hideLoader();alert('Error: '+e.toString());}).updatePrices(list);
+  google.script.run.withSuccessHandler(res=>{hideLoader();if(res.success){showUploadStatus('priceUploadStatus',`${res.count} model prices updated successfully!`);refreshDashboard();}}).withFailureHandler(e=>{hideLoader();showUploadStatus('priceUploadStatus','Error: '+e.toString(),true);}).updatePrices(list);
 }
 
 function processBalances(data){
   const list=data.map(row=>({adName:row['AD Name']||row['ad_name']||'',outstandingBalance:Number(row['Outstanding Balance']||row['outstanding']||0),creditLimit:Number(row['Credit Limit']||row['credit_limit']||300000)})).filter(r=>r.adName);
-  if(list.length===0){alert('No valid rows found.');return;}
+  if(list.length===0){showUploadStatus('balanceUploadStatus','No valid rows found. Check columns: AD Name, Outstanding Balance, Credit Limit',true);return;}
   showLoader('Uploading','Writing balances...');
-  google.script.run.withSuccessHandler(res=>{hideLoader();if(res.success){alert(`${res.count} balances updated!`);refreshDashboard();}}).withFailureHandler(e=>{hideLoader();alert('Error: '+e.toString());}).updateADBalances(list);
+  google.script.run.withSuccessHandler(res=>{hideLoader();if(res.success){showUploadStatus('balanceUploadStatus',`${res.count} AD balances updated successfully!`);refreshDashboard();}}).withFailureHandler(e=>{hideLoader();showUploadStatus('balanceUploadStatus','Error: '+e.toString(),true);}).updateADBalances(list);
 }
 
 function processUsersExcel(data){
