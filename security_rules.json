@@ -1,5 +1,7 @@
 {
   "rules": {
+    ".read": "false",
+    ".write": "false",
     "settings": {
       ".read": "true",
       ".write": "true"
@@ -22,10 +24,15 @@
     },
     "userSecrets": {
       ".read": "false",
+      ".write": "false",
       "$username": {
         ".read": "true",
         ".write": "true"
       }
+    },
+    "rsdAnnouncements": {
+      ".read": "true",
+      ".write": "true"
     }
   }
 }
