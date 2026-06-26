@@ -116,7 +116,9 @@
     .input-wrapper input{padding-left:38px;}
     .form-control{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border-color);border-radius:10px;padding:11px 14px;color:var(--color-text-main);font-size:0.88rem;transition:var(--transition);outline:none;}
     .form-control:focus{border-color:var(--color-primary);background:rgba(255,200,59,0.04);box-shadow:0 0 0 3px rgba(255,200,59,0.1);}
-    select.form-control{background-color:rgba(10,16,32,0.95);cursor:pointer;}
+    select.form-control{background-color:rgb(8,14,28);cursor:pointer;color:var(--color-text-main);}
+    select.form-control option{background-color:rgb(8,14,28)!important;color:var(--color-text-main)!important;padding:8px 12px;}
+    select.form-control option:hover,select.form-control option:checked{background-color:rgb(30,45,80)!important;color:var(--color-primary)!important;}
     textarea.form-control{resize:vertical;min-height:100px;}
 
     /* BUTTONS */
@@ -228,10 +230,19 @@
 
     /* MASTER UPDATION TABS */
     .master-tabs{display:flex;gap:4px;background:rgba(255,255,255,0.03);border-radius:12px;padding:4px;margin-bottom:24px;flex-wrap:wrap;}
-    .master-tab-btn{flex:1;min-width:120px;padding:10px 16px;background:none;border:none;border-radius:9px;color:var(--color-text-muted);font-size:0.82rem;font-weight:600;cursor:pointer;transition:var(--transition);white-space:nowrap;}
-    .master-tab-btn.active{background:linear-gradient(135deg,rgba(255,200,59,0.15),rgba(255,200,59,0.08));color:var(--color-primary);}
+    .master-tab-btn{flex:1;min-width:120px;padding:10px 16px;background:none;border:1px solid transparent;border-radius:9px;color:var(--color-text-muted);font-size:0.82rem;font-weight:600;cursor:pointer;transition:var(--transition);white-space:nowrap;display:flex;align-items:center;gap:6px;justify-content:center;}
+    .master-tab-btn:hover{background:rgba(255,255,255,0.05);color:var(--color-text-main);}
+    .master-tab-btn.active{background:linear-gradient(135deg,rgba(255,200,59,0.15),rgba(255,200,59,0.08));color:var(--color-primary);border-color:rgba(255,200,59,0.2);}
     .master-tab-content{display:none;}
     .master-tab-content.active{display:block;}
+    /* UPLOAD ZONE enhanced */
+    .upload-zone{border:2px dashed rgba(255,200,59,0.25);border-radius:14px;padding:40px 24px;text-align:center;cursor:pointer;transition:var(--transition);background:rgba(255,200,59,0.02);position:relative;overflow:hidden;}
+    .upload-zone::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(255,200,59,0.04),transparent 70%);pointer-events:none;}
+    .upload-zone:hover{border-color:var(--color-primary);background:rgba(255,200,59,0.06);transform:scale(1.005);}
+    .upload-zone label{display:block;cursor:pointer;}
+    .upload-zone h4{font-weight:700;margin:10px 0 6px;font-size:1.05rem;}
+    .upload-zone p{font-size:0.82rem;color:var(--color-text-muted);margin-bottom:12px;}
+    .upload-zone .upload-btn-hint{display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border-radius:8px;background:rgba(255,200,59,0.12);border:1px solid rgba(255,200,59,0.25);color:var(--color-primary);font-size:0.82rem;font-weight:600;margin-top:8px;}
 
     /* USER FILTER BUTTONS */
     .filter-pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;}
@@ -528,25 +539,30 @@
 
         <!-- ADMIN: Master Updation -->
         <div class="tab-panel" id="adminPanel_master">
-          <div class="master-tabs">
-            <button class="master-tab-btn active" onclick="showMasterTab('allocations')"><i data-lucide="package" style="width:14px;height:14px;"></i> Allocations</button>
-            <button class="master-tab-btn" onclick="showMasterTab('prices')"><i data-lucide="indian-rupee" style="width:14px;height:14px;"></i> Price List</button>
-            <button class="master-tab-btn" onclick="showMasterTab('balances')"><i data-lucide="landmark" style="width:14px;height:14px;"></i> Balances</button>
-            <button class="master-tab-btn" onclick="showMasterTab('scheme')"><i data-lucide="settings" style="width:14px;height:14px;"></i> Scheme & Deadlines</button>
+          <div class="master-tabs" id="masterTabsNav">
+            <button class="master-tab-btn active" id="mtab_allocations" onclick="showMasterTab('allocations',this)"><i data-lucide="package" style="width:14px;height:14px;"></i> Allocations</button>
+            <button class="master-tab-btn" id="mtab_prices" onclick="showMasterTab('prices',this)"><i data-lucide="indian-rupee" style="width:14px;height:14px;"></i> Price List</button>
+            <button class="master-tab-btn" id="mtab_balances" onclick="showMasterTab('balances',this)"><i data-lucide="landmark" style="width:14px;height:14px;"></i> Balances</button>
+            <button class="master-tab-btn" id="mtab_scheme" onclick="showMasterTab('scheme',this)"><i data-lucide="settings" style="width:14px;height:14px;"></i> Scheme &amp; Deadlines</button>
           </div>
 
           <!-- Allocations Tab -->
           <div class="master-tab-content active" id="masterTab_allocations">
             <div class="glass-panel">
               <h3 class="settings-title"><i data-lucide="package"></i> Upload Allocation Matrix</h3>
-              <div class="upload-zone" onclick="document.getElementById('fileAllocations').click()">
-                <i data-lucide="file-spreadsheet" style="width:48px;height:48px;color:var(--color-primary);"></i>
-                <h4>Upload Allocations File</h4>
-                <p>Drag and drop or click to upload matrix (.xlsb, .xlsx, .csv)</p>
-                <input type="file" id="fileAllocations" style="display:none;" accept=".xlsx,.xls,.xlsb,.csv" onchange="parseExcel('allocations',this)">
-              </div>
-              <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:16px;">
-                <button class="btn-action" onclick="downloadTemplate('allocations')"><i data-lucide="download"></i> Download Template</button>
+              <label for="fileAllocations">
+                <div class="upload-zone">
+                  <i data-lucide="file-spreadsheet" style="width:52px;height:52px;color:var(--color-primary);"></i>
+                  <h4>Click to Upload Allocations File</h4>
+                  <p>Supports .xlsx, .xls, .xlsb, .csv format</p>
+                  <div class="upload-btn-hint"><i data-lucide="upload" style="width:14px;height:14px;"></i> Browse File</div>
+                </div>
+              </label>
+              <input type="file" id="fileAllocations" style="display:none;" accept=".xlsx,.xls,.xlsb,.csv" onchange="parseExcel('allocations',this);this.value=''">
+              <div id="allocUploadStatus" style="margin-top:12px;display:none;padding:12px;border-radius:8px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:var(--color-success);font-size:0.85rem;"></div>
+              <div style="display:flex;gap:12px;justify-content:space-between;align-items:center;margin-top:16px;">
+                <p style="font-size:0.78rem;color:var(--color-text-muted);">Required columns: AD Name, Contact Number, Area, Model Name, Allocated Qty, Price</p>
+                <button class="btn-action primary" onclick="downloadTemplate('allocations')"><i data-lucide="download"></i> Download Template</button>
               </div>
             </div>
           </div>
@@ -554,15 +570,20 @@
           <!-- Prices Tab -->
           <div class="master-tab-content" id="masterTab_prices">
             <div class="glass-panel">
-              <h3 class="settings-title"><i data-lucide="indian-rupee"></i> Upload Model Price List</h3>
-              <div class="upload-zone" onclick="document.getElementById('filePrices').click()">
-                <i data-lucide="file-spreadsheet" style="width:48px;height:48px;color:var(--color-success);"></i>
-                <h4>Upload Price Catalogue</h4>
-                <p>Drag and drop or click to upload price list (.xlsx, .xls, .csv)</p>
-                <input type="file" id="filePrices" style="display:none;" accept=".xlsx,.xls,.csv" onchange="parseExcel('prices',this)">
-              </div>
-              <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:16px;">
-                <button class="btn-action" onclick="downloadTemplate('prices')"><i data-lucide="download"></i> Download Template</button>
+              <h3 class="settings-title"><i data-lucide="indian-rupee" style="color:var(--color-success);"></i> Upload Model Price List</h3>
+              <label for="filePrices">
+                <div class="upload-zone" style="border-color:rgba(16,185,129,0.25);background:rgba(16,185,129,0.02);">
+                  <i data-lucide="file-spreadsheet" style="width:52px;height:52px;color:var(--color-success);"></i>
+                  <h4>Click to Upload Price Catalogue</h4>
+                  <p>Supports .xlsx, .xls, .csv format</p>
+                  <div class="upload-btn-hint" style="background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.3);color:var(--color-success);"><i data-lucide="upload" style="width:14px;height:14px;"></i> Browse File</div>
+                </div>
+              </label>
+              <input type="file" id="filePrices" style="display:none;" accept=".xlsx,.xls,.csv" onchange="parseExcel('prices',this);this.value=''">
+              <div id="priceUploadStatus" style="margin-top:12px;display:none;padding:12px;border-radius:8px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:var(--color-success);font-size:0.85rem;"></div>
+              <div style="display:flex;gap:12px;justify-content:space-between;align-items:center;margin-top:16px;">
+                <p style="font-size:0.78rem;color:var(--color-text-muted);">Required columns: Model Name, Price</p>
+                <button class="btn-action success" onclick="downloadTemplate('prices')"><i data-lucide="download"></i> Download Template</button>
               </div>
             </div>
           </div>
@@ -570,15 +591,20 @@
           <!-- Balances Tab -->
           <div class="master-tab-content" id="masterTab_balances">
             <div class="glass-panel">
-              <h3 class="settings-title"><i data-lucide="landmark"></i> Upload AD Ledger Balances</h3>
-              <div class="upload-zone" onclick="document.getElementById('fileBalances').click()">
-                <i data-lucide="landmark" style="width:48px;height:48px;color:var(--color-secondary);"></i>
-                <h4>Upload Distributor Balances</h4>
-                <p>Drag and drop or click to upload balances (.xlsx, .xls, .csv)</p>
-                <input type="file" id="fileBalances" style="display:none;" accept=".xlsx,.xls,.csv" onchange="parseExcel('balances',this)">
-              </div>
-              <div style="display:flex;gap:12px;justify-content:flex-end;margin-top:16px;">
-                <button class="btn-action" onclick="downloadTemplate('balances')"><i data-lucide="download"></i> Download Template</button>
+              <h3 class="settings-title"><i data-lucide="landmark" style="color:var(--color-secondary);"></i> Upload AD Ledger Balances</h3>
+              <label for="fileBalances">
+                <div class="upload-zone" style="border-color:rgba(0,212,255,0.25);background:rgba(0,212,255,0.02);">
+                  <i data-lucide="landmark" style="width:52px;height:52px;color:var(--color-secondary);"></i>
+                  <h4>Click to Upload Distributor Balances</h4>
+                  <p>Supports .xlsx, .xls, .csv format</p>
+                  <div class="upload-btn-hint" style="background:rgba(0,212,255,0.1);border-color:rgba(0,212,255,0.3);color:var(--color-secondary);"><i data-lucide="upload" style="width:14px;height:14px;"></i> Browse File</div>
+                </div>
+              </label>
+              <input type="file" id="fileBalances" style="display:none;" accept=".xlsx,.xls,.csv" onchange="parseExcel('balances',this);this.value=''">
+              <div id="balanceUploadStatus" style="margin-top:12px;display:none;padding:12px;border-radius:8px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:var(--color-success);font-size:0.85rem;"></div>
+              <div style="display:flex;gap:12px;justify-content:space-between;align-items:center;margin-top:16px;">
+                <p style="font-size:0.78rem;color:var(--color-text-muted);">Required columns: AD Name, Outstanding Balance, Credit Limit</p>
+                <button class="btn-action info" onclick="downloadTemplate('balances')"><i data-lucide="download"></i> Download Template</button>
               </div>
             </div>
           </div>
@@ -1678,12 +1704,15 @@ function closeMobileSidebar(){
 // ============================================================
 // MASTER UPDATION TABS
 // ============================================================
-function showMasterTab(tab){
+function showMasterTab(tab, btn){
   document.querySelectorAll('.master-tab-btn').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.master-tab-content').forEach(c=>c.classList.remove('active'));
-  event.currentTarget.classList.add('active');
+  // Use passed btn or find by id
+  const activeBtn = btn || document.getElementById('mtab_'+tab);
+  if(activeBtn) activeBtn.classList.add('active');
   const el=document.getElementById('masterTab_'+tab);
   if(el)el.classList.add('active');
+  lucide.createIcons();
 }
 
 function loadMasterSettings(){
