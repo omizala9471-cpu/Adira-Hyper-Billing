@@ -394,6 +394,22 @@
         <i data-lucide="layout-dashboard"></i><span class="nav-label">Dashboard</span>
       </a>
       <!-- Admin only -->
+      <a href="#" class="nav-item" id="navItem_livestatus" onclick="showSubTab('livestatus')">
+        <i data-lucide="play"></i><span class="nav-label">Live Allocations</span>
+      </a>
+      <!-- Sales Head only -->
+      <a href="#" class="nav-item" id="navItem_approvals" onclick="showSubTab('approvals')">
+        <i data-lucide="check-square"></i><span class="nav-label">Pending Approvals</span>
+      </a>
+      <!-- RSD only -->
+      <a href="#" class="nav-item" id="navItem_report" onclick="showSubTab('report')">
+        <i data-lucide="file-text"></i><span class="nav-label">Allocation Report</span>
+      </a>
+      <!-- AD only -->
+      <a href="#" class="nav-item" id="navItem_confirm" onclick="showSubTab('confirm')">
+        <i data-lucide="check-circle"></i><span class="nav-label">Confirm Allocation</span>
+      </a>
+      <!-- Admin only -->
       <a href="#" class="nav-item" id="navItem_master" onclick="showSubTab('master')">
         <i data-lucide="database"></i><span class="nav-label">Master Updation</span>
       </a>
@@ -494,6 +510,10 @@
             </div>
           </div>
 
+        </div><!-- /adminPanel_dashboard -->
+
+        <!-- ADMIN: Live AD Allocations Status -->
+        <div class="tab-panel" id="adminPanel_livestatus">
           <!-- Live Status Table -->
           <div class="glass-panel" style="margin-bottom:20px;">
             <div class="section-header">
@@ -973,6 +993,10 @@
             <div id="rsdADCards" style="display:flex;flex-direction:column;gap:12px;"></div>
           </div>
 
+        </div><!-- /rsdPanel_dashboard -->
+
+        <!-- RSD: Allocation Report -->
+        <div class="tab-panel" id="rsdPanel_report">
           <!-- Allocation Report -->
           <div class="glass-panel">
             <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
@@ -1164,6 +1188,10 @@
             </div>
           </div>
 
+        </div><!-- /salesPanel_dashboard -->
+
+        <!-- Sales: Pending Approvals -->
+        <div class="tab-panel" id="salesPanel_approvals">
           <div class="glass-panel">
             <div class="section-header">
               <h3>AD Quantity Adjustment Queue</h3>
@@ -1312,6 +1340,10 @@
           </div>
         </div>
 
+        </div><!-- /adPanel_dashboard -->
+
+        <!-- AD: Confirm Allocations -->
+        <div class="tab-panel" id="adPanel_confirm">
         <!-- Main interaction -->
         <div class="ad-layout">
           <!-- Allocation Table -->
@@ -1406,7 +1438,7 @@
           </div>
         </div>
 
-        </div><!-- /adPanel_dashboard -->
+        </div><!-- /adPanel_confirm -->
 
         <!-- AD Ledger -->
         <div class="tab-panel" id="adPanel_ledger">
@@ -1675,10 +1707,10 @@
 <div class="modal" id="modalAddAllocation">
   <div class="modal-content" style="max-width:480px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <h3 style="margin:0; color:var(--color-primary); font-weight:800; display:flex; align-items:center; gap:8px;">
-        <i data-lucide="plus-circle"></i> Add New Allocation
+      <h3 style="margin:0; color:var(--color-primary); font-weight:800; display:flex; align-items:center; gap:8px;" id="modalAddAllocationTitle">
+        Add New Allocation
       </h3>
-      <button class="btn-action" onclick="closeAddAllocationModal()" style="padding:6px;"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+      <button class="modal-close" onclick="closeAddAllocationModal()"><i data-lucide="x"></i></button>
     </div>
     <div class="form-group" style="margin-bottom:12px;">
       <label for="newAlloc_adName">Distributor Name (AD)</label>
@@ -1714,7 +1746,7 @@
     </div>
     <div style="display:flex; justify-content:flex-end; gap:8px;">
       <button class="btn-action" onclick="closeAddAllocationModal()">Cancel</button>
-      <button class="btn-action primary" onclick="submitManualAllocation()"><i data-lucide="check"></i> Add Allocation</button>
+      <button class="btn-action primary" id="btnSubmitAllocation" onclick="saveAllocation()"><i data-lucide="check"></i> Add Allocation</button>
     </div>
   </div>
 </div>
@@ -2214,27 +2246,27 @@ function loadRoleSpecificView(){
   document.getElementById('sidebarUserRole').className=`role-pill ${currentUser.role}`;
   document.getElementById('sidebarAvatar').innerText=currentUser.fullName.charAt(0).toUpperCase();
   // Hide all nav items first
-  ['navItem_dashboard','navItem_master','navItem_salesorders','navItem_ledger','navItem_distributors','navItem_users','navItem_territory','navItem_broadcast'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  ['navItem_dashboard','navItem_master','navItem_salesorders','navItem_ledger','navItem_distributors','navItem_users','navItem_territory','navItem_broadcast','navItem_livestatus','navItem_report','navItem_approvals','navItem_confirm'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
   // About is always visible for all roles
   showNavItem('navItem_about');
 
   const role=currentUser.role;
   if(role==='admin'){
-    ['navItem_dashboard','navItem_master','navItem_salesorders','navItem_ledger','navItem_distributors','navItem_users'].forEach(id=>showNavItem(id));
+    ['navItem_dashboard','navItem_livestatus','navItem_master','navItem_salesorders','navItem_ledger','navItem_distributors','navItem_users'].forEach(id=>showNavItem(id));
     document.getElementById('viewAdmin').classList.add('active');
     loadDataAndRender(()=>showSubTab('dashboard'));
   }else if(role==='rsd'){
-    ['navItem_dashboard','navItem_ledger','navItem_territory','navItem_broadcast'].forEach(id=>showNavItem(id));
+    ['navItem_dashboard','navItem_report','navItem_ledger','navItem_territory','navItem_broadcast'].forEach(id=>showNavItem(id));
     document.getElementById('viewRSD').classList.add('active');
     loadDataAndRender(()=>showSubTab('dashboard'));
   }else if(role==='sales'){
-    ['navItem_dashboard','navItem_ledger','navItem_distributors'].forEach(id=>showNavItem(id));
+    ['navItem_dashboard','navItem_approvals','navItem_ledger','navItem_distributors'].forEach(id=>showNavItem(id));
     document.getElementById('viewSales').classList.add('active');
     loadDataAndRender(()=>showSubTab('dashboard'));
   }else if(role==='ad'){
-    ['navItem_dashboard','navItem_ledger'].forEach(id=>showNavItem(id));
+    ['navItem_dashboard','navItem_confirm','navItem_ledger'].forEach(id=>showNavItem(id));
     document.getElementById('viewAD').classList.add('active');
-    loadDataAndRender(()=>buildADDashboard());
+    loadDataAndRender(()=>showSubTab('dashboard'));
   }
   lucide.createIcons();
 }
@@ -2279,10 +2311,12 @@ function showSubTab(tab){
   if(navEl)navEl.classList.add('active');
   closeMobileSidebar();
 
-  const titleMap={
+  const titleMap = {
     dashboard:'Dashboard Overview',master:'Master Updation',salesorders:'Sales Orders History',
     ledger:'Allocation Ledger',distributors:'Distributors & Ledger',users:'User Credentials',
-    territory:'Territory Overview',broadcast:'Broadcast Message',about:'About This Application'
+    territory:'Territory Overview',broadcast:'Broadcast Message',about:'About This Application',
+    livestatus:'Live Allocations Status',approvals:'Pending Approvals',report:'Territorial Allocation Report',
+    confirm:'Confirm Allocation'
   };
   document.getElementById('currentNavTitle').innerText=titleMap[tab]||'Dashboard';
 
@@ -2302,9 +2336,10 @@ function showSubTab(tab){
   const role=currentUser.role;
   if(role==='admin'){
     document.querySelectorAll('#viewAdmin .tab-panel').forEach(p=>p.classList.remove('active'));
-    const pmap={dashboard:'adminPanel_dashboard',master:'adminPanel_master',salesorders:'adminPanel_salesorders',ledger:'adminPanel_ledger',distributors:'adminPanel_distributors',users:'adminPanel_users'};
+    const pmap={dashboard:'adminPanel_dashboard',livestatus:'adminPanel_livestatus',master:'adminPanel_master',salesorders:'adminPanel_salesorders',ledger:'adminPanel_ledger',distributors:'adminPanel_distributors',users:'adminPanel_users'};
     if(pmap[tab]){document.getElementById(pmap[tab]).classList.add('active');}
     if(tab==='dashboard'){buildAdminDashboard();}
+    else if(tab==='livestatus'){filterAdminTable();}
     else if(tab==='master'){loadMasterSettings();}
     else if(tab==='salesorders'){buildSalesOrders();}
     else if(tab==='ledger'){buildLedger('admin');}
@@ -2312,24 +2347,27 @@ function showSubTab(tab){
     else if(tab==='users'){loadUsersTable();}
   }else if(role==='rsd'){
     document.querySelectorAll('#viewRSD .tab-panel').forEach(p=>p.classList.remove('active'));
-    const pmap={dashboard:'rsdPanel_dashboard',territory:'rsdPanel_territory',ledger:'rsdPanel_ledger',broadcast:'rsdPanel_broadcast'};
+    const pmap={dashboard:'rsdPanel_dashboard',report:'rsdPanel_report',territory:'rsdPanel_territory',ledger:'rsdPanel_ledger',broadcast:'rsdPanel_broadcast'};
     if(pmap[tab]){document.getElementById(pmap[tab]).classList.add('active');}
-    if(tab==='dashboard')buildRSDDashboard();
+    if(tab==='dashboard')buildRSDDashboard(false);
+    else if(tab==='report')buildRSDDashboard(true);
     else if(tab==='territory')buildRSDTerritory();
     else if(tab==='ledger')buildLedger('rsd');
     else if(tab==='broadcast')loadRSDBroadcastHistory();
   }else if(role==='sales'){
     document.querySelectorAll('#viewSales .tab-panel').forEach(p=>p.classList.remove('active'));
-    const pmap={dashboard:'salesPanel_dashboard',ledger:'salesPanel_ledger',distributors:'salesPanel_distributors'};
+    const pmap={dashboard:'salesPanel_dashboard',approvals:'salesPanel_approvals',ledger:'salesPanel_ledger',distributors:'salesPanel_distributors'};
     if(pmap[tab]){document.getElementById(pmap[tab]).classList.add('active');}
     if(tab==='dashboard')buildSalesDashboard();
+    else if(tab==='approvals')filterSalesApprovals();
     else if(tab==='ledger')buildLedger('sales');
     else if(tab==='distributors')buildDistributors('sales');
   }else if(role==='ad'){
     document.querySelectorAll('#viewAD .tab-panel').forEach(p=>p.classList.remove('active'));
-    const pmap={dashboard:'adPanel_dashboard',ledger:'adPanel_ledger'};
+    const pmap={dashboard:'adPanel_dashboard',confirm:'adPanel_confirm',ledger:'adPanel_ledger'};
     if(pmap[tab]){document.getElementById(pmap[tab]).classList.add('active');}
-    if(tab==='dashboard')buildADDashboard();
+    if(tab==='dashboard')buildADDashboard(false);
+    else if(tab==='confirm')buildADDashboard(true);
     else if(tab==='ledger')buildLedger('ad');
   }
 }
@@ -2447,7 +2485,7 @@ function renderAdminTable(data){
       }else payCell+=` <span class="badge ${item['Payment Verified']==='Verified'?'approved':'rejected'}">${item['Payment Verified']}</span>`;
     }
     const cbCell=bulkMode?`<td class="checkbox-col"><input type="checkbox" class="row-check" data-id="${item.ID}" onchange="updateBulkCount()"></td>`:'';
-    tr.innerHTML=`${cbCell}<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||Number(item['Allocated Value'])||0).toLocaleString('en-IN')}</td><td>${sb}</td><td>${ab}</td><td>${payCell}</td><td><div style="display:flex; gap:4px;"><button class="btn-action" style="padding:5px 10px;font-size:0.75rem;" onclick="openWA('${item['AD Name']}')" title="Message AD"><i data-lucide="message-square"></i></button><button class="btn-action danger" style="padding:5px 10px;font-size:0.75rem;" onclick="deleteManualAllocation('${item.ID}', '${item['AD Name']}', '${item['Model Name']}')" title="Delete Allocation"><i data-lucide="trash-2"></i></button></div></td>`;
+    tr.innerHTML=`${cbCell}<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||Number(item['Allocated Value'])||0).toLocaleString('en-IN')}</td><td>${sb}</td><td>${ab}</td><td>${payCell}</td><td><div style="display:flex; gap:4px;"><button class="btn-action" style="padding:5px 10px;font-size:0.75rem;" onclick="openWA('${item['AD Name']}')" title="Message AD"><i data-lucide="message-square"></i></button><button class="btn-action primary" style="padding:5px 10px;font-size:0.75rem;" onclick="openEditAllocationModal('${item.ID}')" title="Edit Allocation"><i data-lucide="edit"></i></button><button class="btn-action danger" style="padding:5px 10px;font-size:0.75rem;" onclick="deleteManualAllocation('${item.ID}', '${item['AD Name']}', '${item['Model Name']}')" title="Delete Allocation"><i data-lucide="trash-2"></i></button></div></td>`;
     tbody.appendChild(tr);
   };
 
@@ -3983,7 +4021,16 @@ function toggleAdvancedFilters(id) {
   }
 }
 
+let editingAllocationId = null;
+
 function openAddAllocationModal() {
+  editingAllocationId = null;
+  document.getElementById('modalAddAllocationTitle').innerText = 'Add New Allocation';
+  document.getElementById('btnSubmitAllocation').innerHTML = '<i data-lucide="check"></i> Add Allocation';
+  
+  document.getElementById('newAlloc_adName').disabled = false;
+  document.getElementById('newAlloc_modelName').disabled = false;
+  
   const adSelect = document.getElementById('newAlloc_adName');
   const modelSelect = document.getElementById('newAlloc_modelName');
   
@@ -4007,17 +4054,39 @@ function openAddAllocationModal() {
     document.getElementById('newAlloc_area').value = '';
     document.getElementById('newAlloc_totalVal').value = '0';
     
-    const modal = document.getElementById('modalAddAllocation');
-    if (modal) {
-      modal.classList.add('show');
-      lucide.createIcons({node: modal});
-    }
+    openModal('modalAddAllocation');
   }
 }
 
+function openEditAllocationModal(id) {
+  const item = localDB.allocations.find(a => a.ID === id);
+  if (!item) return;
+  
+  editingAllocationId = id;
+  document.getElementById('modalAddAllocationTitle').innerText = 'Edit Allocation';
+  document.getElementById('btnSubmitAllocation').innerHTML = '<i data-lucide="check"></i> Save Changes';
+  
+  const adSelect = document.getElementById('newAlloc_adName');
+  const modelSelect = document.getElementById('newAlloc_modelName');
+  
+  adSelect.innerHTML = `<option value="${item['AD Name']}">${item['AD Name']}</option>`;
+  modelSelect.innerHTML = `<option value="${item['Model Name']}">${item['Model Name']}</option>`;
+  
+  adSelect.disabled = true;
+  modelSelect.disabled = true;
+  
+  document.getElementById('newAlloc_qty').value = item['Allocated Qty'] || '';
+  document.getElementById('newAlloc_price').value = item.Price || '';
+  document.getElementById('newAlloc_area').value = item.Area || '';
+  
+  const total = (Number(item['Allocated Qty']) || 0) * (Number(item.Price) || 0);
+  document.getElementById('newAlloc_totalVal').value = total.toLocaleString('en-IN');
+  
+  openModal('modalAddAllocation');
+}
+
 function closeAddAllocationModal() {
-  const modal = document.getElementById('modalAddAllocation');
-  if (modal) modal.classList.remove('show');
+  closeModal('modalAddAllocation');
 }
 
 function autoFillNewAllocDetails() {
@@ -4044,7 +4113,7 @@ function autoFillNewAllocDetails() {
   document.getElementById('newAlloc_totalVal').value = total.toLocaleString('en-IN');
 }
 
-function submitManualAllocation() {
+function saveAllocation() {
   const adName = document.getElementById('newAlloc_adName').value;
   const modelName = document.getElementById('newAlloc_modelName').value;
   const qty = Number(document.getElementById('newAlloc_qty').value) || 0;
@@ -4058,29 +4127,43 @@ function submitManualAllocation() {
   
   showLoader();
   
-  const newId = 'M_' + Date.now();
-  const newAlloc = {
-    ID: newId,
-    'AD Name': adName,
-    'Model Name': modelName,
-    'Allocated Qty': qty,
-    'Confirmed Qty': '',
-    'PO Amount': '',
-    'Allocated Value': qty * price,
-    Price: price,
-    Status: 'Pending',
-    'Sales Approval': '',
-    'UTR Number': '',
-    'Payment Verified': '',
-    'Last Updated': new Date().toISOString()
-  };
-  
-  localDB.allocations.push(newAlloc);
+  if (editingAllocationId) {
+    const item = localDB.allocations.find(a => a.ID === editingAllocationId);
+    if (item) {
+      item['Allocated Qty'] = qty;
+      item.Price = price;
+      item['Allocated Value'] = qty * price;
+      item.Area = area;
+      if (item.Status !== 'Pending') {
+        item['Confirmed Qty'] = qty;
+        item['PO Amount'] = qty * price;
+      }
+      item['Last Updated'] = new Date().toISOString();
+    }
+  } else {
+    const newId = 'M_' + Date.now();
+    const newAlloc = {
+      ID: newId,
+      'AD Name': adName,
+      'Model Name': modelName,
+      'Allocated Qty': qty,
+      'Confirmed Qty': '',
+      'PO Amount': '',
+      'Allocated Value': qty * price,
+      Price: price,
+      Status: 'Pending',
+      'Sales Approval': '',
+      'UTR Number': '',
+      'Payment Verified': '',
+      'Last Updated': new Date().toISOString()
+    };
+    localDB.allocations.push(newAlloc);
+  }
   
   saveDataToServer(() => {
     hideLoader();
     closeAddAllocationModal();
-    alert("Manual allocation successfully added!");
+    alert(editingAllocationId ? "Allocation changes saved!" : "Manual allocation added!");
     filterAdminTable();
     buildAdminDashboard();
   });
