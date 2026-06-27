@@ -2545,9 +2545,9 @@ function formatCountdown(target){
 // ============================================================
 function onUserRoleChange(){
   const role=document.getElementById('userRole').value;
-  document.getElementById('rsdMappingGroup').style.display=(role==='ad')?'block':'none';
-  document.getElementById('adCodeGroup').style.display=(role==='ad'||role==='rsd')?'block':'none';
-  if(role==='ad')populateRSDDropdown();
+  document.getElementById('rsdMappingGroup').style.display=(role==='ad'||role==='sales')?'block':'none';
+  document.getElementById('adCodeGroup').style.display=(role==='ad')?'block':'none';
+  if(role==='ad'||role==='sales')populateRSDDropdown();
 }
 
 function populateRSDDropdown(){
@@ -2589,7 +2589,7 @@ function renderUsersTable(users){
       <td><code>${u.Username}</code></td>
       <td><span class="role-pill ${u.Role}">${u.Role.toUpperCase()}</span></td>
       <td>${u.Area||'-'}</td>
-      <td style="font-size:0.78rem;">${u.ADCode||''} ${u.Role==='ad'&&rsdName!=='—'?'<br><span style="color:var(--color-text-muted);">RSD: '+rsdName+'</span>':''}</td>
+      <td style="font-size:0.78rem;">${u.ADCode||''} ${(u.Role==='ad'||u.Role==='sales')&&rsdName!=='—'?'<br><span style="color:var(--color-text-muted);">RSD: '+rsdName+'</span>':''}</td>
       <td>
         <div style="display:flex;align-items:center;gap:6px;">
           <span id="${pwId}" style="font-family:monospace;font-size:0.8rem;letter-spacing:2px;color:var(--color-text-muted);">••••••••</span>
@@ -2692,14 +2692,20 @@ function confirmBulkDeleteUsers(){
 function filterUsersByRole(role,btn){
   document.querySelectorAll('.filter-pill').forEach(p=>p.classList.remove('active'));
   if(btn)btn.classList.add('active');
-  const filtered=role==='all'?_allUsersCache:_allUsersCache.filter(u=>u.Role===role);
+  const term=document.getElementById('searchUsers').value.toLowerCase();
+  const filtered=_allUsersCache.filter(u=>{
+    const matchRole=(role==='all'||u.Role===role);
+    const matchSearch=u.FullName.toLowerCase().includes(term)||u.Username.toLowerCase().includes(term);
+    return matchRole&&matchSearch;
+  });
   renderUsersTable(filtered);
 }
 
 function filterUsersTable(){
-  const q=document.getElementById('searchUsers').value.toLowerCase();
-  const filtered=_allUsersCache.filter(u=>u.FullName.toLowerCase().includes(q)||u.Username.toLowerCase().includes(q)||(u.Role||'').toLowerCase().includes(q)||(u.Area||'').toLowerCase().includes(q));
-  renderUsersTable(filtered);
+  const activePill=document.querySelector('.filter-pill.active');
+  const role=activePill?activePill.innerText.toLowerCase():'all';
+  const roleMap={all:'all',admin:'admin',rsd:'rsd',sales:'sales',ad:'ad'};
+  filterUsersByRole(roleMap[role]||'all');
 }
 
 // ============================================================
@@ -2778,7 +2784,7 @@ function editUser(username,fullName,role,area,adCode,mappedRSD){
   document.getElementById('userArea').value=area;
   document.getElementById('userADCode').value=adCode||'';
   onUserRoleChange();
-  if(role==='ad'){populateRSDDropdown();document.getElementById('userRSDMapping').value=mappedRSD||'';}
+  if(role==='ad'||role==='sales'){populateRSDDropdown();document.getElementById('userRSDMapping').value=mappedRSD||'';}
   if(username===currentUser.username||username==='admin')document.getElementById('userRole').disabled=true;
   else document.getElementById('userRole').disabled=false;
   document.getElementById('adminPanel_users').scrollIntoView({behavior:'smooth'});
@@ -2799,11 +2805,13 @@ function confirmDeleteUser(username){
 function resetUserForm(){
   document.getElementById('editUserMode').value='new';
   document.getElementById('userUsername').value='';document.getElementById('userUsername').readOnly=false;
-  document.getElementById('userFullName').value='';document.getElementById('userPassword').value='';
-  document.getElementById('userPassword').placeholder='Enter password...';
-  document.getElementById('userRole').value='ad';document.getElementById('userRole').disabled=false;
-  document.getElementById('userArea').value='';document.getElementById('userADCode').value='';
-  document.getElementById('userRSDMapping').value='';onUserRoleChange();
+  document.getElementById('userFullName').value='';
+  document.getElementById('userPassword').value='';document.getElementById('userPassword').placeholder='Enter password...';
+  document.getElementById('userRole').value='ad';
+  document.getElementById('userArea').value='';
+  document.getElementById('userADCode').value='';
+  document.getElementById('userRSDMapping').value='';
+  onUserRoleChange();
 }
 
 // ============================================================
@@ -2950,7 +2958,7 @@ function processUsersExcelWorkbook(wb){
       }else if(role==='rsd'){
         payload.FullName=row['APX RSD Branch Name']||row['Full Name']||username.toUpperCase();
         payload.Area=row['City/Town']||row['Area']||'';
-        payload.ADCode=row['MD CODE']||row['AD Code']||row['MD Code']||'';
+        payload.ADCode=''; // RSD MD code is not required
         payload.Zone=row['Zone']||'';
         payload.ContactNo=row['RSD NO']||row['RSD No']||'';
         payload.Email=row['RSD Mail']||'';
@@ -2962,6 +2970,9 @@ function processUsersExcelWorkbook(wb){
         payload.Area=row['Area']||'';
         payload.ContactNo=row['Contact No']||'';
         payload.Email=row['Email']||'';
+        if(role==='sales'){
+          payload.MappedRSD=(row['Mapped RSD']||row['RSD']||'').toString().trim();
+        }
       }
 
       list.push(payload);
@@ -3006,17 +3017,17 @@ function downloadUserTemplate(){
   ];
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(adsData),'ADs');
   
-  // RSDs Sheet template
+  // RSDs Sheet template (Removed MD CODE)
   const rsdsData=[
-    ['APX RSD Branch Name','Username','Password','Sales Person','Short Name','RSD Mail','RSD NO','City/Town','Zone','MD CODE'],
-    ['RSD Gujarat Branch','rsd_gujarat','rsd123','Jaydeepsinh Zala','RSD-GJ','rsd_guj@gmail.com','918887776665','Ahmedabad','Gujarat','RSD-GJ-001']
+    ['APX RSD Branch Name','Username','Password','Sales Person','Short Name','RSD Mail','RSD NO','City/Town','Zone'],
+    ['RSD Gujarat Branch','rsd_gujarat','rsd123','Jaydeepsinh Zala','RSD-GJ','rsd_guj@gmail.com','918887776665','Ahmedabad','Gujarat']
   ];
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rsdsData),'RSDs');
   
-  // Sales Managers Sheet template
+  // Sales Managers Sheet template (Added Mapped RSD)
   const salesData=[
-    ['Full Name','Username','Password','Area','Contact No','Email'],
-    ['Sales Manager Gujarat','sales_gujarat','sales123','Gujarat','917776665554','sales_guj@gmail.com']
+    ['Full Name','Username','Password','Area','Contact No','Email','Mapped RSD'],
+    ['Sales Manager Gujarat','sales_gujarat','sales123','Gujarat','917776665554','sales_guj@gmail.com','rsd_gujarat']
   ];
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(salesData),'Sales Managers');
   
@@ -3034,8 +3045,8 @@ function exportUsersToExcel(){
   const wb=XLSX.utils.book_new();
   
   const adsRows=[['AD Name','Username','Password','RSD','City/Town','Zone','MD CODE','AD Cont name','AD Cont No helper','AD Mail']];
-  const rsdsRows=[['APX RSD Branch Name','Username','Password','Sales Person','Short Name','RSD Mail','RSD NO','City/Town','Zone','MD CODE']];
-  const salesRows=[['Full Name','Username','Password','Area','Contact No','Email']];
+  const rsdsRows=[['APX RSD Branch Name','Username','Password','Sales Person','Short Name','RSD Mail','RSD NO','City/Town','Zone']];
+  const salesRows=[['Full Name','Username','Password','Area','Contact No','Email','Mapped RSD']];
   const adminsRows=[['Full Name','Username','Password','Area','Contact No','Email']];
   
   _allUsersCache.forEach(u=>{
@@ -3063,8 +3074,7 @@ function exportUsersToExcel(){
         u.Email||'',
         u.ContactNo||'',
         u.Area||'',
-        u.Zone||'',
-        u.ADCode||''
+        u.Zone||''
       ]);
     }else if(u.Role==='sales'){
       salesRows.push([
@@ -3073,7 +3083,8 @@ function exportUsersToExcel(){
         pw,
         u.Area||'',
         u.ContactNo||'',
-        u.Email||''
+        u.Email||'',
+        u.MappedRSD||''
       ]);
     }else if(u.Role==='admin'){
       adminsRows.push([
