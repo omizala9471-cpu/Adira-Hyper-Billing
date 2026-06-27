@@ -2171,7 +2171,7 @@ function buildLedger(role){
   let data=localDB.allocations;
   if(role==='ad')data=data.filter(a=>a['AD Name'].toLowerCase()===currentUser.fullName.toLowerCase());
   else if(role==='rsd'){
-    const myADs=localDB.users.filter(u=>u.MappedRSD===currentUser.username).map(u=>u.FullName.toLowerCase());
+    const myADs=getRSDADNames();
     data=data.filter(a=>myADs.includes(a['AD Name'].toLowerCase()));
   }
   const tableId=role==='admin'?'adminLedgerTable':role==='rsd'?'rsdLedgerTable':role==='sales'?'salesLedgerTable':'adLedgerTable';
@@ -2195,7 +2195,7 @@ function buildLedger(role){
 // Filter functions for ledger
 function filterAdminLedger(){const q=document.getElementById('searchAdminLedger').value.toLowerCase();const data=localDB.allocations.filter(a=>a['AD Name'].toLowerCase().includes(q)||(a['Model Name']||'').toLowerCase().includes(q));buildLedgerFiltered('adminLedgerTable',data,'admin');}
 function filterSalesLedger(){const q=document.getElementById('searchSalesLedger').value.toLowerCase();const data=localDB.allocations.filter(a=>a['AD Name'].toLowerCase().includes(q)||(a['Model Name']||'').toLowerCase().includes(q));buildLedgerFiltered('salesLedgerTable',data,'sales');}
-function filterRSDLedger(){const q=document.getElementById('searchRSDLedger').value.toLowerCase();const myADs=localDB.users.filter(u=>u.MappedRSD===currentUser.username).map(u=>u.FullName.toLowerCase());const data=localDB.allocations.filter(a=>myADs.includes(a['AD Name'].toLowerCase())&&(a['AD Name'].toLowerCase().includes(q)||(a['Model Name']||'').toLowerCase().includes(q)));buildLedgerFiltered('rsdLedgerTable',data,'rsd');}
+function filterRSDLedger(){const q=document.getElementById('searchRSDLedger').value.toLowerCase();const myADs=getRSDADNames();const data=localDB.allocations.filter(a=>myADs.includes(a['AD Name'].toLowerCase())&&(a['AD Name'].toLowerCase().includes(q)||(a['Model Name']||'').toLowerCase().includes(q)));buildLedgerFiltered('rsdLedgerTable',data,'rsd');}
 
 function buildLedgerFiltered(tableId,data,role){
   const tbody=document.querySelector('#'+tableId+' tbody');if(!tbody)return;tbody.innerHTML='';
@@ -2209,7 +2209,7 @@ function buildLedgerFiltered(tableId,data,role){
 function exportFinalizedPO(role){
   let data=localDB.allocations;
   if(role==='ad'||currentUser.role==='ad')data=data.filter(a=>a['AD Name'].toLowerCase()===currentUser.fullName.toLowerCase());
-  else if(role==='rsd'||currentUser.role==='rsd'){const myADs=localDB.users.filter(u=>u.MappedRSD===currentUser.username).map(u=>u.FullName.toLowerCase());data=data.filter(a=>myADs.includes(a['AD Name'].toLowerCase()));}
+  else if(role==='rsd'||currentUser.role==='rsd'){const myADs=getRSDADNames();data=data.filter(a=>myADs.includes(a['AD Name'].toLowerCase()));}
 
   if(data.length===0){alert('No allocation data to export.');return;}
 
@@ -2297,11 +2297,25 @@ function filterDistributors(role){
   });
 }
 
+function getRSDADNames() {
+  if (!currentUser) return [];
+  const areaLower = (currentUser.area || '').toLowerCase();
+  return localDB.users
+    .filter(u => u.Role === 'ad' && (u.MappedRSD === currentUser.username || (u.Area && u.Area.toLowerCase() === areaLower)))
+    .map(u => u.FullName.toLowerCase());
+}
+
+function getRSDADUsers() {
+  if (!currentUser) return [];
+  const areaLower = (currentUser.area || '').toLowerCase();
+  return localDB.users.filter(u => u.Role === 'ad' && (u.MappedRSD === currentUser.username || (u.Area && u.Area.toLowerCase() === areaLower)));
+}
+
 // ============================================================
 // RSD DASHBOARD
 // ============================================================
 function buildRSDDashboard(){
-  const myADUsers=localDB.users.filter(u=>u.MappedRSD===currentUser.username);
+  const myADUsers=getRSDADUsers();
   const myADNames=myADUsers.map(u=>u.FullName.toLowerCase());
   const myAllocs=localDB.allocations.filter(a=>myADNames.includes(a['AD Name'].toLowerCase()));
 
@@ -2341,7 +2355,7 @@ function buildRSDDashboard(){
 }
 
 function buildRSDTerritory(){
-  const myADUsers=localDB.users.filter(u=>u.MappedRSD===currentUser.username);
+  const myADUsers=getRSDADUsers();
   const tbody=document.querySelector('#rsdTerritoryTable tbody');
   tbody.innerHTML='';
   myADUsers.forEach(adUser=>{
@@ -2359,7 +2373,7 @@ function buildRSDTerritory(){
 
 function filterRSDTerritory(){
   const q=document.getElementById('searchRSDTerritory').value.toLowerCase();
-  const myADUsers=localDB.users.filter(u=>u.MappedRSD===currentUser.username&&(u.FullName.toLowerCase().includes(q)||u.Area.toLowerCase().includes(q)));
+  const myADUsers=getRSDADUsers().filter(u=>u.FullName.toLowerCase().includes(q)||u.Area.toLowerCase().includes(q));
   const tbody=document.querySelector('#rsdTerritoryTable tbody');
   tbody.innerHTML='';
   myADUsers.forEach(adUser=>{
