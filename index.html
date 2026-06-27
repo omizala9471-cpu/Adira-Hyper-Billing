@@ -2068,7 +2068,7 @@ function renderAdminTable(data){
       }else payCell+=` <span class="badge ${item['Payment Verified']==='Verified'?'approved':'rejected'}">${item['Payment Verified']}</span>`;
     }
     const cbCell=bulkMode?`<td class="checkbox-col"><input type="checkbox" class="row-check" data-id="${item.ID}" onchange="updateBulkCount()"></td>`:'';
-    tr.innerHTML=`${cbCell}<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item['Confirmed Qty']||'-'}</td><td>₹${(Number(item['PO Amount'])||Number(item['Allocated Value'])||0).toLocaleString('en-IN')}</td><td>${sb}</td><td>${ab}</td><td>${payCell}</td><td><button class="btn-action" style="padding:5px 10px;font-size:0.75rem;" onclick="openWA('${item['AD Name']}')"><i data-lucide="message-square"></i></button></td>`;
+    tr.innerHTML=`${cbCell}<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||Number(item['Allocated Value'])||0).toLocaleString('en-IN')}</td><td>${sb}</td><td>${ab}</td><td>${payCell}</td><td><button class="btn-action" style="padding:5px 10px;font-size:0.75rem;" onclick="openWA('${item['AD Name']}')"><i data-lucide="message-square"></i></button></td>`;
     tbody.appendChild(tr);
   });
   lucide.createIcons({node:tbody});
@@ -2139,7 +2139,7 @@ function buildSalesOrders(){
   data.forEach((item,i)=>{
     const tr=document.createElement('tr');
     const dt=item['Last Updated']?new Date(item['Last Updated']).toLocaleDateString('en-IN'):'—';
-    tr.innerHTML=`<td>${i+1}</td><td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item['Confirmed Qty']||'-'}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td><td>${getApprovalBadge(item['Sales Approval'], item.Status)}</td><td>${item['UTR Number']||'-'}</td><td>${dt}</td>`;
+    tr.innerHTML=`<td>${i+1}</td><td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td><td>${getApprovalBadge(item['Sales Approval'], item.Status)}</td><td>${item['UTR Number']||'-'}</td><td>${dt}</td>`;
     tbody.appendChild(tr);
   });
   lucide.createIcons({node:tbody});
@@ -2158,7 +2158,7 @@ function filterSalesOrders(){
   data.forEach((item,i)=>{
     const tr=document.createElement('tr');
     const dt=item['Last Updated']?new Date(item['Last Updated']).toLocaleDateString('en-IN'):'—';
-    tr.innerHTML=`<td>${i+1}</td><td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item['Confirmed Qty']||'-'}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td><td>${getApprovalBadge(item['Sales Approval'], item.Status)}</td><td>${item['UTR Number']||'-'}</td><td>${dt}</td>`;
+    tr.innerHTML=`<td>${i+1}</td><td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td><td>${getApprovalBadge(item['Sales Approval'], item.Status)}</td><td>${item['UTR Number']||'-'}</td><td>${dt}</td>`;
     tbody.appendChild(tr);
   });
   lucide.createIcons({node:tbody});
@@ -2183,9 +2183,9 @@ function buildLedger(role){
     const tr=document.createElement('tr');
     const val=(Number(item['PO Amount'])||Number(item['Allocated Value'])||0);
     if(role==='ad'){
-      tr.innerHTML=`<td><strong>${item['Model Name']}</strong></td><td>${item['Allocated Qty']}</td><td>${item['Confirmed Qty']||'-'}</td><td>₹${(Number(item.Price)||0).toLocaleString('en-IN')}</td><td>₹${val.toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td>`;
+      tr.innerHTML=`<td><strong>${item['Model Name']}</strong></td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item.Price)||0).toLocaleString('en-IN')}</td><td>₹${val.toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td>`;
     }else{
-      tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item['Confirmed Qty']||'-'}</td><td>₹${val.toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td>`;
+      tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${val.toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td>`;
     }
     tbody.appendChild(tr);
   });
@@ -2199,7 +2199,7 @@ function filterRSDLedger(){const q=document.getElementById('searchRSDLedger').va
 
 function buildLedgerFiltered(tableId,data,role){
   const tbody=document.querySelector('#'+tableId+' tbody');if(!tbody)return;tbody.innerHTML='';
-  data.forEach(item=>{const tr=document.createElement('tr');const val=(Number(item['PO Amount'])||Number(item['Allocated Value'])||0);tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item['Confirmed Qty']||'-'}</td><td>₹${val.toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td>`;tbody.appendChild(tr);});
+  data.forEach(item=>{const tr=document.createElement('tr');const val=(Number(item['PO Amount'])||Number(item['Allocated Value'])||0);tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${val.toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td>`;tbody.appendChild(tr);});
   lucide.createIcons({node:tbody});
 }
 
@@ -2333,7 +2333,7 @@ function buildRSDDashboard(){
   tbody.innerHTML='';
   myAllocs.forEach(item=>{
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item['Confirmed Qty']||'-'}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td>`;
+    tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td>`;
     tbody.appendChild(tr);
   });
   if(myAllocs.length===0)tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--color-text-muted);">No allocation data for your territory.</td></tr>';
@@ -2421,7 +2421,7 @@ function buildSalesDashboard(){
     const tr=document.createElement('tr');
     const diff=(Number(item['PO Amount'])||0)-(Number(item['Allocated Value'])||0);
     const diffStr=diff>=0?'+₹'+diff.toLocaleString('en-IN'):'-₹'+Math.abs(diff).toLocaleString('en-IN');
-    tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td><strong>${item['Confirmed Qty']}</strong></td><td>₹${(Number(item.Price)||0).toLocaleString('en-IN')}</td><td style="font-weight:700;color:${diff>=0?'var(--color-success)':'var(--color-danger)'}">${diffStr}</td><td><div style="display:flex;gap:6px;"><button class="btn-action success" onclick="handleSalesDecision('${item.ID}',true)"><i data-lucide="check"></i> Approve</button><button class="btn-action danger" onclick="handleSalesDecision('${item.ID}',false)"><i data-lucide="x"></i> Reject</button></div></td>`;
+    tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td><strong>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</strong></td><td>₹${(Number(item.Price)||0).toLocaleString('en-IN')}</td><td style="font-weight:700;color:${diff>=0?'var(--color-success)':'var(--color-danger)'}">${diffStr}</td><td><div style="display:flex;gap:6px;"><button class="btn-action success" onclick="handleSalesDecision('${item.ID}',true)"><i data-lucide="check"></i> Approve</button><button class="btn-action danger" onclick="handleSalesDecision('${item.ID}',false)"><i data-lucide="x"></i> Reject</button></div></td>`;
     tbody.appendChild(tr);
   });
   lucide.createIcons({node:tbody});
@@ -2433,7 +2433,7 @@ function filterSalesApprovals(){
   const tbody=document.querySelector('#salesApprovalsTable tbody');tbody.innerHTML='';
   data.forEach(item=>{
     const tr=document.createElement('tr');const diff=(Number(item['PO Amount'])||0)-(Number(item['Allocated Value'])||0);const diffStr=diff>=0?'+₹'+diff.toLocaleString('en-IN'):'-₹'+Math.abs(diff).toLocaleString('en-IN');
-    tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td><strong>${item['Confirmed Qty']}</strong></td><td>₹${(Number(item.Price)||0).toLocaleString('en-IN')}</td><td style="font-weight:700;color:${diff>=0?'var(--color-success)':'var(--color-danger)'}">${diffStr}</td><td><div style="display:flex;gap:6px;"><button class="btn-action success" onclick="handleSalesDecision('${item.ID}',true)"><i data-lucide="check"></i> Approve</button><button class="btn-action danger" onclick="handleSalesDecision('${item.ID}',false)"><i data-lucide="x"></i> Reject</button></div></td>`;
+    tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td><strong>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</strong></td><td>₹${(Number(item.Price)||0).toLocaleString('en-IN')}</td><td style="font-weight:700;color:${diff>=0?'var(--color-success)':'var(--color-danger)'}">${diffStr}</td><td><div style="display:flex;gap:6px;"><button class="btn-action success" onclick="handleSalesDecision('${item.ID}',true)"><i data-lucide="check"></i> Approve</button><button class="btn-action danger" onclick="handleSalesDecision('${item.ID}',false)"><i data-lucide="x"></i> Reject</button></div></td>`;
     tbody.appendChild(tr);
   });
   lucide.createIcons({node:tbody});
