@@ -625,34 +625,49 @@
 
         <!-- ADMIN: Dashboard -->
         <div class="tab-panel active" id="adminPanel_dashboard">
+          
+          <!-- System Status & Sync Bar -->
+          <div class="glass-panel" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 16px 24px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="status-indicator-dot" style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; display: inline-block;"></span>
+              <span style="font-weight: 700; font-size: 0.88rem; color: var(--color-text-main);">Database Connected</span>
+              <span style="color: var(--color-text-muted); font-size: 0.8rem;">| Last Sync: <strong id="adminLastSyncTime" style="color: var(--color-text-main);">Just now</strong></span>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <a href="https://docs.google.com/spreadsheets" target="_blank" class="btn-action primary" style="font-size: 0.76rem; padding: 6px 12px;"><i data-lucide="external-link" style="width:14px; height:14px; display:inline-block; vertical-align:middle;"></i> Open Google Sheet</a>
+            </div>
+          </div>
+
           <!-- Hero Metrics -->
-          <div class="admin-hero-strip" id="adminHeroStrip">
+          <div class="admin-hero-strip" id="adminHeroStrip" style="margin-bottom: 20px;">
             <div class="hero-metric yellow">
-              <div class="hero-metric-label">Total Allocated</div>
+              <div class="hero-metric-label">Total Allocated Value</div>
               <div class="hero-metric-value" id="adminStatAllocated">₹0</div>
               <div class="hero-metric-sub">Current Cycle</div>
             </div>
             <div class="hero-metric cyan">
-              <div class="hero-metric-label">Confirmed POs</div>
+              <div class="hero-metric-label">Confirmed PO Value</div>
               <div class="hero-metric-value" id="adminStatConfirmed">₹0</div>
               <div class="hero-metric-sub">Value Locked</div>
             </div>
             <div class="hero-metric orange">
-              <div class="hero-metric-label">Pending Payment</div>
+              <div class="hero-metric-label">Pending UTR Audits</div>
               <div class="hero-metric-value" id="adminStatPending">0 ADs</div>
-              <div class="hero-metric-sub">Awaiting UTR</div>
+              <div class="hero-metric-sub">Requires verification</div>
             </div>
             <div class="hero-metric green">
-              <div class="hero-metric-label">Payment Verified</div>
+              <div class="hero-metric-label">Verified Payments</div>
               <div class="hero-metric-value" id="adminStatVerified">₹0</div>
-              <div class="hero-metric-sub">Completed</div>
+              <div class="hero-metric-sub">Settled value</div>
             </div>
           </div>
 
-          <!-- Dashboard Grid: Charts + Activity + Quick Actions -->
-          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-top: 20px;">
-            <!-- Charts and analytics (left side) -->
+          <!-- Dashboard Grid: Analytics & Insights -->
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+            <!-- Left Side: Charts & Model/Area breakdown -->
             <div style="display: flex; flex-direction: column; gap: 20px;">
+              
+              <!-- Charts block -->
               <div class="charts-row" style="margin-top: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 <div class="glass-panel" style="margin-bottom: 0;">
                   <div class="section-header" style="margin-bottom:16px;">
@@ -667,55 +682,53 @@
                   <div class="chart-container" style="height: 240px; position: relative;"><canvas id="adminDonutChart"></canvas></div>
                 </div>
               </div>
-              
-              <!-- Quick Actions Panel -->
-              <div class="glass-panel">
-                <div class="section-header" style="margin-bottom:16px;">
-                  <h3>Quick Admin Tools</h3>
+
+              <!-- Cycle Product & Territory Insights -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <!-- Product Breakdown -->
+                <div class="glass-panel">
+                  <div class="section-header" style="margin-bottom: 12px;">
+                    <h3 style="font-size: 0.9rem; color: var(--color-primary);"><i data-lucide="package" style="width:16px; height:16px; margin-right:6px; display:inline-block; vertical-align:middle;"></i> Top Allocated Models</h3>
+                  </div>
+                  <div id="adminProductInsights" style="display:flex; flex-direction:column; gap:8px;">
+                    <!-- Dynamically populated -->
+                  </div>
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px;">
-                  <div class="quick-action-card" onclick="showSubTab('livestatus')" style="background: rgba(153, 101, 21, 0.05); border: 1px solid rgba(153, 101, 21, 0.15); border-radius: 12px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s;">
-                    <i data-lucide="play-circle" style="width:24px; height:24px; color:#996515; margin-bottom:8px; display:inline-block;"></i>
-                    <h5 style="margin:0; font-size:0.8rem; color:#996515; font-weight:700;">Manage Allocations</h5>
+                <!-- Territory Breakdown -->
+                <div class="glass-panel">
+                  <div class="section-header" style="margin-bottom: 12px;">
+                    <h3 style="font-size: 0.9rem; color: var(--color-primary);"><i data-lucide="map" style="width:16px; height:16px; margin-right:6px; display:inline-block; vertical-align:middle;"></i> Top Territories</h3>
                   </div>
-                  <div class="quick-action-card" onclick="showSubTab('master')" style="background: rgba(153, 101, 21, 0.05); border: 1px solid rgba(153, 101, 21, 0.15); border-radius: 12px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s;">
-                    <i data-lucide="database" style="width:24px; height:24px; color:#996515; margin-bottom:8px; display:inline-block;"></i>
-                    <h5 style="margin:0; font-size:0.8rem; color:#996515; font-weight:700;">Master Update</h5>
-                  </div>
-                  <div class="quick-action-card" onclick="showSubTab('users')" style="background: rgba(153, 101, 21, 0.05); border: 1px solid rgba(153, 101, 21, 0.15); border-radius: 12px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s;">
-                    <i data-lucide="users" style="width:24px; height:24px; color:#996515; margin-bottom:8px; display:inline-block;"></i>
-                    <h5 style="margin:0; font-size:0.8rem; color:#996515; font-weight:700;">User Credentials</h5>
-                  </div>
-                  <div class="quick-action-card" onclick="showSubTab('ledger')" style="background: rgba(153, 101, 21, 0.05); border: 1px solid rgba(153, 101, 21, 0.15); border-radius: 12px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s;">
-                    <i data-lucide="book-open" style="width:24px; height:24px; color:#996515; margin-bottom:8px; display:inline-block;"></i>
-                    <h5 style="margin:0; font-size:0.8rem; color:#996515; font-weight:700;">Allocation Ledger</h5>
+                  <div id="adminTerritoryInsights" style="display:flex; flex-direction:column; gap:8px;">
+                    <!-- Dynamically populated -->
                   </div>
                 </div>
               </div>
+
             </div>
 
-            <!-- Side columns: Progress ring + Activity feed (right side) -->
+            <!-- Right Side: Cycle confirmation ring + Activity Timeline -->
             <div style="display: flex; flex-direction: column; gap: 20px;">
-              <!-- Target Completion Ring Card -->
+              <!-- Confirmation Progress Ring -->
               <div class="glass-panel" style="text-align: center; padding: 24px;">
-                <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 16px; color:#996515;">Cycle Confirmation Rate</h3>
+                <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 16px; color:var(--color-primary);">Cycle Confirmation Rate</h3>
                 <div style="position: relative; width: 120px; height: 120px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
                   <svg width="120" height="120" viewBox="0 0 120 120">
-                    <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(153, 101, 21, 0.1)" stroke-width="10" />
-                    <circle id="adminProgressRing" cx="60" cy="60" r="50" fill="none" stroke="#996515" stroke-width="10" 
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(164, 124, 36, 0.1)" stroke-width="10" />
+                    <circle id="adminProgressRing" cx="60" cy="60" r="50" fill="none" stroke="var(--color-primary)" stroke-width="10" 
                             stroke-dasharray="314.16" stroke-dashoffset="314.16" stroke-linecap="round" style="transition: stroke-dashoffset 0.6s ease; transform: rotate(-90deg); transform-origin: 50% 50%;" />
                   </svg>
-                  <span id="adminProgressPercentText" style="position: absolute; font-size: 1.25rem; font-weight: 800; color: #2d2212;">0%</span>
+                  <span id="adminProgressPercentText" style="position: absolute; font-size: 1.25rem; font-weight: 800; color: var(--color-text-main);">0%</span>
                 </div>
-                <p style="font-size: 0.76rem; color: var(--color-text-muted);" id="adminProgressSubtext">0 of 0 allocations confirmed</p>
+                <p style="font-size: 0.76rem; color: var(--color-text-muted);" id="adminProgressSubtext">0 of 0 confirmed</p>
               </div>
 
               <!-- Activity Feed -->
-              <div class="glass-panel" style="flex-grow: 1; display: flex; flex-direction: column;">
+              <div class="glass-panel" style="flex-grow: 1; display: flex; flex-direction: column; min-height: 280px;">
                 <div class="section-header" style="margin-bottom: 12px;">
                   <h3>Recent Activity</h3>
                 </div>
-                <div class="activity-feed" id="adminActivityFeed" style="max-height: 250px; overflow-y: auto; padding-right: 4px; flex-grow: 1;"></div>
+                <div class="activity-feed" id="adminActivityFeed" style="max-height: 260px; overflow-y: auto; padding-right: 4px; flex-grow: 1;"></div>
               </div>
             </div>
           </div>
@@ -2642,6 +2655,56 @@ function buildAdminDashboard(){
     subtext.innerText = `${confirmedCount} of ${totalAllocations} confirmed`;
     const offset = 314.16 - (progressPercent / 100) * 314.16;
     ring.style.strokeDashoffset = offset;
+  }
+  
+  // Product Insights
+  const modelAlloc = {};
+  localDB.allocations.forEach(a => {
+    const model = a['Model Name'] || 'Unknown';
+    const qty = Number(a['Allocated Qty']) || 0;
+    if (!modelAlloc[model]) modelAlloc[model] = 0;
+    modelAlloc[model] += qty;
+  });
+  const topModels = Object.entries(modelAlloc).sort((a,b) => b[1] - a[1]).slice(0, 4);
+  const prodContainer = document.getElementById('adminProductInsights');
+  if (prodContainer) {
+    prodContainer.innerHTML = '';
+    topModels.forEach(([model, qty]) => {
+      prodContainer.innerHTML += `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding: 6px 0; border-bottom: 1px dashed rgba(0,0,0,0.05);">
+          <span style="font-size:0.8rem; font-weight:600; color:var(--color-text-main);">${model}</span>
+          <span style="font-size:0.78rem; font-weight:700; color:var(--color-primary);">${qty.toLocaleString('en-IN')} units</span>
+        </div>`;
+    });
+    if (topModels.length === 0) prodContainer.innerHTML = '<div style="color:var(--color-text-muted); font-size:0.8rem;">No data.</div>';
+  }
+
+  // Territory Insights
+  const areaAlloc = {};
+  localDB.allocations.forEach(a => {
+    const area = a.Area || 'Other';
+    const val = Number(a['Allocated Value']) || 0;
+    if (!areaAlloc[area]) areaAlloc[area] = 0;
+    areaAlloc[area] += val;
+  });
+  const topAreas = Object.entries(areaAlloc).sort((a,b) => b[1] - a[1]).slice(0, 4);
+  const terrContainer = document.getElementById('adminTerritoryInsights');
+  if (terrContainer) {
+    terrContainer.innerHTML = '';
+    topAreas.forEach(([area, val]) => {
+      terrContainer.innerHTML += `
+        <div style="display:flex; justify-content:space-between; align-items:center; padding: 6px 0; border-bottom: 1px dashed rgba(0,0,0,0.05);">
+          <span style="font-size:0.8rem; font-weight:600; color:var(--color-text-main);">${area}</span>
+          <span style="font-size:0.78rem; font-weight:700; color:var(--color-primary);">₹${val.toLocaleString('en-IN')}</span>
+        </div>`;
+    });
+    if (topAreas.length === 0) terrContainer.innerHTML = '<div style="color:var(--color-text-muted); font-size:0.8rem;">No data.</div>';
+  }
+
+  // Last Sync Time Update
+  const syncTimeEl = document.getElementById('adminLastSyncTime');
+  if (syncTimeEl) {
+    syncTimeEl.innerText = new Date().toLocaleTimeString('en-IN', {hour: '2-digit', minute:'2-digit'});
   }
   
   renderAdminTable(localDB.allocations);
