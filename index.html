@@ -860,8 +860,14 @@
 
           <!-- Allocation Report -->
           <div class="glass-panel">
-            <div class="section-header">
-              <h3>Allocation Report — My ADs</h3>
+            <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+              <div style="display:flex; align-items:center; gap:12px;">
+                <h3 id="rsdReportTitle">Allocation Report — My ADs</h3>
+                <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:0.85rem; color:var(--color-text-muted); font-weight:normal; user-select:none;">
+                  <input type="checkbox" id="rsdReportShowAll" onchange="buildRSDDashboard()" style="accent-color:var(--color-primary); width:15px; height:15px; cursor:pointer;">
+                  Show All ADs
+                </label>
+              </div>
               <button class="btn-action primary" onclick="exportFinalizedPO('rsd')"><i data-lucide="download"></i> Export Report</button>
             </div>
             <div class="table-container">
@@ -2209,7 +2215,13 @@ function buildLedgerFiltered(tableId,data,role){
 function exportFinalizedPO(role){
   let data=localDB.allocations;
   if(role==='ad'||currentUser.role==='ad')data=data.filter(a=>a['AD Name'].toLowerCase()===currentUser.fullName.toLowerCase());
-  else if(role==='rsd'||currentUser.role==='rsd'){const myADs=getRSDADNames();data=data.filter(a=>myADs.includes(a['AD Name'].toLowerCase()));}
+  else if(role==='rsd'||currentUser.role==='rsd'){
+    const showAll = document.getElementById('rsdReportShowAll')?.checked;
+    if (!showAll) {
+      const myADs=getRSDADNames();
+      data=data.filter(a=>myADs.includes(a['AD Name'].toLowerCase()));
+    }
+  }
 
   if(data.length===0){alert('No allocation data to export.');return;}
 
@@ -2343,14 +2355,24 @@ function buildRSDDashboard(){
   if(myADUsers.length===0)cardsDiv.innerHTML='<p style="color:var(--color-text-muted);font-size:0.85rem;">No ADs mapped to your territory. Contact admin to map ADs to your RSD profile.</p>';
 
   // Allocation Report Table
+  const showAll = document.getElementById('rsdReportShowAll')?.checked;
+  const titleEl = document.getElementById('rsdReportTitle');
+  if (titleEl) {
+    titleEl.innerText = showAll ? 'Allocation Report — All ADs' : 'Allocation Report — My ADs';
+  }
+  
+  const reportAllocs = showAll ? localDB.allocations : myAllocs;
+  
   const tbody=document.querySelector('#rsdReportTable tbody');
   tbody.innerHTML='';
-  myAllocs.forEach(item=>{
+  reportAllocs.forEach(item=>{
     const tr=document.createElement('tr');
     tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td>`;
     tbody.appendChild(tr);
   });
-  if(myAllocs.length===0)tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--color-text-muted);">No allocation data for your territory.</td></tr>';
+  if(reportAllocs.length===0) {
+    tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--color-text-muted);">${showAll ? 'No allocation data found.' : 'No allocation data for your territory.'}</td></tr>`;
+  }
   lucide.createIcons({node:tbody});
 }
 
