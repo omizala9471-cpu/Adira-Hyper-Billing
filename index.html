@@ -329,26 +329,26 @@
     }
   
     /* ============================================================
-       MIDNIGHT GOLD PREMIUM PALETTE
+       LIGHT PLATINUM & BRUSHED GOLD PALETTE
        ============================================================ */
     :root {
-      --bg-dark: #080a0f; /* Deep Obsidian Slate */
-      --bg-card: rgba(15, 18, 26, 0.95); /* Rich Dark Frosted Glass */
-      --bg-card-hover: rgba(22, 27, 38, 0.98);
-      --border-color: rgba(212, 175, 55, 0.12); /* Subtle Gold Dust border */
-      --border-hover: rgba(212, 175, 55, 0.35);
-      --color-primary: #dfb743; /* Bright Premium Gold */
-      --color-primary-rgb: 223, 183, 67;
-      --color-secondary: #00d4ff;
+      --bg-dark: #f4f6f9; /* Soft Platinum Off-White */
+      --bg-card: rgba(255, 255, 255, 0.88); /* Clean White Frosted Glass */
+      --bg-card-hover: rgba(255, 255, 255, 0.96);
+      --border-color: rgba(184, 145, 45, 0.15); /* Brushed Gold borders */
+      --border-hover: rgba(184, 145, 45, 0.4);
+      --color-primary: #a47c24; /* Brushed Dark Gold */
+      --color-primary-rgb: 164, 124, 36;
+      --color-secondary: #0ea5e9;
       --color-success: #10b981;
       --color-warning: #f59e0b;
       --color-danger: #ef4444;
       --color-info: #8b5cf6;
       --color-rsd: #f97316;
       --color-rsd-rgb: 249,115,22;
-      --color-text-main: #f8fafc; /* Crisp White */
-      --color-text-muted: #94a3b8; /* Slate gray */
-      --glass-shadow: 0 10px 40px rgba(0, 0, 0, 0.65);
+      --color-text-main: #1e293b; /* Deep Slate Charcoal */
+      --color-text-muted: #64748b; /* Medium Slate Gray */
+      --glass-shadow: 0 8px 30px rgba(184, 145, 45, 0.06);
     }
     
     body {
@@ -358,89 +358,89 @@
     
     /* Top Bar Gold Highlight */
     .top-bar {
-      background: linear-gradient(135deg, #181c25, #0f121a) !important;
-      border-bottom: 1px solid rgba(212, 175, 55, 0.15) !important;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+      background: linear-gradient(135deg, #b38b2d, #916e1e) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+      box-shadow: 0 4px 20px rgba(184, 145, 45, 0.15) !important;
     }
     .top-bar #currentNavTitle {
-      color: #dfb743 !important; /* Gold Title! */
+      color: #ffffff !important;
       font-weight: 800 !important;
       letter-spacing: 0.5px !important;
     }
     .top-bar .btn-menu-toggle, 
     .top-bar .btn-action {
-      border-color: rgba(255, 255, 255, 0.08) !important;
-      color: var(--color-text-muted) !important;
-      background: rgba(255, 255, 255, 0.03) !important;
+      border-color: rgba(255, 255, 255, 0.25) !important;
+      color: #ffffff !important;
+      background: rgba(255, 255, 255, 0.1) !important;
     }
     .top-bar .btn-menu-toggle:hover, 
     .top-bar .btn-action:hover {
-      background: rgba(212, 175, 55, 0.08) !important;
-      border-color: #dfb743 !important;
-      color: #dfb743 !important;
+      background: rgba(255, 255, 255, 0.22) !important;
+      border-color: #ffffff !important;
+      color: #ffffff !important;
     }
     .top-bar .btn-action.primary {
-      background: rgba(212, 175, 55, 0.15) !important;
-      border-color: rgba(212, 175, 55, 0.4) !important;
-      color: #dfb743 !important;
+      background: #ffffff !important;
+      color: #a47c24 !important;
+      border-color: #ffffff !important;
     }
     
     /* Sidebar styling for warm premium look */
     .app-sidebar {
-      background: #0b0d12 !important; /* Obsidian black */
-      border-right: 1px solid rgba(212, 175, 55, 0.15) !important;
+      background: #191d26 !important; /* Deep Navy Obsidian */
+      border-right: 1px solid rgba(184, 145, 45, 0.18) !important;
     }
     .sidebar-title h2,
     #sidebarUserName {
       color: #ebd197 !important; /* Gold metallic text */
     }
     .profile-avatar {
-      background: linear-gradient(135deg, #ebd197, #dfb743) !important;
-      color: #0b0d12 !important;
+      background: linear-gradient(135deg, #ebd197, #a47c24) !important;
+      color: #191d26 !important;
     }
     .nav-item.active {
-      background: linear-gradient(135deg, rgba(223, 183, 67, 0.15), rgba(223, 183, 67, 0.05)) !important;
-      color: #dfb743 !important;
-      border-color: rgba(223, 183, 67, 0.3) !important;
+      background: linear-gradient(135deg, rgba(235, 209, 151, 0.15), rgba(164, 124, 36, 0.08)) !important;
+      color: #ebd197 !important;
+      border-color: rgba(235, 209, 151, 0.3) !important;
     }
     .nav-item.active i {
-      color: #dfb743 !important;
+      color: #ebd197 !important;
     }
     .nav-item:hover {
-      background: rgba(255, 255, 255, 0.04) !important;
-      color: #f8fafc !important;
+      background: rgba(255, 255, 255, 0.05) !important;
+      color: #ebd197 !important;
     }
     
     /* Table headers, inputs, scrollbars & dialogs */
     thead th {
-      background: rgba(212, 175, 55, 0.05) !important;
-      color: #dfb743 !important;
-      border-bottom: 2px solid rgba(212, 175, 55, 0.25) !important;
+      background: rgba(164, 124, 36, 0.06) !important;
+      color: #a47c24 !important;
+      border-bottom: 2px solid rgba(164, 124, 36, 0.22) !important;
       text-transform: uppercase;
       font-size: 0.72rem;
       letter-spacing: 0.5px;
     }
     tr {
-      border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
     }
     tr:hover {
-      background: rgba(255, 255, 255, 0.02) !important;
+      background: rgba(164, 124, 36, 0.015) !important;
     }
     
     .form-control {
-      background: rgba(255, 255, 255, 0.03) !important;
-      color: #f8fafc !important;
-      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      background: #ffffff !important;
+      color: #1e293b !important;
+      border: 1px solid rgba(164, 124, 36, 0.22) !important;
     }
     .form-control:focus {
-      border-color: #dfb743 !important;
-      background: rgba(223, 183, 67, 0.03) !important;
-      box-shadow: 0 0 0 3px rgba(223, 183, 67, 0.15) !important;
+      border-color: #a47c24 !important;
+      background: #ffffff !important;
+      box-shadow: 0 0 0 3px rgba(164, 124, 36, 0.15) !important;
     }
     select.form-control,
     select.form-control option {
-      background-color: #0f121a !important;
-      color: #f8fafc !important;
+      background-color: #ffffff !important;
+      color: #1e293b !important;
     }
     
     /* Scrollbar */
@@ -448,40 +448,39 @@
       background: var(--bg-dark);
     }
     ::-webkit-scrollbar-thumb {
-      background: rgba(212, 175, 55, 0.2);
+      background: rgba(164, 124, 36, 0.2);
     }
     
     /* Button overrides */
     .btn-submit {
-      background: linear-gradient(135deg, #dfb743, #b8912d) !important;
-      color: #0b0d12 !important;
-      font-weight: 800 !important;
+      background: linear-gradient(135deg, #b38b2d, #916e1e) !important;
+      color: #ffffff !important;
     }
     .btn-submit:hover {
-      box-shadow: 0 4px 15px rgba(223, 183, 67, 0.3) !important;
+      box-shadow: 0 4px 15px rgba(164, 124, 36, 0.25) !important;
     }
     .btn-action.primary {
-      background: rgba(223, 183, 67, 0.1) !important;
-      border-color: rgba(223, 183, 67, 0.25) !important;
-      color: #dfb743 !important;
+      background: rgba(164, 124, 36, 0.08) !important;
+      border-color: rgba(164, 124, 36, 0.25) !important;
+      color: #a47c24 !important;
     }
     .btn-action.primary:hover {
-      background: #dfb743 !important;
-      color: #0b0d12 !important;
+      background: #a47c24 !important;
+      color: #ffffff !important;
     }
     
     /* Card headers & dividers */
     .category-divider-header {
-      background: rgba(212, 175, 55, 0.05) !important;
-      color: #dfb743 !important;
+      background: rgba(164, 124, 36, 0.06) !important;
+      color: #a47c24 !important;
     }
     
     /* Modals & Dialogs */
     .modal-content {
-      background: #0f121a !important;
-      border: 1px solid rgba(212, 175, 55, 0.2) !important;
-      color: #f8fafc !important;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8) !important;
+      background: #ffffff !important;
+      border: 1px solid rgba(164, 124, 36, 0.25) !important;
+      color: #1e293b !important;
+      box-shadow: 0 10px 40px rgba(164, 124, 36, 0.15) !important;
     }
     </style>
 </head>
