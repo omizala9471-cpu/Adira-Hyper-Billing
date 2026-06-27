@@ -499,6 +499,7 @@
             <div class="section-header">
               <h3>Live AD Allocations Status</h3>
               <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <button class="btn-action primary" onclick="openAddAllocationModal()"><i data-lucide="plus-circle"></i> Add Allocation</button>
                 <div style="display:flex;gap:8px;align-items:center;">
                   <div class="search-bar" style="min-width:200px;">
                     <i data-lucide="search"></i>
@@ -1670,6 +1671,54 @@
   </div>
 </div>
 
+<!-- Add Allocation Modal -->
+<div class="modal" id="modalAddAllocation">
+  <div class="modal-content" style="max-width:480px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <h3 style="margin:0; color:var(--color-primary); font-weight:800; display:flex; align-items:center; gap:8px;">
+        <i data-lucide="plus-circle"></i> Add New Allocation
+      </h3>
+      <button class="btn-action" onclick="closeAddAllocationModal()" style="padding:6px;"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label for="newAlloc_adName">Distributor Name (AD)</label>
+      <select id="newAlloc_adName" class="form-control" style="padding-left:10px; background:rgba(10,16,32,0.95);" onchange="autoFillNewAllocDetails()">
+        <option value="">Select AD...</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label for="newAlloc_modelName">Model Name</label>
+      <select id="newAlloc_modelName" class="form-control" style="padding-left:10px; background:rgba(10,16,32,0.95);" onchange="autoFillNewAllocDetails()">
+        <option value="">Select Model...</option>
+      </select>
+    </div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label for="newAlloc_qty">Allocated Quantity</label>
+        <input type="number" id="newAlloc_qty" class="form-control" min="1" placeholder="e.g. 50" style="padding-left:12px;" oninput="autoFillNewAllocDetails()">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label for="newAlloc_price">DP Rate (₹)</label>
+        <input type="number" id="newAlloc_price" class="form-control" min="0" placeholder="e.g. 15000" style="padding-left:12px;" oninput="autoFillNewAllocDetails()">
+      </div>
+    </div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:20px;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label for="newAlloc_area">Area / Territory</label>
+        <input type="text" id="newAlloc_area" class="form-control" placeholder="e.g. Gujarat" style="padding-left:12px;">
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label for="newAlloc_totalVal">Total Value (₹)</label>
+        <input type="text" id="newAlloc_totalVal" class="form-control" readonly placeholder="0" style="padding-left:12px; opacity:0.75;">
+      </div>
+    </div>
+    <div style="display:flex; justify-content:flex-end; gap:8px;">
+      <button class="btn-action" onclick="closeAddAllocationModal()">Cancel</button>
+      <button class="btn-action primary" onclick="submitManualAllocation()"><i data-lucide="check"></i> Add Allocation</button>
+    </div>
+  </div>
+</div>
+
 <!-- Status / Loader Modal -->
 <div class="modal" id="modalStatus">
   <div class="modal-content" style="max-width:300px;text-align:center;">
@@ -2398,7 +2447,7 @@ function renderAdminTable(data){
       }else payCell+=` <span class="badge ${item['Payment Verified']==='Verified'?'approved':'rejected'}">${item['Payment Verified']}</span>`;
     }
     const cbCell=bulkMode?`<td class="checkbox-col"><input type="checkbox" class="row-check" data-id="${item.ID}" onchange="updateBulkCount()"></td>`:'';
-    tr.innerHTML=`${cbCell}<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||Number(item['Allocated Value'])||0).toLocaleString('en-IN')}</td><td>${sb}</td><td>${ab}</td><td>${payCell}</td><td><button class="btn-action" style="padding:5px 10px;font-size:0.75rem;" onclick="openWA('${item['AD Name']}')"><i data-lucide="message-square"></i></button></td>`;
+    tr.innerHTML=`${cbCell}<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||Number(item['Allocated Value'])||0).toLocaleString('en-IN')}</td><td>${sb}</td><td>${ab}</td><td>${payCell}</td><td><div style="display:flex; gap:4px;"><button class="btn-action" style="padding:5px 10px;font-size:0.75rem;" onclick="openWA('${item['AD Name']}')" title="Message AD"><i data-lucide="message-square"></i></button><button class="btn-action danger" style="padding:5px 10px;font-size:0.75rem;" onclick="deleteManualAllocation('${item.ID}', '${item['AD Name']}', '${item['Model Name']}')" title="Delete Allocation"><i data-lucide="trash-2"></i></button></div></td>`;
     tbody.appendChild(tr);
   };
 
@@ -3931,6 +3980,122 @@ function toggleAdvancedFilters(id) {
   if (el) {
     el.style.display = el.style.display === 'none' ? 'flex' : 'none';
     lucide.createIcons({node: el});
+  }
+}
+
+function openAddAllocationModal() {
+  const adSelect = document.getElementById('newAlloc_adName');
+  const modelSelect = document.getElementById('newAlloc_modelName');
+  
+  if (adSelect && modelSelect) {
+    adSelect.innerHTML = '<option value="">Select AD...</option>';
+    modelSelect.innerHTML = '<option value="">Select Model...</option>';
+    
+    const adUsers = localDB.users.filter(u => u.Role === 'ad');
+    const adNames = [...new Set(adUsers.map(u => u.FullName))].sort();
+    adNames.forEach(name => {
+      adSelect.innerHTML += `<option value="${name}">${name}</option>`;
+    });
+    
+    const models = Object.keys(localDB.prices).sort();
+    models.forEach(model => {
+      modelSelect.innerHTML += `<option value="${model}">${model}</option>`;
+    });
+    
+    document.getElementById('newAlloc_qty').value = '';
+    document.getElementById('newAlloc_price').value = '';
+    document.getElementById('newAlloc_area').value = '';
+    document.getElementById('newAlloc_totalVal').value = '0';
+    
+    const modal = document.getElementById('modalAddAllocation');
+    if (modal) {
+      modal.classList.add('show');
+      lucide.createIcons({node: modal});
+    }
+  }
+}
+
+function closeAddAllocationModal() {
+  const modal = document.getElementById('modalAddAllocation');
+  if (modal) modal.classList.remove('show');
+}
+
+function autoFillNewAllocDetails() {
+  const adName = document.getElementById('newAlloc_adName').value;
+  const modelName = document.getElementById('newAlloc_modelName').value;
+  const qty = Number(document.getElementById('newAlloc_qty').value) || 0;
+  
+  if (adName) {
+    const adUser = localDB.users.find(u => u.FullName === adName);
+    if (adUser && adUser.Area) {
+      document.getElementById('newAlloc_area').value = adUser.Area;
+    }
+  }
+  
+  if (modelName) {
+    const price = localDB.prices[modelName] || 0;
+    if (price && !document.getElementById('newAlloc_price').value) {
+      document.getElementById('newAlloc_price').value = price;
+    }
+  }
+  
+  const curPrice = Number(document.getElementById('newAlloc_price').value) || 0;
+  const total = qty * curPrice;
+  document.getElementById('newAlloc_totalVal').value = total.toLocaleString('en-IN');
+}
+
+function submitManualAllocation() {
+  const adName = document.getElementById('newAlloc_adName').value;
+  const modelName = document.getElementById('newAlloc_modelName').value;
+  const qty = Number(document.getElementById('newAlloc_qty').value) || 0;
+  const price = Number(document.getElementById('newAlloc_price').value) || 0;
+  const area = document.getElementById('newAlloc_area').value || 'Gujarat';
+  
+  if (!adName || !modelName || qty <= 0) {
+    alert("Please select AD, Model, and enter a valid quantity.");
+    return;
+  }
+  
+  showLoader();
+  
+  const newId = 'M_' + Date.now();
+  const newAlloc = {
+    ID: newId,
+    'AD Name': adName,
+    'Model Name': modelName,
+    'Allocated Qty': qty,
+    'Confirmed Qty': '',
+    'PO Amount': '',
+    'Allocated Value': qty * price,
+    Price: price,
+    Status: 'Pending',
+    'Sales Approval': '',
+    'UTR Number': '',
+    'Payment Verified': '',
+    'Last Updated': new Date().toISOString()
+  };
+  
+  localDB.allocations.push(newAlloc);
+  
+  saveDataToServer(() => {
+    hideLoader();
+    closeAddAllocationModal();
+    alert("Manual allocation successfully added!");
+    filterAdminTable();
+    buildAdminDashboard();
+  });
+}
+
+function deleteManualAllocation(id, adName, modelName) {
+  if (confirm(`Are you sure you want to delete the allocation of ${modelName} for ${adName}?`)) {
+    showLoader();
+    localDB.allocations = localDB.allocations.filter(a => a.ID !== id);
+    saveDataToServer(() => {
+      hideLoader();
+      alert("Allocation deleted successfully!");
+      filterAdminTable();
+      buildAdminDashboard();
+    });
   }
 }
 
