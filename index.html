@@ -799,9 +799,18 @@
               <button class="filter-pill" onclick="filterUsersByRole('ad',this)">AD</button>
             </div>
             <div class="table-container">
+              <!-- Bulk Action Bar -->
+              <div id="usersBulkBar" style="display:none;align-items:center;gap:12px;padding:10px 16px;background:linear-gradient(135deg,rgba(255,200,59,0.12),rgba(255,200,59,0.06));border:1px solid rgba(255,200,59,0.3);border-radius:10px;margin-bottom:10px;flex-wrap:wrap;">
+                <span id="usersBulkCount" style="font-size:0.85rem;font-weight:700;color:var(--color-primary);">0 selected</span>
+                <div style="display:flex;gap:8px;margin-left:auto;flex-wrap:wrap;">
+                  <button class="btn-action danger" onclick="confirmBulkDeleteUsers()"><i data-lucide="trash-2" style="width:14px;height:14px;"></i> Delete Selected</button>
+                  <button class="btn-action" onclick="clearUserSelection()"><i data-lucide="x" style="width:14px;height:14px;"></i> Clear</button>
+                </div>
+              </div>
               <table id="usersTable">
                 <thead>
                   <tr>
+                    <th style="width:36px;"><input type="checkbox" id="usersSelectAll" onchange="toggleSelectAllUsers(this)" title="Select All" style="width:16px;height:16px;cursor:pointer;accent-color:var(--color-primary);"></th>
                     <th>Full Name</th><th>Username</th><th>Role</th><th>Area</th><th>AD Code / RSD</th><th>Password</th><th>Actions</th>
                   </tr>
                 </thead>
@@ -2597,13 +2606,19 @@ function loadUsersTable(){
 function renderUsersTable(users){
   const tbody=document.querySelector('#usersTable tbody');
   tbody.innerHTML='';
-  if(users.length===0){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--color-text-muted);">No users found.</td></tr>';return;}
+  // Reset select-all
+  const sa=document.getElementById('usersSelectAll');
+  if(sa)sa.checked=false;
+  hideBulkBar();
+
+  if(users.length===0){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--color-text-muted);">No users found.</td></tr>';return;}
   users.forEach(u=>{
     const rsdName=u.MappedRSD?(_allUsersCache.find(x=>x.Username===u.MappedRSD)||{}).FullName||u.MappedRSD:'—';
     const tr=document.createElement('tr');
     const pwDisplay=u.PlainPassword||'(not set)';
     const pwId='pw_'+u.Username.replace(/[^a-z0-9]/gi,'_');
     tr.innerHTML=`
+      <td><input type="checkbox" class="user-row-cb" data-username="${u.Username}" onchange="onUserRowCheck()" style="width:16px;height:16px;cursor:pointer;accent-color:var(--color-primary);"></td>
       <td><strong>${u.FullName}</strong></td>
       <td><code>${u.Username}</code></td>
       <td><span class="role-pill ${u.Role}">${u.Role.toUpperCase()}</span></td>
@@ -2629,6 +2644,83 @@ function renderUsersTable(users){
     tbody.appendChild(tr);
   });
   lucide.createIcons({node:tbody});
+}
+
+// ============================================================
+// BULK USER SELECTION
+// ============================================================
+function toggleSelectAllUsers(masterCb){
+  document.querySelectorAll('.user-row-cb').forEach(cb=>cb.checked=masterCb.checked);
+  onUserRowCheck();
+}
+
+function onUserRowCheck(){
+  const all=document.querySelectorAll('.user-row-cb');
+  const checked=document.querySelectorAll('.user-row-cb:checked');
+  const master=document.getElementById('usersSelectAll');
+  if(master){
+    master.checked=checked.length===all.length&&all.length>0;
+    master.indeterminate=checked.length>0&&checked.length<all.length;
+  }
+  const bar=document.getElementById('usersBulkBar');
+  const countEl=document.getElementById('usersBulkCount');
+  if(checked.length>0){
+    bar.style.display='flex';
+    countEl.innerText=`${checked.length} user${checked.length>1?'s':''} selected`;
+    lucide.createIcons({node:bar});
+  }else{
+    bar.style.display='none';
+  }
+}
+
+function hideBulkBar(){
+  const bar=document.getElementById('usersBulkBar');
+  if(bar)bar.style.display='none';
+}
+
+function clearUserSelection(){
+  document.querySelectorAll('.user-row-cb').forEach(cb=>cb.checked=false);
+  const master=document.getElementById('usersSelectAll');
+  if(master){master.checked=false;master.indeterminate=false;}
+  hideBulkBar();
+}
+
+function getSelectedUsernames(){
+  return Array.from(document.querySelectorAll('.user-row-cb:checked')).map(cb=>cb.dataset.username);
+}
+
+function confirmBulkDeleteUsers(){
+  const selected=getSelectedUsernames();
+  if(selected.length===0)return;
+  // Check if trying to delete own account
+  const selfIncluded=selected.includes(currentUser.username);
+  if(selfIncluded){alert('You cannot delete your own account. Please deselect it first.');return;}
+
+  // Build confirmation list
+  const listHTML=selected.map(u=>`• ${u}`).join('\n');
+  const msg=`Delete ${selected.length} user${selected.length>1?'s':''}?\n\n${listHTML}\n\nThis action cannot be undone.`;
+  if(!confirm(msg))return;
+
+  showLoader('Deleting','Removing selected users...');
+  let done=0; let failed=0;
+  selected.forEach(username=>{
+    google.script.run
+      .withSuccessHandler(res=>{
+        done++;
+        if(!res.success)failed++;
+        if(done===selected.length){
+          hideLoader();
+          if(failed>0)alert(`${done-failed} deleted, ${failed} failed.`);
+          else alert(`${done} user${done>1?'s':''} deleted successfully.`);
+          loadUsersTable();
+        }
+      })
+      .withFailureHandler(e=>{
+        done++;failed++;
+        if(done===selected.length){hideLoader();alert(`Done with errors: ${e}`);loadUsersTable();}
+      })
+      .deleteUser(username);
+  });
 }
 
 function filterUsersByRole(role,btn){
