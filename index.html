@@ -1657,12 +1657,12 @@ if(typeof google==='undefined'){
         const upd={};
         list.forEach((item,i)=>{
           const id='AL'+(1000+i);
-          upd[id]={ID:id,'AD Name':item.adName,'Contact Number':item.contactNumber||'',Area:item.area||'','Model Name':item.modelName,'Allocated Qty':Number(item.allocatedQty),Price:Number(item.price),'Allocated Value':Number(item.allocatedQty)*Number(item.price),'Confirmed Qty':Number(item.allocatedQty),'PO Amount':Number(item.allocatedQty)*Number(item.price),Status:'Pending','Last Updated':new Date().toISOString(),'Sales Approval':'Approved','UTR Number':'','Payment Verified':'Pending',Transporter:'','LR Number':'','Dispatch Date':''};
+          upd[id]={ID:id,'AD Name':item.adName,'Contact Number':item.contactNumber||'',Area:item.area||'','Model Name':item.modelName,'Allocated Qty':Number(item.allocatedQty),Price:Number(item.price),'Allocated Value':Number(item.allocatedQty)*Number(item.price),'Confirmed Qty':'','PO Amount':'',Status:'Pending','Last Updated':new Date().toISOString(),'Sales Approval':'','UTR Number':'','Payment Verified':'Pending',Transporter:'','LR Number':'','Dispatch Date':''};
         });
         database.ref('allocations').set(upd).then(()=>self._s&&self._s({success:true,count:list.length})).catch(e=>self._f&&self._f(e));
       }else{
         setTimeout(()=>{
-          localDB.allocations=list.map((p,i)=>({ID:'AL'+(1000+i),'AD Name':p.adName,'Contact Number':p.contactNumber||'',Area:p.area||'','Model Name':p.modelName,'Allocated Qty':p.allocatedQty,Price:p.price,'Allocated Value':p.allocatedQty*p.price,'Confirmed Qty':p.allocatedQty,'PO Amount':p.allocatedQty*p.price,Status:'Pending','Last Updated':'','Sales Approval':'Approved','UTR Number':'','Payment Verified':'Pending',Transporter:'','LR Number':'','Dispatch Date':''}));
+          localDB.allocations=list.map((p,i)=>({ID:'AL'+(1000+i),'AD Name':p.adName,'Contact Number':p.contactNumber||'',Area:p.area||'','Model Name':p.modelName,'Allocated Qty':p.allocatedQty,Price:p.price,'Allocated Value':p.allocatedQty*p.price,'Confirmed Qty':'','PO Amount':'',Status:'Pending','Last Updated':'','Sales Approval':'','UTR Number':'','Payment Verified':'Pending',Transporter:'','LR Number':'','Dispatch Date':''}));
           saveLocalDB();self._s&&self._s({success:true,count:list.length});
         },400);
       }
@@ -2059,7 +2059,7 @@ function renderAdminTable(data){
   data.forEach(item=>{
     const tr=document.createElement('tr');
     const sb=getStatusBadge(item.Status);
-    const ab=getApprovalBadge(item['Sales Approval']);
+    const ab=getApprovalBadge(item['Sales Approval'], item.Status);
     let payCell='-';
     if(item['UTR Number']){
       payCell=`<div style="font-size:0.78rem;">UTR: <strong>${item['UTR Number']}</strong></div>`;
@@ -2139,7 +2139,7 @@ function buildSalesOrders(){
   data.forEach((item,i)=>{
     const tr=document.createElement('tr');
     const dt=item['Last Updated']?new Date(item['Last Updated']).toLocaleDateString('en-IN'):'—';
-    tr.innerHTML=`<td>${i+1}</td><td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item['Confirmed Qty']||'-'}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td><td>${getApprovalBadge(item['Sales Approval'])}</td><td>${item['UTR Number']||'-'}</td><td>${dt}</td>`;
+    tr.innerHTML=`<td>${i+1}</td><td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item['Confirmed Qty']||'-'}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td><td>${getApprovalBadge(item['Sales Approval'], item.Status)}</td><td>${item['UTR Number']||'-'}</td><td>${dt}</td>`;
     tbody.appendChild(tr);
   });
   lucide.createIcons({node:tbody});
@@ -2158,7 +2158,7 @@ function filterSalesOrders(){
   data.forEach((item,i)=>{
     const tr=document.createElement('tr');
     const dt=item['Last Updated']?new Date(item['Last Updated']).toLocaleDateString('en-IN'):'—';
-    tr.innerHTML=`<td>${i+1}</td><td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item['Confirmed Qty']||'-'}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td><td>${getApprovalBadge(item['Sales Approval'])}</td><td>${item['UTR Number']||'-'}</td><td>${dt}</td>`;
+    tr.innerHTML=`<td>${i+1}</td><td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item['Confirmed Qty']||'-'}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td><td>${getApprovalBadge(item['Sales Approval'], item.Status)}</td><td>${item['UTR Number']||'-'}</td><td>${dt}</td>`;
     tbody.appendChild(tr);
   });
   lucide.createIcons({node:tbody});
@@ -3080,11 +3080,11 @@ function processAllocations(rows) {
           "Allocated Qty": p.allocatedQty,
           Price: p.price,
           "Allocated Value": val,
-          "Confirmed Qty": p.allocatedQty,
-          "PO Amount": val,
+          "Confirmed Qty": "",
+          "PO Amount": "",
           Status: "Pending",
           "Last Updated": "",
-          "Sales Approval": "Approved",
+          "Sales Approval": "",
           "UTR Number": "",
           "Payment Verified": "Pending",
           Transporter: "",
@@ -3465,7 +3465,7 @@ function hideLoader(){closeModal('modalStatus');}
 // STATUS BADGE HELPERS
 // ============================================================
 function getStatusBadge(s){const map={Pending:'pending',Confirmed:'confirmed',Completed:'completed',Dispatched:'dispatched',Paid:'paid'};const c=map[s]||'pending';return`<span class="badge ${c}">${s||'Pending'}</span>`;}
-function getApprovalBadge(s){if(!s||s==='Approved')return`<span class="badge approved">Approved</span>`;if(s==='Rejected')return`<span class="badge rejected">Rejected</span>`;return`<span class="badge pending">Pending</span>`;}
+function getApprovalBadge(s, status){if(status==='Pending' || !s) return '—';if(s==='Approved')return`<span class="badge approved">Approved</span>`;if(s==='Rejected')return`<span class="badge rejected">Rejected</span>`;return`<span class="badge pending">Pending</span>`;}
 
 // ============================================================
 // CLOSE MODALS ON BACKDROP CLICK
