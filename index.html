@@ -1270,7 +1270,8 @@
 
       <!-- ===== AD VIEW ===== -->
       <div class="view-container" id="viewAD">
-        <!-- Announcement -->
+        <div class="tab-panel active" id="adPanel_dashboard">
+          <!-- Announcement -->
         <div class="announcement-banner">
           <i data-lucide="megaphone"></i>
           <div>
@@ -1404,8 +1405,11 @@
           </div>
         </div>
 
+        </div><!-- /adPanel_dashboard -->
+
         <!-- AD Ledger -->
-        <div class="glass-panel" style="margin-top:20px;">
+        <div class="tab-panel" id="adPanel_ledger">
+          <div class="glass-panel" style="margin-top:20px;">
           <div class="section-header">
             <h3>My Allocation Ledger</h3>
             <div style="display:flex;gap:8px;align-items:center;">
@@ -1457,6 +1461,7 @@
             </table>
           </div>
         </div>
+        </div><!-- /adPanel_ledger -->
 
       </div><!-- /viewAD -->
 
@@ -2271,6 +2276,12 @@ function showSubTab(tab){
     if(tab==='dashboard')buildSalesDashboard();
     else if(tab==='ledger')buildLedger('sales');
     else if(tab==='distributors')buildDistributors('sales');
+  }else if(role==='ad'){
+    document.querySelectorAll('#viewAD .tab-panel').forEach(p=>p.classList.remove('active'));
+    const pmap={dashboard:'adPanel_dashboard',ledger:'adPanel_ledger'};
+    if(pmap[tab]){document.getElementById(pmap[tab]).classList.add('active');}
+    if(tab==='dashboard')buildADDashboard();
+    else if(tab==='ledger')buildLedger('ad');
   }
 }
 
