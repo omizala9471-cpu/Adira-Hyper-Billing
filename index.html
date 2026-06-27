@@ -499,9 +499,14 @@
             <div class="section-header">
               <h3>Live AD Allocations Status</h3>
               <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                <div class="search-bar" style="min-width:200px;">
-                  <i data-lucide="search"></i>
-                  <input type="text" id="searchAdminTable" placeholder="Search AD, model..." oninput="filterAdminTable()">
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <div class="search-bar" style="min-width:200px;">
+                    <i data-lucide="search"></i>
+                    <input type="text" id="searchAdminTable" placeholder="Search AD, model..." oninput="filterAdminTable()">
+                  </div>
+                  <button class="btn-action" onclick="toggleAdvancedFilters('adminTableFiltersDrawer')" title="Range Filters" style="padding:6px 10px;">
+                    <i data-lucide="filter" style="width:14px; height:14px;"></i>
+                  </button>
                 </div>
                 <button class="btn-action" onclick="filterAdminByStatus('all')">All</button>
                 <button class="btn-action" onclick="filterAdminByStatus('Pending')">Pending</button>
@@ -515,6 +520,39 @@
               <span id="selectedCount">0 selected</span>
               <button class="btn-action success" onclick="bulkMarkPaymentReceived()"><i data-lucide="check-circle"></i> Mark Payment Received</button>
               <button class="btn-action" onclick="clearBulkSelection()"><i data-lucide="x"></i> Clear</button>
+            </div>
+                        <!-- Advanced Filters Drawer -->
+            <div id="adminTableFiltersDrawer" class="advanced-filters-drawer" style="display:none; flex-direction:column; gap:8px; padding:12px 16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; margin-bottom:16px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <span style="font-size:0.75rem; font-weight:700; color:var(--color-primary); text-transform:uppercase; letter-spacing:1px;">Range Filters</span>
+                <button class="btn-action danger" style="padding:2px 8px; font-size:0.68rem;" onclick="clearAdvancedFilters('adminTable')">Clear</button>
+              </div>
+              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px;">
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Start Date</label>
+                  <input type="date" id="adminTable_startDate" class="form-control" style="font-size:0.75rem; padding:4px 8px; height:auto;" onchange="filterAdminTable()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">End Date</label>
+                  <input type="date" id="adminTable_endDate" class="form-control" style="font-size:0.75rem; padding:4px 8px; height:auto;" onchange="filterAdminTable()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Min Value (₹)</label>
+                  <input type="number" id="adminTable_minVal" class="form-control" placeholder="0" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterAdminTable()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Max Value (₹)</label>
+                  <input type="number" id="adminTable_maxVal" class="form-control" placeholder="Max" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterAdminTable()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Min Qty</label>
+                  <input type="number" id="adminTable_minQty" class="form-control" placeholder="0" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterAdminTable()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Max Qty</label>
+                  <input type="number" id="adminTable_maxQty" class="form-control" placeholder="Max" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterAdminTable()">
+                </div>
+              </div>
             </div>
             <div style="margin-bottom:8px;">
               <label style="font-size:0.78rem;color:var(--color-text-muted);display:flex;align-items:center;gap:6px;cursor:pointer;">
@@ -644,9 +682,14 @@
             <div class="section-header">
               <h3><i data-lucide="clipboard-list" style="width:18px;height:18px;margin-right:8px;color:var(--color-primary);"></i>All Sales Orders</h3>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <div class="search-bar">
-                  <i data-lucide="search"></i>
-                  <input type="text" id="searchSalesOrders" placeholder="Search AD, model, status..." oninput="filterSalesOrders()">
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <div class="search-bar">
+                    <i data-lucide="search"></i>
+                    <input type="text" id="searchSalesOrders" placeholder="Search AD, model, status..." oninput="filterSalesOrders()">
+                  </div>
+                  <button class="btn-action" onclick="toggleAdvancedFilters('salesOrdersFiltersDrawer')" title="Range Filters" style="padding:6px 10px;">
+                    <i data-lucide="filter" style="width:14px; height:14px;"></i>
+                  </button>
                 </div>
                 <select id="filterSalesOrderStatus" class="form-control" style="padding-left:10px;width:auto;background:rgba(10,16,32,0.95);" onchange="filterSalesOrders()">
                   <option value="">All Statuses</option>
@@ -656,6 +699,39 @@
                   <option value="Dispatched">Dispatched</option>
                 </select>
                 <button class="btn-action primary" onclick="exportFinalizedPO()"><i data-lucide="download"></i> Export Finalized PO</button>
+              </div>
+            </div>
+                        <!-- Advanced Filters Drawer -->
+            <div id="salesOrdersFiltersDrawer" class="advanced-filters-drawer" style="display:none; flex-direction:column; gap:8px; padding:12px 16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; margin-bottom:16px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <span style="font-size:0.75rem; font-weight:700; color:var(--color-primary); text-transform:uppercase; letter-spacing:1px;">Range Filters</span>
+                <button class="btn-action danger" style="padding:2px 8px; font-size:0.68rem;" onclick="clearAdvancedFilters('salesOrders')">Clear</button>
+              </div>
+              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px;">
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Start Date</label>
+                  <input type="date" id="salesOrders_startDate" class="form-control" style="font-size:0.75rem; padding:4px 8px; height:auto;" onchange="filterSalesOrders()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">End Date</label>
+                  <input type="date" id="salesOrders_endDate" class="form-control" style="font-size:0.75rem; padding:4px 8px; height:auto;" onchange="filterSalesOrders()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Min Value (₹)</label>
+                  <input type="number" id="salesOrders_minVal" class="form-control" placeholder="0" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterSalesOrders()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Max Value (₹)</label>
+                  <input type="number" id="salesOrders_maxVal" class="form-control" placeholder="Max" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterSalesOrders()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Min Qty</label>
+                  <input type="number" id="salesOrders_minQty" class="form-control" placeholder="0" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterSalesOrders()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Max Qty</label>
+                  <input type="number" id="salesOrders_maxQty" class="form-control" placeholder="Max" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterSalesOrders()">
+                </div>
               </div>
             </div>
             <div class="table-container">
@@ -679,11 +755,49 @@
             <div class="section-header">
               <h3><i data-lucide="book-open" style="width:18px;height:18px;margin-right:8px;color:var(--color-primary);"></i>Allocation Ledger</h3>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <div class="search-bar">
-                  <i data-lucide="search"></i>
-                  <input type="text" id="searchAdminLedger" placeholder="Search..." oninput="filterAdminLedger()">
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <div class="search-bar">
+                    <i data-lucide="search"></i>
+                    <input type="text" id="searchAdminLedger" placeholder="Search..." oninput="filterAdminLedger()">
+                  </div>
+                  <button class="btn-action" onclick="toggleAdvancedFilters('adminLedgerFiltersDrawer')" title="Range Filters" style="padding:6px 10px;">
+                    <i data-lucide="filter" style="width:14px; height:14px;"></i>
+                  </button>
                 </div>
                 <button class="btn-action primary" onclick="exportFinalizedPO()"><i data-lucide="file-spreadsheet"></i> Export Finalized PO</button>
+              </div>
+            </div>
+                        <!-- Advanced Filters Drawer -->
+            <div id="adminLedgerFiltersDrawer" class="advanced-filters-drawer" style="display:none; flex-direction:column; gap:8px; padding:12px 16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; margin-bottom:16px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <span style="font-size:0.75rem; font-weight:700; color:var(--color-primary); text-transform:uppercase; letter-spacing:1px;">Range Filters</span>
+                <button class="btn-action danger" style="padding:2px 8px; font-size:0.68rem;" onclick="clearAdvancedFilters('adminLedger')">Clear</button>
+              </div>
+              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px;">
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Start Date</label>
+                  <input type="date" id="adminLedger_startDate" class="form-control" style="font-size:0.75rem; padding:4px 8px; height:auto;" onchange="filterAdminLedger()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">End Date</label>
+                  <input type="date" id="adminLedger_endDate" class="form-control" style="font-size:0.75rem; padding:4px 8px; height:auto;" onchange="filterAdminLedger()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Min Value (₹)</label>
+                  <input type="number" id="adminLedger_minVal" class="form-control" placeholder="0" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterAdminLedger()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Max Value (₹)</label>
+                  <input type="number" id="adminLedger_maxVal" class="form-control" placeholder="Max" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterAdminLedger()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Min Qty</label>
+                  <input type="number" id="adminLedger_minQty" class="form-control" placeholder="0" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterAdminLedger()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Max Qty</label>
+                  <input type="number" id="adminLedger_maxQty" class="form-control" placeholder="Max" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterAdminLedger()">
+                </div>
               </div>
             </div>
             <div class="table-container">
@@ -862,10 +976,52 @@
           <div class="glass-panel">
             <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
               <h3 id="rsdReportTitle">Allocation Report — My ADs</h3>
-              <button class="btn-action primary" onclick="exportFinalizedPO('rsd')"><i data-lucide="download"></i> Export Report</button>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <div class="search-bar" style="min-width:180px;">
+                  <i data-lucide="search"></i>
+                  <input type="text" id="searchRSDReport" placeholder="Search model..." oninput="buildRSDDashboard(true)">
+                </div>
+                <button class="btn-action" onclick="toggleAdvancedFilters('rsdReportFiltersDrawer')" title="Range Filters" style="padding:6px 10px;">
+                  <i data-lucide="filter" style="width:14px; height:14px;"></i>
+                </button>
+                <button class="btn-action primary" onclick="exportFinalizedPO('rsd')"><i data-lucide="download"></i> Export Report</button>
+              </div>
             </div>
             <!-- Toggle filters -->
             <div id="rsdReportFilters" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:12px;">
+            </div>
+                        <!-- Advanced Filters Drawer -->
+            <div id="rsdReportFiltersDrawer" class="advanced-filters-drawer" style="display:none; flex-direction:column; gap:8px; padding:12px 16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; margin-bottom:16px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <span style="font-size:0.75rem; font-weight:700; color:var(--color-primary); text-transform:uppercase; letter-spacing:1px;">Range Filters</span>
+                <button class="btn-action danger" style="padding:2px 8px; font-size:0.68rem;" onclick="clearAdvancedFilters('rsdReport')">Clear</button>
+              </div>
+              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px;">
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Start Date</label>
+                  <input type="date" id="rsdReport_startDate" class="form-control" style="font-size:0.75rem; padding:4px 8px; height:auto;" onchange="buildRSDDashboard(true)">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">End Date</label>
+                  <input type="date" id="rsdReport_endDate" class="form-control" style="font-size:0.75rem; padding:4px 8px; height:auto;" onchange="buildRSDDashboard(true)">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Min Value (₹)</label>
+                  <input type="number" id="rsdReport_minVal" class="form-control" placeholder="0" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="buildRSDDashboard(true)">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Max Value (₹)</label>
+                  <input type="number" id="rsdReport_maxVal" class="form-control" placeholder="Max" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="buildRSDDashboard(true)">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Min Qty</label>
+                  <input type="number" id="rsdReport_minQty" class="form-control" placeholder="0" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="buildRSDDashboard(true)">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Max Qty</label>
+                  <input type="number" id="rsdReport_maxQty" class="form-control" placeholder="Max" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="buildRSDDashboard(true)">
+                </div>
+              </div>
             </div>
             <div class="table-container">
               <table id="rsdReportTable">
@@ -905,15 +1061,53 @@
             <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
               <h3>Allocation Ledger</h3>
               <div style="display:flex;gap:8px;">
-                <div class="search-bar">
-                  <i data-lucide="search"></i>
-                  <input type="text" id="searchRSDLedger" placeholder="Search..." oninput="filterRSDLedger()">
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <div class="search-bar">
+                    <i data-lucide="search"></i>
+                    <input type="text" id="searchRSDLedger" placeholder="Search..." oninput="filterRSDLedger()">
+                  </div>
+                  <button class="btn-action" onclick="toggleAdvancedFilters('rsdLedgerFiltersDrawer')" title="Range Filters" style="padding:6px 10px;">
+                    <i data-lucide="filter" style="width:14px; height:14px;"></i>
+                  </button>
                 </div>
                 <button class="btn-action primary" onclick="exportFinalizedPO('rsd')"><i data-lucide="file-spreadsheet"></i> Export</button>
               </div>
             </div>
             <!-- Toggle filters -->
             <div id="rsdLedgerFilters" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:12px;">
+            </div>
+                        <!-- Advanced Filters Drawer -->
+            <div id="rsdLedgerFiltersDrawer" class="advanced-filters-drawer" style="display:none; flex-direction:column; gap:8px; padding:12px 16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; margin-bottom:16px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <span style="font-size:0.75rem; font-weight:700; color:var(--color-primary); text-transform:uppercase; letter-spacing:1px;">Range Filters</span>
+                <button class="btn-action danger" style="padding:2px 8px; font-size:0.68rem;" onclick="clearAdvancedFilters('rsdLedger')">Clear</button>
+              </div>
+              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px;">
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Start Date</label>
+                  <input type="date" id="rsdLedger_startDate" class="form-control" style="font-size:0.75rem; padding:4px 8px; height:auto;" onchange="filterRSDLedger()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">End Date</label>
+                  <input type="date" id="rsdLedger_endDate" class="form-control" style="font-size:0.75rem; padding:4px 8px; height:auto;" onchange="filterRSDLedger()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Min Value (₹)</label>
+                  <input type="number" id="rsdLedger_minVal" class="form-control" placeholder="0" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterRSDLedger()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Max Value (₹)</label>
+                  <input type="number" id="rsdLedger_maxVal" class="form-control" placeholder="Max" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterRSDLedger()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Min Qty</label>
+                  <input type="number" id="rsdLedger_minQty" class="form-control" placeholder="0" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterRSDLedger()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Max Qty</label>
+                  <input type="number" id="rsdLedger_maxQty" class="form-control" placeholder="Max" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterRSDLedger()">
+                </div>
+              </div>
             </div>
             <div class="table-container">
               <table id="rsdLedgerTable">
@@ -995,11 +1189,49 @@
             <div class="section-header">
               <h3>Allocation Ledger</h3>
               <div style="display:flex;gap:8px;">
-                <div class="search-bar">
-                  <i data-lucide="search"></i>
-                  <input type="text" id="searchSalesLedger" placeholder="Search..." oninput="filterSalesLedger()">
+                <div style="display:flex;gap:8px;align-items:center;">
+                  <div class="search-bar">
+                    <i data-lucide="search"></i>
+                    <input type="text" id="searchSalesLedger" placeholder="Search..." oninput="filterSalesLedger()">
+                  </div>
+                  <button class="btn-action" onclick="toggleAdvancedFilters('salesLedgerFiltersDrawer')" title="Range Filters" style="padding:6px 10px;">
+                    <i data-lucide="filter" style="width:14px; height:14px;"></i>
+                  </button>
                 </div>
                 <button class="btn-action primary" onclick="exportFinalizedPO('sales')"><i data-lucide="file-spreadsheet"></i> Export</button>
+              </div>
+            </div>
+                        <!-- Advanced Filters Drawer -->
+            <div id="salesLedgerFiltersDrawer" class="advanced-filters-drawer" style="display:none; flex-direction:column; gap:8px; padding:12px 16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; margin-bottom:16px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <span style="font-size:0.75rem; font-weight:700; color:var(--color-primary); text-transform:uppercase; letter-spacing:1px;">Range Filters</span>
+                <button class="btn-action danger" style="padding:2px 8px; font-size:0.68rem;" onclick="clearAdvancedFilters('salesLedger')">Clear</button>
+              </div>
+              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px;">
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Start Date</label>
+                  <input type="date" id="salesLedger_startDate" class="form-control" style="font-size:0.75rem; padding:4px 8px; height:auto;" onchange="filterSalesLedger()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">End Date</label>
+                  <input type="date" id="salesLedger_endDate" class="form-control" style="font-size:0.75rem; padding:4px 8px; height:auto;" onchange="filterSalesLedger()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Min Value (₹)</label>
+                  <input type="number" id="salesLedger_minVal" class="form-control" placeholder="0" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterSalesLedger()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Max Value (₹)</label>
+                  <input type="number" id="salesLedger_maxVal" class="form-control" placeholder="Max" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterSalesLedger()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Min Qty</label>
+                  <input type="number" id="salesLedger_minQty" class="form-control" placeholder="0" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterSalesLedger()">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Max Qty</label>
+                  <input type="number" id="salesLedger_maxQty" class="form-control" placeholder="Max" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterSalesLedger()">
+                </div>
               </div>
             </div>
             <div class="table-container">
@@ -1089,9 +1321,47 @@
             </div>
             <div class="section-header">
               <h3>Model Wise Allocation</h3>
-              <div class="search-bar">
-                <i data-lucide="search"></i>
-                <input type="text" id="searchADAlloc" placeholder="Search model..." oninput="filterADAllocations()">
+              <div style="display:flex;gap:8px;align-items:center;">
+                <div class="search-bar">
+                  <i data-lucide="search"></i>
+                  <input type="text" id="searchADAlloc" placeholder="Search model..." oninput="filterADAllocations()">
+                </div>
+                <button class="btn-action" onclick="toggleAdvancedFilters('adAllocFiltersDrawer')" title="Range Filters" style="padding:6px 10px;">
+                  <i data-lucide="filter" style="width:14px; height:14px;"></i>
+                </button>
+              </div>
+            </div>
+                        <!-- Advanced Filters Drawer -->
+            <div id="adAllocFiltersDrawer" class="advanced-filters-drawer" style="display:none; flex-direction:column; gap:8px; padding:12px 16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; margin-bottom:16px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <span style="font-size:0.75rem; font-weight:700; color:var(--color-primary); text-transform:uppercase; letter-spacing:1px;">Range Filters</span>
+                <button class="btn-action danger" style="padding:2px 8px; font-size:0.68rem;" onclick="clearAdvancedFilters('adAlloc')">Clear</button>
+              </div>
+              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px;">
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Start Date</label>
+                  <input type="date" id="adAlloc_startDate" class="form-control" style="font-size:0.75rem; padding:4px 8px; height:auto;" onchange="buildADDashboard(true)">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">End Date</label>
+                  <input type="date" id="adAlloc_endDate" class="form-control" style="font-size:0.75rem; padding:4px 8px; height:auto;" onchange="buildADDashboard(true)">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Min Value (₹)</label>
+                  <input type="number" id="adAlloc_minVal" class="form-control" placeholder="0" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="buildADDashboard(true)">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Max Value (₹)</label>
+                  <input type="number" id="adAlloc_maxVal" class="form-control" placeholder="Max" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="buildADDashboard(true)">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Min Qty</label>
+                  <input type="number" id="adAlloc_minQty" class="form-control" placeholder="0" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="buildADDashboard(true)">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Max Qty</label>
+                  <input type="number" id="adAlloc_maxQty" class="form-control" placeholder="Max" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="buildADDashboard(true)">
+                </div>
               </div>
             </div>
             <div class="table-container">
@@ -1138,8 +1408,46 @@
         <div class="glass-panel" style="margin-top:20px;">
           <div class="section-header">
             <h3>My Allocation Ledger</h3>
-            <button class="btn-action primary" onclick="exportFinalizedPO('ad')"><i data-lucide="download"></i> Export My PO</button>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="btn-action" onclick="toggleAdvancedFilters('adLedgerFiltersDrawer')" title="Range Filters" style="padding:6px 10px;">
+                <i data-lucide="filter" style="width:14px; height:14px;"></i>
+              </button>
+              <button class="btn-action primary" onclick="exportFinalizedPO('ad')"><i data-lucide="download"></i> Export My PO</button>
+            </div>
           </div>
+                      <!-- Advanced Filters Drawer -->
+            <div id="adLedgerFiltersDrawer" class="advanced-filters-drawer" style="display:none; flex-direction:column; gap:8px; padding:12px 16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; margin-bottom:16px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <span style="font-size:0.75rem; font-weight:700; color:var(--color-primary); text-transform:uppercase; letter-spacing:1px;">Range Filters</span>
+                <button class="btn-action danger" style="padding:2px 8px; font-size:0.68rem;" onclick="clearAdvancedFilters('adLedger')">Clear</button>
+              </div>
+              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px;">
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Start Date</label>
+                  <input type="date" id="adLedger_startDate" class="form-control" style="font-size:0.75rem; padding:4px 8px; height:auto;" onchange="buildLedger('ad', true)">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">End Date</label>
+                  <input type="date" id="adLedger_endDate" class="form-control" style="font-size:0.75rem; padding:4px 8px; height:auto;" onchange="buildLedger('ad', true)">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Min Value (₹)</label>
+                  <input type="number" id="adLedger_minVal" class="form-control" placeholder="0" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="buildLedger('ad', true)">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Max Value (₹)</label>
+                  <input type="number" id="adLedger_maxVal" class="form-control" placeholder="Max" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="buildLedger('ad', true)">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Min Qty</label>
+                  <input type="number" id="adLedger_minQty" class="form-control" placeholder="0" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="buildLedger('ad', true)">
+                </div>
+                <div>
+                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Max Qty</label>
+                  <input type="number" id="adLedger_maxQty" class="form-control" placeholder="Max" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="buildLedger('ad', true)">
+                </div>
+              </div>
+            </div>
           <div class="table-container">
             <table id="adLedgerTable">
               <thead>
@@ -2088,10 +2396,11 @@ function filterAdminByStatus(status){
 function filterAdminTable(){
   const q=document.getElementById('searchAdminTable').value.toLowerCase();
   const filtered=localDB.allocations.filter(a=>
-    a['AD Name'].toLowerCase().includes(q)||
+    (a['AD Name'].toLowerCase().includes(q)||
     (a['Model Name']||'').toLowerCase().includes(q)||
     (a.Area||'').toLowerCase().includes(q)||
-    (a.Status||'').toLowerCase().includes(q)
+    (a.Status||'').toLowerCase().includes(q)) &&
+    matchRangeFilters(a, 'adminTable')
   );
   renderAdminTable(filtered);
 }
@@ -2157,7 +2466,7 @@ function filterSalesOrders(){
   const data=localDB.allocations.filter(a=>{
     const matchQ=!q||(a['AD Name'].toLowerCase().includes(q)||(a['Model Name']||'').toLowerCase().includes(q)||(a.Area||'').toLowerCase().includes(q));
     const matchS=!st||a.Status===st;
-    return matchQ&&matchS;
+    return matchQ&&matchS && matchRangeFilters(a, 'salesOrders');
   });
   const tbody=document.querySelector('#salesOrdersTable tbody');
   tbody.innerHTML='';
@@ -2175,7 +2484,16 @@ function filterSalesOrders(){
 // ============================================================
 function buildLedger(role, keepFilters = false){
   let data=localDB.allocations;
-  if(role==='ad')data=data.filter(a=>a['AD Name'].toLowerCase()===currentUser.fullName.toLowerCase());
+  if(role==='ad'){
+    if (!keepFilters) {
+      const fields = ['_startDate', '_endDate', '_minVal', '_maxVal', '_minQty', '_maxQty'];
+      fields.forEach(f => {
+        const el = document.getElementById('adLedger' + f);
+        if (el) el.value = '';
+      });
+    }
+    data=data.filter(a=>a['AD Name'].toLowerCase()===currentUser.fullName.toLowerCase() && matchRangeFilters(a, 'adLedger'));
+  }
   else if(role==='rsd'){
     const myADUsers = getRSDADUsers();
     const myADNames = myADUsers.map(u=>u.FullName.toLowerCase());
@@ -2235,12 +2553,30 @@ function buildLedger(role, keepFilters = false){
 }
 
 // Filter functions for ledger
-function filterAdminLedger(){const q=document.getElementById('searchAdminLedger').value.toLowerCase();const data=localDB.allocations.filter(a=>a['AD Name'].toLowerCase().includes(q)||(a['Model Name']||'').toLowerCase().includes(q));buildLedgerFiltered('adminLedgerTable',data,'admin');}
-function filterSalesLedger(){const q=document.getElementById('searchSalesLedger').value.toLowerCase();const data=localDB.allocations.filter(a=>a['AD Name'].toLowerCase().includes(q)||(a['Model Name']||'').toLowerCase().includes(q));buildLedgerFiltered('salesLedgerTable',data,'sales');}
+function filterAdminLedger(){
+  const q=document.getElementById('searchAdminLedger').value.toLowerCase();
+  const data=localDB.allocations.filter(a=>
+    (a['AD Name'].toLowerCase().includes(q)||(a['Model Name']||'').toLowerCase().includes(q)) &&
+    matchRangeFilters(a, 'adminLedger')
+  );
+  buildLedgerFiltered('adminLedgerTable',data,'admin');
+}
+function filterSalesLedger(){
+  const q=document.getElementById('searchSalesLedger').value.toLowerCase();
+  const data=localDB.allocations.filter(a=>
+    (a['AD Name'].toLowerCase().includes(q)||(a['Model Name']||'').toLowerCase().includes(q)) &&
+    matchRangeFilters(a, 'salesLedger')
+  );
+  buildLedgerFiltered('salesLedgerTable',data,'sales');
+}
 function filterRSDLedger(){
   const q=document.getElementById('searchRSDLedger').value.toLowerCase();
   const myADs=getRSDADNames().filter(n => _rsdLedgerFilteredADs.has(n));
-  const filtered=localDB.allocations.filter(a=>myADs.includes(a['AD Name'].toLowerCase())&&(a['AD Name'].toLowerCase().includes(q)||(a['Model Name']||'').toLowerCase().includes(q)));
+  const filtered=localDB.allocations.filter(a=>
+    myADs.includes(a['AD Name'].toLowerCase()) &&
+    (a['AD Name'].toLowerCase().includes(q)||(a['Model Name']||'').toLowerCase().includes(q)) &&
+    matchRangeFilters(a, 'rsdLedger')
+  );
   buildLedgerFiltered('rsdLedgerTable',filtered,'rsd');
 }
 
@@ -2473,7 +2809,12 @@ function buildRSDDashboard(keepFilters = false){
   }
 
   // Filter report allocations
-  const reportAllocs = myAllocs.filter(a => _rsdFilteredADs.has(a['AD Name'].toLowerCase()));
+  const qReport = document.getElementById('searchRSDReport')?.value.toLowerCase() || '';
+  const reportAllocs = myAllocs.filter(a => 
+    _rsdFilteredADs.has(a['AD Name'].toLowerCase()) && 
+    (a['Model Name']||'').toLowerCase().includes(qReport) && 
+    matchRangeFilters(a, 'rsdReport')
+  );
   
   // Allocation Report Table
   const tbody=document.querySelector('#rsdReportTable tbody');
@@ -2614,7 +2955,7 @@ function buildADDashboard(){
   startCountdownTimers();
 
   const adName=currentUser.fullName;
-  const myAllocs=localDB.allocations.filter(a=>a['AD Name'].toLowerCase()===adName.toLowerCase());
+  const myAllocs=localDB.allocations.filter(a=>a['AD Name'].toLowerCase()===adName.toLowerCase() && matchRangeFilters(a, 'adAlloc'));
 
   // Status hero
   const statusEl=document.getElementById('adStatusBadge');const statusText=document.getElementById('adStatusText');
@@ -2650,11 +2991,7 @@ function buildADDashboard(){
 }
 
 function filterADAllocations(){
-  const q=document.getElementById('searchADAlloc').value.toLowerCase();
-  document.querySelectorAll('#adAllocationRows tr').forEach(tr=>{
-    const txt=tr.innerText.toLowerCase();
-    tr.style.display=q===''||txt.includes(q)?'':'none';
-  });
+  buildADDashboard(true);
 }
 
 function recalculateADSummary(){
@@ -3470,6 +3807,64 @@ function downloadBase64File(base64Data, fileName, mimeType) {
 }
 
 // Templates
+function toggleAdvancedFilters(id) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+    lucide.createIcons({node: el});
+  }
+}
+
+function clearAdvancedFilters(prefix) {
+  const fields = ['_startDate', '_endDate', '_minVal', '_maxVal', '_minQty', '_maxQty'];
+  fields.forEach(f => {
+    const el = document.getElementById(prefix + f);
+    if (el) el.value = '';
+  });
+  
+  if (prefix === 'adminTable') filterAdminTable();
+  else if (prefix === 'salesOrders') filterSalesOrders();
+  else if (prefix === 'rsdReport') buildRSDDashboard(true);
+  else if (prefix === 'rsdLedger') filterRSDLedger();
+  else if (prefix === 'adAlloc') buildADDashboard(true);
+  else if (prefix === 'adLedger') buildLedger('ad', true);
+  else if (prefix === 'adminLedger') filterAdminLedger();
+  else if (prefix === 'salesLedger') filterSalesLedger();
+}
+
+function matchRangeFilters(item, prefix) {
+  const startDateVal = document.getElementById(prefix + '_startDate')?.value;
+  const endDateVal = document.getElementById(prefix + '_endDate')?.value;
+  const minVal = Number(document.getElementById(prefix + '_minVal')?.value || 0);
+  const maxVal = Number(document.getElementById(prefix + '_maxVal')?.value || 0) || Infinity;
+  const minQty = Number(document.getElementById(prefix + '_minQty')?.value || 0);
+  const maxQty = Number(document.getElementById(prefix + '_maxQty')?.value || 0) || Infinity;
+  
+  const itemDateStr = item['Last Updated'];
+  if (startDateVal || endDateVal) {
+    if (!itemDateStr) return false;
+    const itemDate = new Date(itemDateStr);
+    if (startDateVal) {
+      const sDate = new Date(startDateVal);
+      sDate.setHours(0, 0, 0, 0);
+      if (itemDate < sDate) return false;
+    }
+    if (endDateVal) {
+      const eDate = new Date(endDateVal);
+      eDate.setHours(23, 59, 59, 999);
+      if (itemDate > eDate) return false;
+    }
+  }
+  
+  const itemVal = Number(item['PO Amount']) || Number(item['Allocated Value']) || 0;
+  if (itemVal < minVal || itemVal > maxVal) return false;
+  
+  const itemQty = Number(item['Confirmed Qty']) || Number(item['Allocated Qty']) || 0;
+  if (itemQty < minQty || itemQty > maxQty) return false;
+  
+  return true;
+}
+
 function downloadTemplate(type){
   if (type === 'allocations') {
     downloadBase64File(ALLOCATIONS_TEMPLATE_B64, 'Allocation_template.xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
