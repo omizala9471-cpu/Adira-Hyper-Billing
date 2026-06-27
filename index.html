@@ -327,7 +327,154 @@
       .countdown-grid{grid-template-columns:1fr;}
       .kpi-info h3{font-size:1.2rem;}
     }
-  </style>
+  
+    /* ============================================================
+       LIGHT YELLOW & DARK GOLD PALETTE OVERRIDES
+       ============================================================ */
+    :root {
+      --bg-dark: #fbf9e6; /* light warm yellow */
+      --bg-card: rgba(255, 255, 255, 0.88);
+      --bg-card-hover: rgba(255, 255, 255, 0.96);
+      --border-color: rgba(153, 101, 21, 0.16);
+      --border-hover: rgba(153, 101, 21, 0.35);
+      --color-primary: #996515; /* dark gold */
+      --color-primary-rgb: 153, 101, 21;
+      --color-text-main: #2d2212; /* dark charcoal-brown */
+      --color-text-muted: #72624d; /* muted warm brown */
+      --glass-shadow: 0 8px 32px rgba(153, 101, 21, 0.06);
+    }
+    
+    body {
+      background-color: var(--bg-dark);
+      color: var(--color-text-main);
+    }
+    
+    /* Top Bar Gold Highlight */
+    .top-bar {
+      background: linear-gradient(135deg, #a47621, #855b14) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+      box-shadow: 0 4px 20px rgba(153, 101, 21, 0.15) !important;
+    }
+    .top-bar #currentNavTitle {
+      color: #ffffff !important;
+    }
+    .top-bar .btn-menu-toggle, 
+    .top-bar .btn-action {
+      border-color: rgba(255, 255, 255, 0.25) !important;
+      color: #ffffff !important;
+      background: rgba(255, 255, 255, 0.1) !important;
+    }
+    .top-bar .btn-menu-toggle:hover, 
+    .top-bar .btn-action:hover {
+      background: rgba(255, 255, 255, 0.22) !important;
+      border-color: #ffffff !important;
+      color: #ffffff !important;
+    }
+    .top-bar .btn-action.primary {
+      background: #ffffff !important;
+      color: #996515 !important;
+    }
+    
+    /* Sidebar styling for warm premium look */
+    .app-sidebar {
+      background: #1f170b !important; /* deep rich gold-black */
+      border-right: 1px solid rgba(153, 101, 21, 0.2) !important;
+    }
+    .sidebar-title h2,
+    #sidebarUserName {
+      color: #ebd197 !important; /* warm metallic text */
+    }
+    .profile-avatar {
+      background: linear-gradient(135deg, #ebd197, #996515) !important;
+      color: #1f170b !important;
+    }
+    .nav-item.active {
+      background: linear-gradient(135deg, rgba(235, 209, 151, 0.15), rgba(153, 101, 21, 0.08)) !important;
+      color: #ebd197 !important;
+      border-color: rgba(235, 209, 151, 0.3) !important;
+    }
+    .nav-item.active i {
+      color: #ebd197 !important;
+    }
+    .nav-item:hover {
+      background: rgba(255, 255, 255, 0.06) !important;
+      color: #ebd197 !important;
+    }
+    
+    /* Table headers, inputs, scrollbars & dialogs */
+    thead th {
+      background: rgba(153, 101, 21, 0.07) !important;
+      color: #996515 !important;
+      border-bottom: 2px solid rgba(153, 101, 21, 0.2) !important;
+    }
+    tr {
+      border-bottom: 1px solid rgba(153, 101, 21, 0.08) !important;
+    }
+    tr:hover {
+      background: rgba(153, 101, 21, 0.02) !important;
+    }
+    
+    .form-control {
+      background: #ffffff !important;
+      color: #2d2212 !important;
+      border: 1px solid rgba(153, 101, 21, 0.22) !important;
+    }
+    .form-control:focus {
+      border-color: #996515 !important;
+      background: #ffffff !important;
+      box-shadow: 0 0 0 3px rgba(153, 101, 21, 0.15) !important;
+    }
+    select.form-control,
+    select.form-control option {
+      background-color: #ffffff !important;
+      color: #2d2212 !important;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar-track {
+      background: var(--bg-dark);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(153, 101, 21, 0.2);
+    }
+    
+    /* Button overrides */
+    .btn-submit {
+      background: linear-gradient(135deg, #a47621, #855b14) !important;
+      color: #ffffff !important;
+    }
+    .btn-submit:hover {
+      box-shadow: 0 4px 15px rgba(153, 101, 21, 0.3) !important;
+    }
+    .btn-action.primary {
+      background: rgba(153, 101, 21, 0.08) !important;
+      border-color: rgba(153, 101, 21, 0.25) !important;
+      color: #996515 !important;
+    }
+    .btn-action.primary:hover {
+      background: #996515 !important;
+      color: #ffffff !important;
+    }
+    
+    /* Card headers & dividers */
+    .category-divider-header {
+      background: rgba(153, 101, 21, 0.08) !important;
+      color: #996515 !important;
+    }
+    
+    /* Modals & Dialogs */
+    .modal-content {
+      background: #ffffff !important;
+      border: 1px solid rgba(153, 101, 21, 0.3) !important;
+      color: #2d2212 !important;
+      box-shadow: 0 10px 40px rgba(153, 101, 21, 0.2) !important;
+    }
+    
+    /* Chart visual adjustments */
+    canvas {
+      filter: contrast(1.05) saturate(1.05);
+    }
+</style>
 </head>
 <body>
 
