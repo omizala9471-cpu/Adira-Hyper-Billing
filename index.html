@@ -1377,7 +1377,39 @@ async function hashPassword(pw,salt){const enc=new TextEncoder();const km=await 
 // ============================================================
 let database=null;
 if(window.firebaseConfig&&window.firebaseConfig.apiKey!=='YOUR_FIREBASE_API_KEY'){
-  try{firebase.initializeApp(window.firebaseConfig);database=firebase.database();console.log('Firebase OK');}
+  try{
+    firebase.initializeApp(window.firebaseConfig);
+    database=firebase.database();
+    console.log('Firebase OK');
+    
+    // Programmatic cleanup of AD Ahmedabad and AD Surat from Firebase
+    database.ref('users/ad_ahmedabad').remove();
+    database.ref('users/ad_surat').remove();
+    database.ref('userSecrets/ad_ahmedabad').remove();
+    database.ref('userSecrets/ad_surat').remove();
+    
+    database.ref('distributors').once('value').then(snap => {
+      const data = snap.val();
+      if (data) {
+        Object.keys(data).forEach(k => {
+          if (data[k] && (data[k]['AD Name'] === 'AD Ahmedabad' || data[k]['AD Name'] === 'AD Surat' || k === 'ad_ahmedabad' || k === 'ad_surat')) {
+            database.ref('distributors/' + k).remove();
+          }
+        });
+      }
+    });
+    
+    database.ref('allocations').once('value').then(snap => {
+      const data = snap.val();
+      if (data) {
+        Object.keys(data).forEach(k => {
+          if (data[k] && (data[k]['AD Name'] === 'AD Ahmedabad' || data[k]['AD Name'] === 'AD Surat')) {
+            database.ref('allocations/' + k).remove();
+          }
+        });
+      }
+    });
+  }
   catch(e){console.warn('Firebase failed:',e.message);}
 }
 
@@ -1434,9 +1466,13 @@ if(typeof google==='undefined'){
           if(Array.isArray(pricesRaw))pricesRaw.forEach(p=>{prices[p.modelName]=p.price;});
           else Object.assign(prices,pricesRaw);
           let allocations=aSnap.val()?Object.values(aSnap.val()):[];
+          // Filter out AD Ahmedabad and AD Surat
+          allocations = allocations.filter(a => a && a['AD Name'] !== 'AD Ahmedabad' && a['AD Name'] !== 'AD Surat');
           if(role==='ad')allocations=allocations.filter(a=>a['AD Name'].toLowerCase()===username.toLowerCase());
-          const distributors=dSnap.val()?Object.values(dSnap.val()):[];
-          const users=uSnap.val()?Object.values(uSnap.val()):[];
+          let distributors=dSnap.val()?Object.values(dSnap.val()):[];
+          distributors = distributors.filter(d => d && d['AD Name'] !== 'AD Ahmedabad' && d['AD Name'] !== 'AD Surat');
+          let users=uSnap.val()?Object.values(uSnap.val()):[];
+          users = users.filter(u => u && u.Username !== 'ad_ahmedabad' && u.Username !== 'ad_surat');
           const rsdAnnouncements=rSnap.val()||{};
           self._s&&self._s({success:true,settings,prices,allocations,distributors,users,rsdAnnouncements});
         }).catch(e=>{self._f&&self._f(e);});
@@ -1453,7 +1489,8 @@ if(typeof google==='undefined'){
       const self=this;
       if(database){
         database.ref('users').once('value').then(snap=>{
-          const list=snap.val()?Object.values(snap.val()):[];
+          let list=snap.val()?Object.values(snap.val()):[];
+          list = list.filter(u => u && u.Username !== 'ad_ahmedabad' && u.Username !== 'ad_surat');
           self._s&&self._s({success:true,users:list});
         }).catch(e=>{self._f&&self._f(e);});
       }else{
