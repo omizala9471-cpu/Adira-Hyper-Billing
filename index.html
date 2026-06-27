@@ -2484,7 +2484,7 @@ function buildADDashboard(){
     const allocQty=Number(item['Allocated Qty']);
     const baseVal=allocQty*price;
     const locked=item.Status==='Confirmed'||item.Status==='Completed'||item.Status==='Dispatched';
-    tr.innerHTML=`<td><strong>${item['Model Name']}</strong></td><td>${allocQty}</td><td>₹${price.toLocaleString('en-IN')}</td><td>₹${baseVal.toLocaleString('en-IN')}</td><td><input type="number" class="input-qty" min="0" max="${allocQty}" value="${item['Confirmed Qty']||allocQty}" oninput="recalculateADSummary()" data-model="${item['Model Name']}" data-price="${price}" ${locked?'readonly':''} style="${locked?'opacity:0.6;':''}"></td><td class="po-row-total" style="font-weight:700;">₹${baseVal.toLocaleString('en-IN')}</td>`;
+    tr.innerHTML=`<td><strong>${item['Model Name']}</strong></td><td>${allocQty}</td><td>₹${price.toLocaleString('en-IN')}</td><td>₹${baseVal.toLocaleString('en-IN')}</td><td><input type="number" class="input-qty" min="0" max="${allocQty}" value="${(item['Confirmed Qty']===''||item['Confirmed Qty']===undefined||item['Confirmed Qty']===null)?0:item['Confirmed Qty']}" oninput="recalculateADSummary()" data-model="${item['Model Name']}" data-price="${price}" ${locked?'readonly':''} style="${locked?'opacity:0.6;':''}"></td><td class="po-row-total" style="font-weight:700;">₹${baseVal.toLocaleString('en-IN')}</td>`;
     tbody.appendChild(tr);
   });
 
