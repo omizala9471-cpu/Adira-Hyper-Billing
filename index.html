@@ -2369,8 +2369,13 @@ function renderAdminTable(data){
   tbody.innerHTML='';
   const bulkMode=document.getElementById('enableBulkMode').checked;
   document.getElementById('bulkCheckCol').style.display=bulkMode?'table-cell':'none';
-  if(data.length===0){tbody.innerHTML=`<tr><td colspan="11" style="text-align:center;color:var(--color-text-muted);padding:24px;">No allocations loaded. Upload via Master Updation.</td></tr>`;return;}
-  data.forEach(item=>{
+  const cols = bulkMode ? 11 : 10;
+  if(data.length===0){tbody.innerHTML=`<tr><td colspan="${cols}" style="text-align:center;color:var(--color-text-muted);padding:24px;">No allocations loaded. Upload via Master Updation.</td></tr>`;return;}
+  
+  const mobiles = data.filter(item => getModelCategory(item['Model Name']) === 'Mobile');
+  const aiots = data.filter(item => getModelCategory(item['Model Name']) === 'AIOT');
+  
+  const renderRow = (item) => {
     const tr=document.createElement('tr');
     const sb=getStatusBadge(item.Status);
     const ab=getApprovalBadge(item['Sales Approval'], item.Status);
@@ -2384,7 +2389,16 @@ function renderAdminTable(data){
     const cbCell=bulkMode?`<td class="checkbox-col"><input type="checkbox" class="row-check" data-id="${item.ID}" onchange="updateBulkCount()"></td>`:'';
     tr.innerHTML=`${cbCell}<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||Number(item['Allocated Value'])||0).toLocaleString('en-IN')}</td><td>${sb}</td><td>${ab}</td><td>${payCell}</td><td><button class="btn-action" style="padding:5px 10px;font-size:0.75rem;" onclick="openWA('${item['AD Name']}')"><i data-lucide="message-square"></i></button></td>`;
     tbody.appendChild(tr);
-  });
+  };
+
+  if (mobiles.length > 0) {
+    renderSectionHeader(tbody, "📱 Mobile Phones", cols);
+    mobiles.forEach(renderRow);
+  }
+  if (aiots.length > 0) {
+    renderSectionHeader(tbody, "🎧 AIOT Products", cols);
+    aiots.forEach(renderRow);
+  }
   lucide.createIcons({node:tbody});
 }
 
@@ -2470,12 +2484,27 @@ function filterSalesOrders(){
   });
   const tbody=document.querySelector('#salesOrdersTable tbody');
   tbody.innerHTML='';
-  data.forEach((item,i)=>{
+  const cols = 11;
+  if(data.length===0){tbody.innerHTML=`<tr><td colspan="${cols}" style="text-align:center;color:var(--color-text-muted);">No sales orders matched.</td></tr>`;return;}
+
+  const mobiles = data.filter(item => getModelCategory(item['Model Name']) === 'Mobile');
+  const aiots = data.filter(item => getModelCategory(item['Model Name']) === 'AIOT');
+
+  const renderRow = (item, i) => {
     const tr=document.createElement('tr');
     const dt=item['Last Updated']?new Date(item['Last Updated']).toLocaleDateString('en-IN'):'—';
     tr.innerHTML=`<td>${i+1}</td><td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td><td>${getApprovalBadge(item['Sales Approval'], item.Status)}</td><td>${item['UTR Number']||'-'}</td><td>${dt}</td>`;
     tbody.appendChild(tr);
-  });
+  };
+
+  if (mobiles.length > 0) {
+    renderSectionHeader(tbody, "📱 Mobile Phones", cols);
+    mobiles.forEach((item, index) => renderRow(item, index));
+  }
+  if (aiots.length > 0) {
+    renderSectionHeader(tbody, "🎧 AIOT Products", cols);
+    aiots.forEach((item, index) => renderRow(item, mobiles.length + index));
+  }
   lucide.createIcons({node:tbody});
 }
 
@@ -2538,8 +2567,13 @@ function buildLedger(role, keepFilters = false){
   const tbody=document.querySelector('#'+tableId+' tbody');
   if(!tbody)return;
   tbody.innerHTML='';
-  if(data.length===0){const cols=role==='ad'?6:7;tbody.innerHTML=`<tr><td colspan="${cols}" style="text-align:center;color:var(--color-text-muted);">No allocation data matched.</td></tr>`;return;}
-  data.forEach(item=>{
+  const cols=role==='ad'?6:8;
+  if(data.length===0){tbody.innerHTML=`<tr><td colspan="${cols}" style="text-align:center;color:var(--color-text-muted);">No allocation data matched.</td></tr>`;return;}
+
+  const mobiles = data.filter(item => getModelCategory(item['Model Name']) === 'Mobile');
+  const aiots = data.filter(item => getModelCategory(item['Model Name']) === 'AIOT');
+
+  const renderRow = (item) => {
     const tr=document.createElement('tr');
     const val=(Number(item['PO Amount'])||Number(item['Allocated Value'])||0);
     if(role==='ad'){
@@ -2548,7 +2582,16 @@ function buildLedger(role, keepFilters = false){
       tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${val.toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td>`;
     }
     tbody.appendChild(tr);
-  });
+  };
+
+  if (mobiles.length > 0) {
+    renderSectionHeader(tbody, "📱 Mobile Phones", cols);
+    mobiles.forEach(renderRow);
+  }
+  if (aiots.length > 0) {
+    renderSectionHeader(tbody, "🎧 AIOT Products", cols);
+    aiots.forEach(renderRow);
+  }
   lucide.createIcons({node:tbody});
 }
 
@@ -2582,7 +2625,27 @@ function filterRSDLedger(){
 
 function buildLedgerFiltered(tableId,data,role){
   const tbody=document.querySelector('#'+tableId+' tbody');if(!tbody)return;tbody.innerHTML='';
-  data.forEach(item=>{const tr=document.createElement('tr');const val=(Number(item['PO Amount'])||Number(item['Allocated Value'])||0);tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${val.toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td>`;tbody.appendChild(tr);});
+  const cols=8;
+  if(data.length===0){tbody.innerHTML=`<tr><td colspan="${cols}" style="text-align:center;color:var(--color-text-muted);">No allocation data matched.</td></tr>`;return;}
+
+  const mobiles = data.filter(item => getModelCategory(item['Model Name']) === 'Mobile');
+  const aiots = data.filter(item => getModelCategory(item['Model Name']) === 'AIOT');
+
+  const renderRow = (item) => {
+    const tr=document.createElement('tr');
+    const val=(Number(item['PO Amount'])||Number(item['Allocated Value'])||0);
+    tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${val.toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td>`;
+    tbody.appendChild(tr);
+  };
+
+  if (mobiles.length > 0) {
+    renderSectionHeader(tbody, "📱 Mobile Phones", cols);
+    mobiles.forEach(renderRow);
+  }
+  if (aiots.length > 0) {
+    renderSectionHeader(tbody, "🎧 AIOT Products", cols);
+    aiots.forEach(renderRow);
+  }
   lucide.createIcons({node:tbody});
 }
 
@@ -2819,13 +2882,27 @@ function buildRSDDashboard(keepFilters = false){
   // Allocation Report Table
   const tbody=document.querySelector('#rsdReportTable tbody');
   tbody.innerHTML='';
-  reportAllocs.forEach(item=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td>`;
-    tbody.appendChild(tr);
-  });
+  const cols=6;
   if(reportAllocs.length===0) {
     tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--color-text-muted);">No allocation data matched.</td></tr>';
+  } else {
+    const mobiles = reportAllocs.filter(item => getModelCategory(item['Model Name']) === 'Mobile');
+    const aiots = reportAllocs.filter(item => getModelCategory(item['Model Name']) === 'AIOT');
+
+    const renderRow = (item) => {
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td>`;
+      tbody.appendChild(tr);
+    };
+
+    if (mobiles.length > 0) {
+      renderSectionHeader(tbody, "📱 Mobile Phones", cols);
+      mobiles.forEach(renderRow);
+    }
+    if (aiots.length > 0) {
+      renderSectionHeader(tbody, "🎧 AIOT Products", cols);
+      aiots.forEach(renderRow);
+    }
   }
   lucide.createIcons({node:tbody});
 }
@@ -2967,8 +3044,13 @@ function buildADDashboard(){
 
   // Build rows
   const tbody=document.getElementById('adAllocationRows');tbody.innerHTML='';
+  const cols=6;
   if(myAllocs.length===0){tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;color:var(--color-text-muted);">No allocations found. Check with Admin.</td></tr>`;return;}
-  myAllocs.forEach(item=>{
+  
+  const mobiles = myAllocs.filter(item => getModelCategory(item['Model Name']) === 'Mobile');
+  const aiots = myAllocs.filter(item => getModelCategory(item['Model Name']) === 'AIOT');
+
+  const renderRow = (item) => {
     const tr=document.createElement('tr');
     const price=Number(item.Price)||Number(localDB.prices[item['Model Name']])||0;
     const allocQty=Number(item['Allocated Qty']);
@@ -2976,7 +3058,16 @@ function buildADDashboard(){
     const locked=item.Status==='Confirmed'||item.Status==='Completed'||item.Status==='Dispatched';
     tr.innerHTML=`<td><strong>${item['Model Name']}</strong></td><td>${allocQty}</td><td>₹${price.toLocaleString('en-IN')}</td><td>₹${baseVal.toLocaleString('en-IN')}</td><td><input type="number" class="input-qty" min="0" max="${allocQty}" value="${(item.Status==='Pending')?0:(item['Confirmed Qty']||0)}" oninput="recalculateADSummary()" data-model="${item['Model Name']}" data-price="${price}" ${locked?'readonly':''} style="${locked?'opacity:0.6;':''}"></td><td class="po-row-total" style="font-weight:700;">₹${baseVal.toLocaleString('en-IN')}</td>`;
     tbody.appendChild(tr);
-  });
+  };
+
+  if (mobiles.length > 0) {
+    renderSectionHeader(tbody, "📱 Mobile Phones", cols);
+    mobiles.forEach(renderRow);
+  }
+  if (aiots.length > 0) {
+    renderSectionHeader(tbody, "🎧 AIOT Products", cols);
+    aiots.forEach(renderRow);
+  }
 
   // Check lock
   const confDeadline=localDB.settings.confirmationDeadline;
@@ -3807,6 +3898,23 @@ function downloadBase64File(base64Data, fileName, mimeType) {
 }
 
 // Templates
+function getModelCategory(modelName) {
+  if (!modelName) return 'Mobile';
+  const nameLower = modelName.toString().toLowerCase();
+  const aiotKeywords = ['buds', 'watch', 'pad', 'band', 'tv', 'charger', 'cable', 'techlife', 'aiot', 'audio', 'realme link', 'realme-link'];
+  if (aiotKeywords.some(keyword => nameLower.includes(keyword))) {
+    return 'AIOT';
+  }
+  return 'Mobile';
+}
+
+function renderSectionHeader(tbody, text, cols) {
+  const tr = document.createElement('tr');
+  tr.className = 'category-section-header';
+  tr.innerHTML = `<td colspan="${cols}" style="background:rgba(255,200,59,0.06); font-weight:800; color:var(--color-primary); font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; padding:8px 12px; border-top:1px solid rgba(255,255,255,0.08); border-bottom:1px solid rgba(255,255,255,0.08); text-align:left;">${text}</td>`;
+  tbody.appendChild(tr);
+}
+
 function toggleAdvancedFilters(id) {
   const el = document.getElementById(id);
   if (el) {
