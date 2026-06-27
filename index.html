@@ -902,19 +902,18 @@
         <!-- RSD: Allocation Ledger -->
         <div class="tab-panel" id="rsdPanel_ledger">
           <div class="glass-panel">
-            <div class="section-header">
+            <div class="section-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
               <h3>Allocation Ledger</h3>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:0.85rem; color:var(--color-text-muted); font-weight:normal; user-select:none; margin-right:8px;">
-                  <input type="checkbox" id="rsdLedgerShowAll" onchange="buildLedger('rsd')" style="accent-color:var(--color-primary); width:15px; height:15px; cursor:pointer;">
-                  Show All ADs
-                </label>
+              <div style="display:flex;gap:8px;">
                 <div class="search-bar">
                   <i data-lucide="search"></i>
                   <input type="text" id="searchRSDLedger" placeholder="Search..." oninput="filterRSDLedger()">
                 </div>
                 <button class="btn-action primary" onclick="exportFinalizedPO('rsd')"><i data-lucide="file-spreadsheet"></i> Export</button>
               </div>
+            </div>
+            <!-- Toggle filters -->
+            <div id="rsdLedgerFilters" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:12px;">
             </div>
             <div class="table-container">
               <table id="rsdLedgerTable">
@@ -2174,21 +2173,54 @@ function filterSalesOrders(){
 // ============================================================
 // ALLOCATION LEDGER (All roles)
 // ============================================================
-function buildLedger(role){
+function buildLedger(role, keepFilters = false){
   let data=localDB.allocations;
   if(role==='ad')data=data.filter(a=>a['AD Name'].toLowerCase()===currentUser.fullName.toLowerCase());
   else if(role==='rsd'){
-    const showAll = document.getElementById('rsdLedgerShowAll')?.checked;
-    if (!showAll) {
-      const myADs=getRSDADNames();
-      data=data.filter(a=>myADs.includes(a['AD Name'].toLowerCase()));
+    const myADUsers = getRSDADUsers();
+    const myADNames = myADUsers.map(u=>u.FullName.toLowerCase());
+    if (!keepFilters) {
+      _rsdLedgerFilteredADs.clear();
+      myADNames.forEach(n => _rsdLedgerFilteredADs.add(n));
     }
+    
+    // Render toggle filter buttons
+    const filtersDiv = document.getElementById('rsdLedgerFilters');
+    if (filtersDiv) {
+      filtersDiv.innerHTML = '';
+      
+      // "All" button
+      const allActive = myADNames.every(n => _rsdLedgerFilteredADs.has(n));
+      const btnAll = document.createElement('button');
+      btnAll.className = 'btn-action' + (allActive ? ' success' : '');
+      btnAll.style.padding = '4px 10px';
+      btnAll.style.fontSize = '0.75rem';
+      btnAll.innerText = 'All';
+      btnAll.onclick = () => toggleRSDLedgerFilter('all');
+      filtersDiv.appendChild(btnAll);
+      
+      // Individual AD buttons
+      myADUsers.forEach(u => {
+        const lower = u.FullName.toLowerCase();
+        const active = _rsdLedgerFilteredADs.has(lower);
+        const btn = document.createElement('button');
+        btn.className = 'btn-action' + (active ? ' primary' : '');
+        btn.style.padding = '4px 10px';
+        btn.style.fontSize = '0.75rem';
+        btn.style.marginLeft = '4px';
+        btn.innerText = u.FullName;
+        btn.onclick = () => toggleRSDLedgerFilter(u.FullName);
+        filtersDiv.appendChild(btn);
+      });
+    }
+    
+    data = data.filter(a => _rsdLedgerFilteredADs.has(a['AD Name'].toLowerCase()));
   }
   const tableId=role==='admin'?'adminLedgerTable':role==='rsd'?'rsdLedgerTable':role==='sales'?'salesLedgerTable':'adLedgerTable';
   const tbody=document.querySelector('#'+tableId+' tbody');
   if(!tbody)return;
   tbody.innerHTML='';
-  if(data.length===0){const cols=role==='ad'?6:7;tbody.innerHTML=`<tr><td colspan="${cols}" style="text-align:center;color:var(--color-text-muted);">No allocation data.</td></tr>`;return;}
+  if(data.length===0){const cols=role==='ad'?6:7;tbody.innerHTML=`<tr><td colspan="${cols}" style="text-align:center;color:var(--color-text-muted);">No allocation data matched.</td></tr>`;return;}
   data.forEach(item=>{
     const tr=document.createElement('tr');
     const val=(Number(item['PO Amount'])||Number(item['Allocated Value'])||0);
@@ -2207,13 +2239,8 @@ function filterAdminLedger(){const q=document.getElementById('searchAdminLedger'
 function filterSalesLedger(){const q=document.getElementById('searchSalesLedger').value.toLowerCase();const data=localDB.allocations.filter(a=>a['AD Name'].toLowerCase().includes(q)||(a['Model Name']||'').toLowerCase().includes(q));buildLedgerFiltered('salesLedgerTable',data,'sales');}
 function filterRSDLedger(){
   const q=document.getElementById('searchRSDLedger').value.toLowerCase();
-  const showAll = document.getElementById('rsdLedgerShowAll')?.checked;
-  let data=localDB.allocations;
-  if (!showAll) {
-    const myADs=getRSDADNames();
-    data=data.filter(a=>myADs.includes(a['AD Name'].toLowerCase()));
-  }
-  const filtered = data.filter(a=>a['AD Name'].toLowerCase().includes(q)||(a['Model Name']||'').toLowerCase().includes(q));
+  const myADs=getRSDADNames().filter(n => _rsdLedgerFilteredADs.has(n));
+  const filtered=localDB.allocations.filter(a=>myADs.includes(a['AD Name'].toLowerCase())&&(a['AD Name'].toLowerCase().includes(q)||(a['Model Name']||'').toLowerCase().includes(q)));
   buildLedgerFiltered('rsdLedgerTable',filtered,'rsd');
 }
 
@@ -2230,14 +2257,10 @@ function exportFinalizedPO(role){
   let data=localDB.allocations;
   if(role==='ad'||currentUser.role==='ad')data=data.filter(a=>a['AD Name'].toLowerCase()===currentUser.fullName.toLowerCase());
   else if(role==='rsd'||currentUser.role==='rsd'){
-    const ledgerTabActive = document.getElementById('rsdPanel_ledger')?.classList.contains('show') || document.getElementById('rsdPanel_ledger')?.style.display !== 'none';
     const onLedgerTab = document.querySelector('#rsdPanel_ledger.active') !== null;
     if (onLedgerTab) {
-      const showAll = document.getElementById('rsdLedgerShowAll')?.checked;
-      if (!showAll) {
-        const myADs=getRSDADNames();
-        data=data.filter(a=>myADs.includes(a['AD Name'].toLowerCase()));
-      }
+      const myADs=getRSDADNames().filter(n => _rsdLedgerFilteredADs.has(n));
+      data=data.filter(a=>myADs.includes(a['AD Name'].toLowerCase()));
     } else {
       const myADs=getRSDADNames().filter(n => _rsdFilteredADs.has(n));
       data=data.filter(a=>myADs.includes(a['AD Name'].toLowerCase()));
@@ -2331,6 +2354,29 @@ function filterDistributors(role){
 }
 
 let _rsdFilteredADs = new Set();
+let _rsdLedgerFilteredADs = new Set();
+
+function toggleRSDLedgerFilter(adName) {
+  const myADUsers = getRSDADUsers();
+  const myNames = myADUsers.map(u => u.FullName.toLowerCase());
+  
+  if (adName === 'all') {
+    const allActive = myNames.every(n => _rsdLedgerFilteredADs.has(n));
+    if (allActive) {
+      _rsdLedgerFilteredADs.clear();
+    } else {
+      myNames.forEach(n => _rsdLedgerFilteredADs.add(n));
+    }
+  } else {
+    const lowerName = adName.toLowerCase();
+    if (_rsdLedgerFilteredADs.has(lowerName)) {
+      _rsdLedgerFilteredADs.delete(lowerName);
+    } else {
+      _rsdLedgerFilteredADs.add(lowerName);
+    }
+  }
+  buildLedger('rsd', true);
+}
 
 function toggleRSDADFilter(adName) {
   const myADUsers = getRSDADUsers();
