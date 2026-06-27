@@ -1468,7 +1468,21 @@ if(typeof google==='undefined'){
       const self=this;const ukey=userObj.Username.trim().toLowerCase();
       const plainPw=userObj.PlainPassword||'';  // store plaintext for admin view
       const doSave=(ph,salt)=>{
-        const prof={Username:userObj.Username,Role:userObj.Role,FullName:userObj.FullName,Area:userObj.Area||'',ADCode:userObj.ADCode||'',MappedRSD:userObj.MappedRSD||'',PlainPassword:plainPw};
+        const prof={
+          Username:userObj.Username,
+          Role:userObj.Role,
+          FullName:userObj.FullName,
+          Area:userObj.Area||'',
+          ADCode:userObj.ADCode||'',
+          MappedRSD:userObj.MappedRSD||'',
+          PlainPassword:plainPw,
+          Zone:userObj.Zone||'',
+          ContactName:userObj.ContactName||'',
+          ContactNo:userObj.ContactNo||'',
+          Email:userObj.Email||'',
+          SalesPerson:userObj.SalesPerson||'',
+          ShortName:userObj.ShortName||''
+        };
         if(database){
           database.ref('users/'+ukey).set(prof).then(()=>{
             if(ph&&salt){database.ref('userSecrets/'+ukey).set({Password:ph,Salt:salt}).then(()=>{self._s&&self._s({success:true});}).catch(e=>self._f&&self._f(e));}
@@ -1479,8 +1493,11 @@ if(typeof google==='undefined'){
           const idx=localDB.users.findIndex(u=>u.Username.toLowerCase()===ukey);
           if(idx>-1){
             if(!ph){lo.Password=localDB.users[idx].Password;lo.Salt=localDB.users[idx].Salt;}
-            // Keep existing PlainPassword if no new password given
+            // Keep existing PlainPassword and extra details if not in userObj
             if(!plainPw&&localDB.users[idx].PlainPassword)lo.PlainPassword=localDB.users[idx].PlainPassword;
+            ['Zone','ContactName','ContactNo','Email','SalesPerson','ShortName'].forEach(field=>{
+              if(!userObj[field] && localDB.users[idx][field]) lo[field] = localDB.users[idx][field];
+            });
             localDB.users[idx]=lo;
           }else localDB.users.push(lo);
           saveLocalDB();self._s&&self._s({success:true});
@@ -2837,12 +2854,15 @@ function parseExcel(type,input){
   reader.onload=function(e){
     try{
       const wb=XLSX.read(e.target.result,{type:'array'});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      const data=XLSX.utils.sheet_to_json(ws,{defval:''});
-      if(type==='allocations')processAllocations(data);
-      else if(type==='prices')processPrices(data);
-      else if(type==='balances')processBalances(data);
-      else if(type==='users')processUsersExcel(data);
+      if(type==='users') {
+        processUsersExcelWorkbook(wb);
+      } else {
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const data=XLSX.utils.sheet_to_json(ws,{defval:''});
+        if(type==='allocations')processAllocations(data);
+        else if(type==='prices')processPrices(data);
+        else if(type==='balances')processBalances(data);
+      }
     }catch(err){alert('Error parsing file: '+err.message);}
   };
   reader.readAsArrayBuffer(file);
@@ -2881,12 +2901,89 @@ function processBalances(data){
   google.script.run.withSuccessHandler(res=>{hideLoader();if(res.success){showUploadStatus('balanceUploadStatus',`${res.count} AD balances updated successfully!`);refreshDashboard();}}).withFailureHandler(e=>{hideLoader();showUploadStatus('balanceUploadStatus','Error: '+e.toString(),true);}).updateADBalances(list);
 }
 
-function processUsersExcel(data){
-  const list=data.map(row=>({Username:(row['Username']||row['username']||'').toLowerCase().trim(),FullName:row['Full Name']||row['FullName']||'',Password:row['Password']||row['password']||'ad123',Role:(row['Role']||row['role']||'ad').toLowerCase(),Area:row['Area']||row['area']||'',ADCode:row['AD Code']||row['ADCode']||'',MappedRSD:row['Mapped RSD']||row['MappedRSD']||''})).filter(r=>r.Username&&r.FullName);
-  if(list.length===0){alert('No valid rows found.');return;}
+function processUsersExcelWorkbook(wb){
+  const list=[];
+  wb.SheetNames.forEach(sheetName=>{
+    const ws=wb.Sheets[sheetName];
+    const data=XLSX.utils.sheet_to_json(ws,{defval:''});
+    if(data.length===0)return;
+
+    // Detect role from sheet name or column existence
+    let role='ad';
+    const lowerName=sheetName.toLowerCase();
+    if(lowerName.includes('rsd')) role='rsd';
+    else if(lowerName.includes('sales')||lowerName.includes('manager')) role='sales';
+    else if(lowerName.includes('admin')) role='admin';
+    else if(lowerName.includes('ad')) role='ad';
+    else {
+      // Check column names to identify sheet purpose
+      const first=data[0]||{};
+      if(first['APX RSD Branch Name']!==undefined||first['RSD NO']!==undefined) role='rsd';
+      else if(first['AD Name']!==undefined||first['AD Mail']!==undefined) role='ad';
+      else if(first['Full Name']!==undefined&&first['Username']!==undefined) role='sales';
+    }
+
+    data.forEach(row=>{
+      const username=(row['Username']||row['username']||'').toString().toLowerCase().trim();
+      const password=(row['Password']||row['password']||'').toString().trim();
+      if(!username)return;
+
+      const payload={
+        Username:username,
+        Role:role,
+        isNewPassword:password?true:false
+      };
+      if(password){
+        payload.Password=password;
+        payload.PlainPassword=password;
+      }
+
+      if(role==='ad'){
+        payload.FullName=row['AD Name']||row['AD Name']||row['Full Name']||username.toUpperCase();
+        payload.MappedRSD=(row['RSD']||row['Mapped RSD']||'').toString().trim();
+        payload.Area=row['City/Town']||row['Area']||'';
+        payload.ADCode=row['MD CODE']||row['AD Code']||row['MD Code']||'';
+        payload.Zone=row['Zone']||'';
+        payload.ContactName=row['AD Cont name']||'';
+        payload.ContactNo=row['AD Cont No helper']||'';
+        payload.Email=row['AD Mail']||'';
+      }else if(role==='rsd'){
+        payload.FullName=row['APX RSD Branch Name']||row['Full Name']||username.toUpperCase();
+        payload.Area=row['City/Town']||row['Area']||'';
+        payload.ADCode=row['MD CODE']||row['AD Code']||row['MD Code']||'';
+        payload.Zone=row['Zone']||'';
+        payload.ContactNo=row['RSD NO']||row['RSD No']||'';
+        payload.Email=row['RSD Mail']||'';
+        payload.SalesPerson=row['Sales Person']||'';
+        payload.ShortName=row['Short Name']||'';
+      }else{
+        // Sales or Admin
+        payload.FullName=row['Full Name']||row['Full Name']||username.toUpperCase();
+        payload.Area=row['Area']||'';
+        payload.ContactNo=row['Contact No']||'';
+        payload.Email=row['Email']||'';
+      }
+
+      list.push(payload);
+    });
+  });
+
+  if(list.length===0){alert('No valid user rows found.');return;}
   showLoader('Importing','Processing users...');
   let done=0;
-  list.forEach(u=>{const payload={...u,isNewPassword:true};google.script.run.withSuccessHandler(()=>{done++;if(done===list.length){hideLoader();alert(`${done} users imported!`);loadUsersTable();}}).withFailureHandler(e=>{hideLoader();alert('Error: '+e.toString());}).saveUser(payload);});
+  list.forEach(u=>{
+    google.script.run.withSuccessHandler(()=>{
+      done++;
+      if(done===list.length){
+        hideLoader();
+        alert(`${done} users imported successfully!`);
+        loadUsersTable();
+      }
+    }).withFailureHandler(e=>{
+      hideLoader();
+      alert('Error importing user: '+e.toString());
+    }).saveUser(u);
+  });
 }
 
 // Templates
@@ -2901,16 +2998,100 @@ function downloadTemplate(type){
 
 function downloadUserTemplate(){
   const wb=XLSX.utils.book_new();
-  const data=[['Username','Full Name','Password','Role','Area','AD Code','Mapped RSD'],['ad_rajkot','AD Rajkot (XYZ)','pass123','ad','Rajkot','AD-GJ-003','rsd_gujarat'],['rsd_saurashtra','RSD Saurashtra','rsd123','rsd','Saurashtra','RSD-GJ-02','']];
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'Users');
-  XLSX.writeFile(wb,'User_Template.xlsx');
+  
+  // ADs Sheet template
+  const adsData=[
+    ['AD Name','Username','Password','RSD','City/Town','Zone','MD CODE','AD Cont name','AD Cont No helper','AD Mail'],
+    ['AD Ahmedabad (Test)','ad_ahmedabad','ad123','rsd_gujarat','Ahmedabad','Gujarat','AD-GJ-001','Rajesh Bhai','919998887776','ahmedabad_ad@gmail.com']
+  ];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(adsData),'ADs');
+  
+  // RSDs Sheet template
+  const rsdsData=[
+    ['APX RSD Branch Name','Username','Password','Sales Person','Short Name','RSD Mail','RSD NO','City/Town','Zone','MD CODE'],
+    ['RSD Gujarat Branch','rsd_gujarat','rsd123','Jaydeepsinh Zala','RSD-GJ','rsd_guj@gmail.com','918887776665','Ahmedabad','Gujarat','RSD-GJ-001']
+  ];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rsdsData),'RSDs');
+  
+  // Sales Managers Sheet template
+  const salesData=[
+    ['Full Name','Username','Password','Area','Contact No','Email'],
+    ['Sales Manager Gujarat','sales_gujarat','sales123','Gujarat','917776665554','sales_guj@gmail.com']
+  ];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(salesData),'Sales Managers');
+  
+  // Admins Sheet template
+  const adminsData=[
+    ['Full Name','Username','Password','Area','Contact No','Email'],
+    ['Admin User','admin','admin123','HQ','916665554443','admin@gmail.com']
+  ];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(adminsData),'Admins');
+  
+  XLSX.writeFile(wb,'User_Operations_Template.xlsx');
 }
 
 function exportUsersToExcel(){
   const wb=XLSX.utils.book_new();
-  const rows=[['Username','Full Name','Role','Area','AD Code','Mapped RSD']];
-  _allUsersCache.forEach(u=>rows.push([u.Username,u.FullName,u.Role,u.Area||'',u.ADCode||'',u.MappedRSD||'']));
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Users');
+  
+  const adsRows=[['AD Name','Username','Password','RSD','City/Town','Zone','MD CODE','AD Cont name','AD Cont No helper','AD Mail']];
+  const rsdsRows=[['APX RSD Branch Name','Username','Password','Sales Person','Short Name','RSD Mail','RSD NO','City/Town','Zone','MD CODE']];
+  const salesRows=[['Full Name','Username','Password','Area','Contact No','Email']];
+  const adminsRows=[['Full Name','Username','Password','Area','Contact No','Email']];
+  
+  _allUsersCache.forEach(u=>{
+    const pw=u.PlainPassword||'';
+    if(u.Role==='ad'){
+      adsRows.push([
+        u.FullName||'',
+        u.Username,
+        pw,
+        u.MappedRSD||'',
+        u.Area||'',
+        u.Zone||'',
+        u.ADCode||'',
+        u.ContactName||'',
+        u.ContactNo||'',
+        u.Email||''
+      ]);
+    }else if(u.Role==='rsd'){
+      rsdsRows.push([
+        u.FullName||'',
+        u.Username,
+        pw,
+        u.SalesPerson||'',
+        u.ShortName||'',
+        u.Email||'',
+        u.ContactNo||'',
+        u.Area||'',
+        u.Zone||'',
+        u.ADCode||''
+      ]);
+    }else if(u.Role==='sales'){
+      salesRows.push([
+        u.FullName||'',
+        u.Username,
+        pw,
+        u.Area||'',
+        u.ContactNo||'',
+        u.Email||''
+      ]);
+    }else if(u.Role==='admin'){
+      adminsRows.push([
+        u.FullName||'',
+        u.Username,
+        pw,
+        u.Area||'',
+        u.ContactNo||'',
+        u.Email||''
+      ]);
+    }
+  });
+  
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(adsRows),'ADs');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rsdsRows),'RSDs');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(salesRows),'Sales Managers');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(adminsRows),'Admins');
+  
   XLSX.writeFile(wb,'All_Users_Export.xlsx');
 }
 
