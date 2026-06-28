@@ -3085,7 +3085,9 @@ function renderAdminTable(data){
                     <td style="font-size:0.75rem; color:var(--color-text-muted);">${catPill}</td>
                     <td>${item['Allocated Qty']}</td>
                     <td>${confCell}</td>
-                    <td style="font-weight:600; color:var(--color-text-main);">₹${(Number(item['PO Amount'])||Number(item['Allocated Value'])||0).toLocaleString('en-IN')}</td>
+                    <td style="font-weight:600; color:var(--color-text-main);">
+                      ${item.Status === 'Pending' ? '<span style="color:var(--color-text-muted); font-size:0.75rem; font-style:italic;">Awaiting...</span>' : '₹' + (Number(item['PO Amount']) || Number(item['Allocated Value']) || 0).toLocaleString('en-IN')}
+                    </td>
                     <td>${sb}</td>
                     <td>${ab}</td>
                     <td>${payCell}</td>
