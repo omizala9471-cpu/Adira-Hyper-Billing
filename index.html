@@ -3038,7 +3038,18 @@ function renderAdminTable(data){
             <tbody>
               ${group.items.map(item => {
                 const sb = getStatusBadge(item.Status);
-                const ab = getApprovalBadge(item['Sales Approval'], item.Status);
+                let ab = '';
+                if(item['Sales Approval'] === 'Pending Approval' || item['Sales Approval'] === 'Pending') {
+                  ab = `<div style="display:flex;flex-direction:column;gap:4px;">
+                          <span style="font-size:0.7rem;color:var(--color-warning);font-weight:700;">Qty Changed</span>
+                          <div style="display:flex;gap:4px;">
+                            <button class="btn-action success" style="padding:2px 6px;font-size:0.68rem;" onclick="handleApprovePO('${item.ID}',true)"><i data-lucide="check" style="width:12px;height:12px;"></i> Approve</button>
+                            <button class="btn-action danger" style="padding:2px 6px;font-size:0.68rem;" onclick="handleApprovePO('${item.ID}',false)"><i data-lucide="x" style="width:12px;height:12px;"></i> Reject</button>
+                          </div>
+                        </div>`;
+                } else {
+                  ab = getApprovalBadge(item['Sales Approval'], item.Status);
+                }
                 const cat = getModelCategory(item['Model Name']);
                 const catPill = cat === 'Mobile' ? '📱 Mobile' : '🎧 AIOT';
                 let payCell = '—';
@@ -3156,6 +3167,14 @@ function handleVerifyPayment(id,verified){
     .withSuccessHandler(res=>{hideLoader();if(res.success)refreshDashboard();})
     .withFailureHandler(e=>{hideLoader();alert('Error: '+e.toString());})
     .verifyPayment(id,verified);
+}
+
+function handleApprovePO(id,approved){
+  showLoader('Approval','Processing PO approval...');
+  google.script.run
+    .withSuccessHandler(res=>{hideLoader();if(res.success)refreshDashboard();})
+    .withFailureHandler(e=>{hideLoader();alert('Error: '+e.toString());})
+    .approvePO(id,approved);
 }
 
 // ============================================================
