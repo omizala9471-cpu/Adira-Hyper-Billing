@@ -2995,6 +2995,8 @@ function renderAdminTable(data){
       <!-- Accordion Header -->
       <div onclick="toggleAdAccordion('${adId}')" style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; background:rgba(65, 105, 225, 0.03); cursor:pointer; user-select:none; border-bottom:1px solid rgba(65,105,225,0.06); transition:background 0.2s;">
         <div style="display:flex; align-items:center; gap:12px;">
+          <!-- Party-wise Checkbox selection instead of model-wise -->
+          <input type="checkbox" class="party-check" data-ad-name="${group.name}" onclick="event.stopPropagation(); updateBulkCount()" style="width:16px; height:16px; margin-right:4px; display:${bulkMode ? 'inline-block' : 'none'}; cursor:pointer;">
           <i data-lucide="chevron-down" id="icon_${adId}" style="width:18px; height:18px; color:var(--color-primary); transition:transform 0.2s;"></i>
           <div>
             <h4 style="margin:0; font-size:0.95rem; font-weight:800; color:var(--color-text-main);">${group.name}</h4>
@@ -3016,13 +3018,12 @@ function renderAdminTable(data){
         </div>
       </div>
       
-      <!-- Accordion Content (Nested Table) -->
+      <!-- Accordion Content (Nested Table - No inner checkboxes) -->
       <div id="content_${adId}" style="display:none; padding:15px; background:#ffffff;">
         <div class="table-container" style="margin:0; border:none; box-shadow:none; overflow-x:auto;">
           <table style="width:100%; border-collapse:collapse;">
             <thead>
               <tr>
-                ${bulkMode ? '<th style="width:40px;">Select</th>' : ''}
                 <th>Model Name</th>
                 <th>Category</th>
                 <th>Alloc Qty</th>
@@ -3049,10 +3050,8 @@ function renderAdminTable(data){
                     payCell += ` <span class="badge ${item['Payment Verified']==='Verified'?'approved':'rejected'}" style="margin-top:4px; display:inline-block;">${item['Payment Verified']}</span>`;
                   }
                 }
-                const cbCell = bulkMode ? `<td><input type="checkbox" class="row-check" data-id="${item.ID}" onchange="updateBulkCount()"></td>` : '';
                 return `
                   <tr style="border-bottom:1px solid rgba(0,0,0,0.04);">
-                    ${cbCell}
                     <td><strong style="color:var(--color-text-main);">${item['Model Name']}</strong></td>
                     <td style="font-size:0.75rem; color:var(--color-text-muted);">${catPill}</td>
                     <td>${item['Allocated Qty']}</td>
@@ -3116,22 +3115,34 @@ function toggleBulkMode(cb){
   renderAdminTable(localDB.allocations);
 }
 function toggleSelectAll(cb){
-  document.querySelectorAll('.row-check').forEach(c=>c.checked=cb.checked);
+  document.querySelectorAll('.party-check').forEach(c=>c.checked=cb.checked);
   updateBulkCount();
 }
 function updateBulkCount(){
-  const selected=document.querySelectorAll('.row-check:checked').length;
-  document.getElementById('selectedCount').innerText=selected+' selected';
+  const selected=document.querySelectorAll('.party-check:checked').length;
+  document.getElementById('selectedCount').innerText=selected+' party(parties) selected';
 }
 function clearBulkSelection(){
-  document.querySelectorAll('.row-check').forEach(c=>c.checked=false);
-  document.getElementById('selectAllCheck').checked=false;
+  document.querySelectorAll('.party-check').forEach(c=>c.checked=false);
+  const selectAll = document.getElementById('selectAllCheck');
+  if (selectAll) selectAll.checked = false;
   updateBulkCount();
 }
 function bulkMarkPaymentReceived(){
-  const ids=Array.from(document.querySelectorAll('.row-check:checked')).map(c=>c.dataset.id);
-  if(ids.length===0){alert('No rows selected.');return;}
-  if(!confirm(`Mark payment received for ${ids.length} allocation(s)?`))return;
+  const selectedADs = Array.from(document.querySelectorAll('.party-check:checked')).map(c => c.dataset.adName);
+  if(selectedADs.length===0){alert('No parties selected.');return;}
+  
+  // Find all allocation IDs belonging to these ADs that are Confirmed (awaiting payment audit) or Pending verification
+  const ids = localDB.allocations
+    .filter(a => selectedADs.includes(a['AD Name']) && (a.Status === 'Confirmed' || a['Payment Verified'] === 'Pending'))
+    .map(a => a.ID);
+    
+  if(ids.length===0){
+    alert('No allocations needing payment verification found for the selected parties.');
+    return;
+  }
+  
+  if(!confirm(`Mark payment received for all allocations under the ${selectedADs.length} selected distributor(s)?`))return;
   showLoader('Processing','Updating payment status...');
   google.script.run
     .withSuccessHandler(res=>{hideLoader();if(res.success){clearBulkSelection();refreshDashboard();}else alert('Failed.');})
