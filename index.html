@@ -3052,21 +3052,39 @@ function renderAdminTable(data){
                 }
                 const cat = getModelCategory(item['Model Name']);
                 const catPill = cat === 'Mobile' ? '📱 Mobile' : '🎧 AIOT';
-                let payCell = '—';
+                
+                // Rich AD Confirmation and Date tracking
+                let payCell = `<span style="color:var(--color-text-muted); font-size:0.75rem; font-style:italic;">Awaiting Confirmation...</span>`;
                 if(item['UTR Number']){
-                  payCell = `<div style="font-size:0.76rem;">UTR: <strong>${item['UTR Number']}</strong></div>`;
+                  const confDt = item['Last Updated'] ? new Date(item['Last Updated']).toLocaleString('en-IN', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '—';
+                  payCell = `<div>UTR: <strong>${item['UTR Number']}</strong></div>
+                             <div style="font-size:0.68rem; color:var(--color-text-muted); margin-top:2px;">Confirmed: ${confDt}</div>`;
                   if(item['Payment Verified']==='Pending'){
                     payCell += `<div style="margin-top:4px;display:flex;gap:4px;"><button class="btn-action success" style="padding:2px 6px;font-size:0.68rem;" onclick="handleVerifyPayment('${item.ID}',true)"><i data-lucide="check" style="width:12px;height:12px;"></i> Approve</button><button class="btn-action danger" style="padding:2px 6px;font-size:0.68rem;" onclick="handleVerifyPayment('${item.ID}',false)"><i data-lucide="x" style="width:12px;height:12px;"></i> Reject</button></div>`;
                   } else {
                     payCell += ` <span class="badge ${item['Payment Verified']==='Verified'?'approved':'rejected'}" style="margin-top:4px; display:inline-block;">${item['Payment Verified']}</span>`;
                   }
                 }
+                
+                let confCell = '';
+                if(item.Status === 'Pending'){
+                  confCell = `<span style="color:var(--color-text-muted); font-size:0.75rem; font-style:italic;">Awaiting...</span>`;
+                } else {
+                  const alloc = Number(item['Allocated Qty']) || 0;
+                  const conf = Number(item['Confirmed Qty']) || 0;
+                  if(alloc !== conf) {
+                    confCell = `<strong style="color:#d97706;">${conf}</strong> <span style="font-size:0.68rem; color:var(--color-text-muted); font-weight:normal;">(diff)</span>`;
+                  } else {
+                    confCell = `<strong style="color:var(--color-success);">${conf}</strong>`;
+                  }
+                }
+                
                 return `
                   <tr style="border-bottom:1px solid rgba(0,0,0,0.04);">
                     <td><strong style="color:var(--color-text-main);">${item['Model Name']}</strong></td>
                     <td style="font-size:0.75rem; color:var(--color-text-muted);">${catPill}</td>
                     <td>${item['Allocated Qty']}</td>
-                    <td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td>
+                    <td>${confCell}</td>
                     <td style="font-weight:600; color:var(--color-text-main);">₹${(Number(item['PO Amount'])||Number(item['Allocated Value'])||0).toLocaleString('en-IN')}</td>
                     <td>${sb}</td>
                     <td>${ab}</td>
