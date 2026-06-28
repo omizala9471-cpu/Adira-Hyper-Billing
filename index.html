@@ -782,11 +782,7 @@
       </a>
     </nav>
 
-    <div class="sidebar-footer">
-      <button class="btn-sidebar-logout" onclick="logout()">
-        <i data-lucide="log-out"></i><span class="nav-label">Sign Out</span>
-      </button>
-    </div>
+
   </aside>
 
   <!-- MAIN WRAPPER -->
@@ -805,7 +801,7 @@
           <h2 id="currentNavTitle" style="font-size:0.95rem; font-weight:700; color:#ffffff; margin:0; opacity:0.85;">Dashboard Overview</h2>
         </div>
       </div>
-      <div class="top-bar-actions">
+      <div class="top-bar-actions" style="display:flex; align-items:center; gap:10px;">
         <div class="sidebar-profile" onclick="openPasswordModal()" style="display:flex; align-items:center; gap:10px; padding:4px 10px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); cursor:pointer; transition:var(--transition); margin:0; border-bottom: none !important;">
           <div class="profile-avatar" id="sidebarAvatar" style="width:28px; height:28px; min-width:28px; border-radius:6px; background:linear-gradient(135deg, #b9caff, #4169e1); display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:800; color:#151821; flex-shrink:0;">K</div>
           <div class="profile-details" style="display:flex; flex-direction:column; justify-content:center;">
@@ -813,6 +809,11 @@
             <span id="sidebarUserRole" class="role-pill admin" style="font-size:0.58rem; padding:1px 4px; border-radius:4px; margin-top:1px; display:inline-block; width:fit-content; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.18); color:#ffffff; line-height:1.1;">ADMIN</span>
           </div>
         </div>
+        
+        <!-- Premium Compact Sign Out Button -->
+        <button onclick="logout()" title="Sign Out" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.25); color:#fca5a5; width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; outline:none; padding:0;">
+          <i data-lucide="log-out" style="width:16px; height:16px;"></i>
+        </button>
       </div>
     </div>
 
