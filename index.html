@@ -537,7 +537,130 @@
     }
     
 
-    </style>
+      /* Sidebar styling with Brushed Gold Theme */
+    .app-sidebar {
+      background: linear-gradient(180deg, #b38b2d 0%, #916e1e 100%) !important; /* Warm Gold Gradient */
+      border-right: 1px solid rgba(255, 255, 255, 0.15) !important;
+      transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    .sidebar-header {
+      background: #191d26 !important; /* Same dark navy as top bar */
+      border-bottom: 1px solid rgba(184, 145, 45, 0.18) !important;
+      transition: background-color 0.22s ease !important;
+    }
+    .sidebar-header .sidebar-title h2 {
+      color: #ebd197 !important; /* Gold metallic text */
+      text-shadow: none !important;
+    }
+    .sidebar-header .sidebar-title span {
+      color: var(--color-text-muted) !important;
+    }
+    #sidebarUserName {
+      color: #ffffff !important; /* Crisp white for gold background contrast */
+      text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    }
+    #sidebarUserRole {
+      color: rgba(255, 255, 255, 0.8) !important;
+    }
+    .sidebar-profile {
+      transition: background-color 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    .sidebar-profile:hover {
+      background: rgba(25, 29, 38, 0.12) !important;
+    }
+    .profile-avatar {
+      background: #191d26 !important; /* Dark navy for avatar contrast */
+      color: #ebd197 !important;
+    }
+    .sidebar-nav .nav-item {
+      color: rgba(255, 255, 255, 0.85) !important;
+      transition: background-color 0.22s cubic-bezier(0.4, 0, 0.2, 1), color 0.22s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    .nav-item.active {
+      background: #191d26 !important; /* Dark Navy Obsidian for active tab */
+      color: #ebd197 !important;
+      border-color: rgba(184, 145, 45, 0.3) !important;
+    }
+    .nav-item.active i {
+      color: #ebd197 !important;
+    }
+    .nav-item:hover {
+      background: rgba(25, 29, 38, 0.15) !important;
+      color: #ffffff !important;
+    }
+    
+    /* Table headers, inputs, scrollbars & dialogs */
+    thead th {
+      background: rgba(164, 124, 36, 0.06) !important;
+      color: #a47c24 !important;
+      border-bottom: 2px solid rgba(164, 124, 36, 0.22) !important;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      letter-spacing: 0.5px;
+    }
+    tr {
+      border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
+    }
+    tr:hover {
+      background: rgba(164, 124, 36, 0.015) !important;
+    }
+    
+    .form-control {
+      background: #ffffff !important;
+      color: #1e293b !important;
+      border: 1px solid rgba(164, 124, 36, 0.22) !important;
+    }
+    .form-control:focus {
+      border-color: #a47c24 !important;
+      background: #ffffff !important;
+      box-shadow: 0 0 0 3px rgba(164, 124, 36, 0.15) !important;
+    }
+    select.form-control,
+    select.form-control option {
+      background-color: #ffffff !important;
+      color: #1e293b !important;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar-track {
+      background: var(--bg-dark);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(164, 124, 36, 0.2);
+    }
+    
+    /* Button overrides */
+    .btn-submit {
+      background: linear-gradient(135deg, #b38b2d, #916e1e) !important;
+      color: #ffffff !important;
+    }
+    .btn-submit:hover {
+      box-shadow: 0 4px 15px rgba(164, 124, 36, 0.25) !important;
+    }
+    .btn-action.primary {
+      background: rgba(164, 124, 36, 0.08) !important;
+      border-color: rgba(164, 124, 36, 0.25) !important;
+      color: #a47c24 !important;
+    }
+    .btn-action.primary:hover {
+      background: #a47c24 !important;
+      color: #ffffff !important;
+    }
+    
+    /* Card headers & dividers */
+    .category-divider-header {
+      background: rgba(164, 124, 36, 0.06) !important;
+      color: #a47c24 !important;
+    }
+    
+    /* Modals & Dialogs */
+    .modal-content {
+      background: #ffffff !important;
+      border: 1px solid rgba(164, 124, 36, 0.25) !important;
+      color: #1e293b !important;
+      box-shadow: 0 10px 40px rgba(164, 124, 36, 0.15) !important;
+    }
+  </style>
 </head>
 <body>
 
