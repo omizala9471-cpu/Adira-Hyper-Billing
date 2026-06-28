@@ -996,19 +996,8 @@
                 <input type="checkbox" id="enableBulkMode" onchange="toggleBulkMode(this)"> Enable multi-select for payment
               </label>
             </div>
-            <div class="table-container">
-              <table id="adminTrackTable">
-                <thead>
-                  <tr>
-                    <th class="checkbox-col" id="bulkCheckCol" style="display:none;"></th>
-                    <th>AD Name</th><th>Area</th><th>Model</th>
-                    <th>Alloc Qty</th><th>Conf Qty</th><th>PO Value</th>
-                    <th>Status</th><th>Approval</th><th>Payment</th><th>Action</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
+            <!-- AD Accordion drop-down container -->
+            <div id="adminAdAccordionContainer" style="display:flex; flex-direction:column; gap:12px; margin-top:10px;"></div>
           </div>
 
 
@@ -2958,41 +2947,149 @@ function buildActivityFeed(){
 
 function renderAdminTable(data){
   _adminTableData=data;
-  const tbody=document.querySelector('#adminTrackTable tbody');
-  tbody.innerHTML='';
-  const bulkMode=document.getElementById('enableBulkMode').checked;
-  document.getElementById('bulkCheckCol').style.display=bulkMode?'table-cell':'none';
-  const cols = bulkMode ? 11 : 10;
-  if(data.length===0){tbody.innerHTML=`<tr><td colspan="${cols}" style="text-align:center;color:var(--color-text-muted);padding:24px;">No allocations loaded. Upload via Master Updation.</td></tr>`;return;}
+  const container = document.getElementById('adminAdAccordionContainer');
+  if(!container) return;
+  container.innerHTML = '';
   
-  const mobiles = data.filter(item => getModelCategory(item['Model Name']) === 'Mobile');
-  const aiots = data.filter(item => getModelCategory(item['Model Name']) === 'AIOT');
+  const bulkMode = document.getElementById('enableBulkMode').checked;
   
-  const renderRow = (item) => {
-    const tr=document.createElement('tr');
-    const sb=getStatusBadge(item.Status);
-    const ab=getApprovalBadge(item['Sales Approval'], item.Status);
-    let payCell='-';
-    if(item['UTR Number']){
-      payCell=`<div style="font-size:0.78rem;">UTR: <strong>${item['UTR Number']}</strong></div>`;
-      if(item['Payment Verified']==='Pending'){
-        payCell+=`<div style="margin-top:4px;display:flex;gap:4px;"><button class="btn-action success" style="padding:2px 6px;font-size:0.68rem;" onclick="handleVerifyPayment('${item.ID}',true)"><i data-lucide="check" style="width:12px;height:12px;"></i> Approve</button><button class="btn-action danger" style="padding:2px 6px;font-size:0.68rem;" onclick="handleVerifyPayment('${item.ID}',false)"><i data-lucide="x" style="width:12px;height:12px;"></i> Reject</button></div>`;
-      }else payCell+=` <span class="badge ${item['Payment Verified']==='Verified'?'approved':'rejected'}">${item['Payment Verified']}</span>`;
+  if(data.length === 0){
+    container.innerHTML = `<div style="text-align:center;color:var(--color-text-muted);padding:24px;" class="glass-panel">No allocations loaded. Upload via Master Updation.</div>`;
+    return;
+  }
+  
+  // Group by AD Name
+  const adGroups = {};
+  data.forEach(item => {
+    const adName = item['AD Name'];
+    if (!adGroups[adName]) {
+      adGroups[adName] = {
+        name: adName,
+        area: item.Area || 'Other',
+        items: [],
+        totalQty: 0,
+        totalConf: 0,
+        totalPOVal: 0,
+        statuses: new Set()
+      };
     }
-    const cbCell=bulkMode?`<td class="checkbox-col"><input type="checkbox" class="row-check" data-id="${item.ID}" onchange="updateBulkCount()"></td>`:'';
-    tr.innerHTML=`${cbCell}<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||Number(item['Allocated Value'])||0).toLocaleString('en-IN')}</td><td>${sb}</td><td>${ab}</td><td>${payCell}</td><td><div style="display:flex; gap:4px;"><button class="btn-action" style="padding:5px 10px;font-size:0.75rem;" onclick="openWA('${item['AD Name']}')" title="Message AD"><i data-lucide="message-square"></i></button><button class="btn-action primary" style="padding:5px 10px;font-size:0.75rem;" onclick="openEditAllocationModal('${item.ID}')" title="Edit Allocation"><i data-lucide="edit"></i></button><button class="btn-action danger" style="padding:5px 10px;font-size:0.75rem;" onclick="deleteManualAllocation('${item.ID}', '${item['AD Name']}', '${item['Model Name']}')" title="Delete Allocation"><i data-lucide="trash-2"></i></button></div></td>`;
-    tbody.appendChild(tr);
-  };
+    adGroups[adName].items.push(item);
+    adGroups[adName].totalQty += Number(item['Allocated Qty']) || 0;
+    adGroups[adName].totalConf += item.Status === 'Pending' ? 0 : (Number(item['Confirmed Qty']) || 0);
+    adGroups[adName].totalPOVal += Number(item['PO Amount']) || Number(item['Allocated Value']) || 0;
+    adGroups[adName].statuses.add(item.Status);
+  });
+  
+  // Render accordions for each AD
+  Object.values(adGroups).forEach((group, index) => {
+    const adId = 'ad_acc_' + index;
+    const statusBadgesHtml = Array.from(group.statuses).map(s => getStatusBadge(s)).join(' ');
+    
+    const adCard = document.createElement('div');
+    adCard.className = 'glass-panel';
+    adCard.style.padding = '0';
+    adCard.style.marginBottom = '12px';
+    adCard.style.overflow = 'hidden';
+    
+    adCard.innerHTML = `
+      <!-- Accordion Header -->
+      <div onclick="toggleAdAccordion('${adId}')" style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; background:rgba(65, 105, 225, 0.03); cursor:pointer; user-select:none; border-bottom:1px solid rgba(65,105,225,0.06); transition:background 0.2s;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <i data-lucide="chevron-down" id="icon_${adId}" style="width:18px; height:18px; color:var(--color-primary); transition:transform 0.2s;"></i>
+          <div>
+            <h4 style="margin:0; font-size:0.95rem; font-weight:800; color:var(--color-text-main);">${group.name}</h4>
+            <span style="font-size:0.74rem; color:var(--color-text-muted);"><i data-lucide="map-pin" style="width:11px; height:11px; display:inline-block; vertical-align:middle; margin-right:3px;"></i>${group.area}</span>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+          <div style="text-align:right;">
+            <div style="font-size:0.7rem; color:var(--color-text-muted); text-transform:uppercase;">Allocated Value</div>
+            <div style="font-weight:800; font-size:0.9rem; color:var(--color-primary);">₹${group.totalPOVal.toLocaleString('en-IN')}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:0.7rem; color:var(--color-text-muted); text-transform:uppercase;">Total Qty</div>
+            <div style="font-weight:700; font-size:0.85rem; color:var(--color-text-main);">${group.totalQty} Units</div>
+          </div>
+          <div style="display:flex; gap:4px;">
+            ${statusBadgesHtml}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Accordion Content (Nested Table) -->
+      <div id="content_${adId}" style="display:none; padding:15px; background:#ffffff;">
+        <div class="table-container" style="margin:0; border:none; box-shadow:none; overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse;">
+            <thead>
+              <tr>
+                ${bulkMode ? '<th style="width:40px;">Select</th>' : ''}
+                <th>Model Name</th>
+                <th>Category</th>
+                <th>Alloc Qty</th>
+                <th>Conf Qty</th>
+                <th>PO Value</th>
+                <th>Status</th>
+                <th>Approval</th>
+                <th>Payment / UTR</th>
+                <th style="text-align:right;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${group.items.map(item => {
+                const sb = getStatusBadge(item.Status);
+                const ab = getApprovalBadge(item['Sales Approval'], item.Status);
+                const cat = getModelCategory(item['Model Name']);
+                const catPill = cat === 'Mobile' ? '📱 Mobile' : '🎧 AIOT';
+                let payCell = '—';
+                if(item['UTR Number']){
+                  payCell = `<div style="font-size:0.76rem;">UTR: <strong>${item['UTR Number']}</strong></div>`;
+                  if(item['Payment Verified']==='Pending'){
+                    payCell += `<div style="margin-top:4px;display:flex;gap:4px;"><button class="btn-action success" style="padding:2px 6px;font-size:0.68rem;" onclick="handleVerifyPayment('${item.ID}',true)"><i data-lucide="check" style="width:12px;height:12px;"></i> Approve</button><button class="btn-action danger" style="padding:2px 6px;font-size:0.68rem;" onclick="handleVerifyPayment('${item.ID}',false)"><i data-lucide="x" style="width:12px;height:12px;"></i> Reject</button></div>`;
+                  } else {
+                    payCell += ` <span class="badge ${item['Payment Verified']==='Verified'?'approved':'rejected'}" style="margin-top:4px; display:inline-block;">${item['Payment Verified']}</span>`;
+                  }
+                }
+                const cbCell = bulkMode ? `<td><input type="checkbox" class="row-check" data-id="${item.ID}" onchange="updateBulkCount()"></td>` : '';
+                return `
+                  <tr style="border-bottom:1px solid rgba(0,0,0,0.04);">
+                    ${cbCell}
+                    <td><strong style="color:var(--color-text-main);">${item['Model Name']}</strong></td>
+                    <td style="font-size:0.75rem; color:var(--color-text-muted);">${catPill}</td>
+                    <td>${item['Allocated Qty']}</td>
+                    <td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td>
+                    <td style="font-weight:600; color:var(--color-text-main);">₹${(Number(item['PO Amount'])||Number(item['Allocated Value'])||0).toLocaleString('en-IN')}</td>
+                    <td>${sb}</td>
+                    <td>${ab}</td>
+                    <td>${payCell}</td>
+                    <td style="text-align:right;">
+                      <div style="display:flex; gap:4px; justify-content:flex-end;">
+                        <button class="btn-action" style="padding:5px 10px;font-size:0.75rem;" onclick="openWA('${group.name}')" title="Message AD"><i data-lucide="message-square"></i></button>
+                        <button class="btn-action primary" style="padding:5px 10px;font-size:0.75rem;" onclick="openEditAllocationModal('${item.ID}')" title="Edit Allocation"><i data-lucide="edit"></i></button>
+                        <button class="btn-action danger" style="padding:5px 10px;font-size:0.75rem;" onclick="deleteManualAllocation('${item.ID}', '${group.name}', '${item['Model Name']}')" title="Delete Allocation"><i data-lucide="trash-2"></i></button>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    container.appendChild(adCard);
+  });
+  
+  lucide.createIcons({node:container});
+}
 
-  if (mobiles.length > 0) {
-    renderSectionHeader(tbody, "📱 Mobile Phones", cols);
-    mobiles.forEach(renderRow);
+function toggleAdAccordion(id) {
+  const content = document.getElementById('content_' + id);
+  const icon = document.getElementById('icon_' + id);
+  if (content && icon) {
+    const isHidden = content.style.display === 'none';
+    content.style.display = isHidden ? 'block' : 'none';
+    icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
   }
-  if (aiots.length > 0) {
-    renderSectionHeader(tbody, "🎧 AIOT Products", cols);
-    aiots.forEach(renderRow);
-  }
-  lucide.createIcons({node:tbody});
 }
 
 function filterAdminByStatus(status){
