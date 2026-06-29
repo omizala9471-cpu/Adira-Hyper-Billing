@@ -753,10 +753,7 @@
       <a href="#" class="nav-item" id="navItem_ledger" onclick="showSubTab('ledger')">
         <i data-lucide="book-open"></i><span class="nav-label">Allocation Ledger</span>
       </a>
-      <!-- Admin + Sales + RSD -->
-      <a href="#" class="nav-item" id="navItem_distributors" onclick="showSubTab('distributors')">
-        <i data-lucide="landmark"></i><span class="nav-label">Distributors</span>
-      </a>
+      <!-- Distributors section removed from sidebar -->
       <!-- Admin only -->
       <a href="#" class="nav-item" id="navItem_users" onclick="showSubTab('users')">
         <i data-lucide="users"></i><span class="nav-label">User Credentials</span>
@@ -2634,13 +2631,13 @@ function loadRoleSpecificView(){
   document.getElementById('sidebarUserRole').className=`role-pill ${currentUser.role}`;
   document.getElementById('sidebarAvatar').innerText=currentUser.fullName.charAt(0).toUpperCase();
   // Hide all nav items first
-  ['navItem_dashboard','navItem_master','navItem_salesorders','navItem_ledger','navItem_distributors','navItem_users','navItem_territory','navItem_broadcast','navItem_report','navItem_approvals','navItem_confirm','navItem_systemlogs'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  ['navItem_dashboard','navItem_master','navItem_salesorders','navItem_ledger','navItem_users','navItem_territory','navItem_broadcast','navItem_report','navItem_approvals','navItem_confirm','navItem_systemlogs'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
   // About is always visible for all roles
   showNavItem('navItem_about');
 
   const role=currentUser.role;
   if(role==='admin'){
-    ['navItem_dashboard','navItem_master','navItem_salesorders','navItem_ledger','navItem_distributors','navItem_users','navItem_systemlogs'].forEach(id=>showNavItem(id));
+    ['navItem_dashboard','navItem_master','navItem_salesorders','navItem_ledger','navItem_users','navItem_systemlogs'].forEach(id=>showNavItem(id));
     document.getElementById('viewAdmin').classList.add('active');
     loadDataAndRender(()=>showSubTab('dashboard'));
   }else if(role==='rsd'){
@@ -2648,7 +2645,7 @@ function loadRoleSpecificView(){
     document.getElementById('viewRSD').classList.add('active');
     loadDataAndRender(()=>showSubTab('dashboard'));
   }else if(role==='sales'){
-    ['navItem_dashboard','navItem_approvals','navItem_ledger','navItem_distributors'].forEach(id=>showNavItem(id));
+    ['navItem_dashboard','navItem_approvals','navItem_ledger'].forEach(id=>showNavItem(id));
     document.getElementById('viewSales').classList.add('active');
     loadDataAndRender(()=>showSubTab('dashboard'));
   }else if(role==='ad'){
