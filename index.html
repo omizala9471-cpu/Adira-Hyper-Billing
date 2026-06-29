@@ -761,6 +761,9 @@
       <a href="#" class="nav-item" id="navItem_users" onclick="showSubTab('users')">
         <i data-lucide="users"></i><span class="nav-label">User Credentials</span>
       </a>
+      <a href="#" class="nav-item" id="navItem_systemlogs" onclick="showSubTab('systemlogs')">
+        <i data-lucide="list-todo"></i><span class="nav-label">Action Ledger</span>
+      </a>
       <!-- RSD only -->
       <a href="#" class="nav-item" id="navItem_territory" onclick="showSubTab('territory')">
         <i data-lucide="map-pin"></i><span class="nav-label">Territory Overview</span>
@@ -1289,6 +1292,35 @@
             </div>
           </div>
         </div>
+
+        <!-- ADMIN: Action Ledger -->
+        <div class="tab-panel" id="adminPanel_systemlogs">
+          <div class="glass-panel">
+            <div class="section-header">
+              <h3><i data-lucide="list-todo" style="width:18px;height:18px;margin-right:8px;color:var(--color-primary);"></i>System Action Ledger</h3>
+              <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                <div class="search-bar" style="min-width:260px;">
+                  <i data-lucide="search"></i>
+                  <input type="text" id="searchSystemLogs" placeholder="Search user, action, details..." oninput="filterSystemLogs()">
+                </div>
+                <button class="btn-action danger" onclick="clearSystemLogs()"><i data-lucide="trash-2"></i> Clear Logs</button>
+              </div>
+            </div>
+            <div class="table-container">
+              <table id="systemLogsTable">
+                <thead>
+                  <tr>
+                    <th style="width:180px;">Timestamp</th>
+                    <th style="width:160px;">User</th>
+                    <th style="width:180px;">Action Type</th>
+                    <th>Details</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /adminPanel_systemlogs -->
 
       </div><!-- /viewAdmin -->
 
@@ -2395,7 +2427,7 @@ if(typeof google==='undefined'){
       }else{
         setTimeout(()=>{
           const m=localDB.allocations.find(a=>a.ID===id);
-          if(m){m['Confirmed Qty']=Number(qty);m['PO Amount']=Number(qty)*m.Price;m['UTR Number']=utr||'';m.Status='Confirmed';m['Last Updated']=new Date().toISOString();m['Sales Approval']=(Number(qty)!==Number(m['Allocated Qty']))?'Pending Approval':'Approved';}
+          if(m){logSystemAction('Edit Allocation', `Modified allocation ID ${id}: Set confirmed quantity to ${qty}`); m['Confirmed Qty']=Number(qty);m['PO Amount']=Number(qty)*m.Price;m['UTR Number']=utr||'';m.Status='Confirmed';m['Last Updated']=new Date().toISOString();m['Sales Approval']=(Number(qty)!==Number(m['Allocated Qty']))?'Pending Approval':'Approved';}
           saveLocalDB();self._s&&self._s({success:true});
         },400);
       }
@@ -2561,7 +2593,7 @@ function loadRoleSpecificView(){
   document.getElementById('sidebarUserRole').className=`role-pill ${currentUser.role}`;
   document.getElementById('sidebarAvatar').innerText=currentUser.fullName.charAt(0).toUpperCase();
   // Hide all nav items first
-  ['navItem_dashboard','navItem_master','navItem_salesorders','navItem_ledger','navItem_distributors','navItem_users','navItem_territory','navItem_broadcast','navItem_report','navItem_approvals','navItem_confirm'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  ['navItem_dashboard','navItem_master','navItem_salesorders','navItem_ledger','navItem_distributors','navItem_users','navItem_territory','navItem_broadcast','navItem_report','navItem_approvals','navItem_confirm','navItem_systemlogs'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
   // About is always visible for all roles
   showNavItem('navItem_about');
 
@@ -2598,7 +2630,7 @@ function loadDataAndRender(callback){
         if(res.prices&&typeof res.prices==='object')localDB.prices=res.prices;
         if(Array.isArray(res.allocations))localDB.allocations=res.allocations;
         if(Array.isArray(res.distributors))localDB.distributors=res.distributors;
-        if(Array.isArray(res.users))localDB.users=res.users;
+        if(Array.isArray(res.users))localDB.users=res.users; if(Array.isArray(res.logs))localDB.logs=res.logs; if(Array.isArray(res.logs))localDB.logs=res.logs;
         if(res.rsdAnnouncements)localDB.rsdAnnouncements=res.rsdAnnouncements;
         if(callback)callback();
       }else{if(callback)callback();}
@@ -2651,7 +2683,7 @@ function showSubTab(tab){
   const role=currentUser.role;
   if(role==='admin'){
     document.querySelectorAll('#viewAdmin .tab-panel').forEach(p=>p.classList.remove('active'));
-    const pmap={dashboard:'adminPanel_dashboard',master:'adminPanel_master',salesorders:'adminPanel_salesorders',ledger:'adminPanel_ledger',distributors:'adminPanel_distributors',users:'adminPanel_users'};
+    const pmap={dashboard:'adminPanel_dashboard',master:'adminPanel_master',salesorders:'adminPanel_salesorders',ledger:'adminPanel_ledger',distributors:'adminPanel_distributors',users:'adminPanel_users',systemlogs:'adminPanel_systemlogs'};
     if(pmap[tab]){document.getElementById(pmap[tab]).classList.add('active');}
     if(tab==='dashboard'){buildAdminDashboard();}
     
@@ -2659,7 +2691,7 @@ function showSubTab(tab){
     else if(tab==='salesorders'){buildSalesOrders();}
     else if(tab==='ledger'){buildLedger('admin');}
     else if(tab==='distributors'){buildDistributors('admin');}
-    else if(tab==='users'){loadUsersTable();}
+    else if(tab==='users'){loadUsersTable();}else if(tab==='systemlogs'){buildSystemLogs();}else if(tab==='systemlogs'){buildSystemLogs();}
   }else if(role==='rsd'){
     document.querySelectorAll('#viewRSD .tab-panel').forEach(p=>p.classList.remove('active'));
     const pmap={dashboard:'rsdPanel_dashboard',report:'rsdPanel_report',territory:'rsdPanel_territory',ledger:'rsdPanel_ledger',broadcast:'rsdPanel_broadcast'};
@@ -3096,6 +3128,8 @@ function bulkMarkPaymentReceived(){
 
 function handleVerifyPayment(id,verified){
   showLoader('Verification','Processing...');
+  logSystemAction(verified ? 'Approve UTR Payment' : 'Reject UTR Payment', `Verified payment status for allocation ID ${id}`);
+  logSystemAction(verified ? 'Approve UTR Payment' : 'Reject UTR Payment', `Verified payment status for allocation ID ${id}`);
   google.script.run
     .withSuccessHandler(res=>{hideLoader();if(res.success)refreshDashboard();})
     .withFailureHandler(e=>{hideLoader();alert('Error: '+e.toString());})
@@ -3104,6 +3138,8 @@ function handleVerifyPayment(id,verified){
 
 function handleApprovePO(id,approved){
   showLoader('Approval','Processing PO approval...');
+  logSystemAction(approved ? 'Approve PO Deviation' : 'Reject PO Deviation', `Processed deviation approval for allocation ID ${id}`);
+  logSystemAction(approved ? 'Approve PO Deviation' : 'Reject PO Deviation', `Processed deviation approval for allocation ID ${id}`);
   google.script.run
     .withSuccessHandler(res=>{hideLoader();if(res.success)refreshDashboard();})
     .withFailureHandler(e=>{hideLoader();alert('Error: '+e.toString());})
@@ -3953,6 +3989,85 @@ function populateRSDDropdown(){
   sel.innerHTML='<option value="">-- Select RSD --</option>';
   const rsds=localDB.users.filter(u=>u.Role==='rsd');
   rsds.forEach(r=>{const opt=document.createElement('option');opt.value=r.Username;opt.text=r.FullName;sel.appendChild(opt);});
+}
+
+function logSystemAction(action, details){
+  const logEntry = {
+    ID: 'LOG' + Date.now() + Math.floor(Math.random()*1000),
+    Timestamp: new Date().toISOString(),
+    User: (typeof currentUser !== 'undefined' && currentUser) ? currentUser.fullName : 'System',
+    Action: action,
+    Details: details
+  };
+  
+  if(!localDB.logs) localDB.logs = [];
+  localDB.logs.unshift(logEntry);
+  saveLocalDB();
+  
+  if(typeof google !== 'undefined' && google.script && google.script.run) {
+    if(google.script.run.writeLogEntry) {
+      google.script.run.writeLogEntry(logEntry);
+    }
+  }
+}
+
+function buildSystemLogs(){
+  const tbody = document.querySelector('#systemLogsTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  const logs = localDB.logs || [];
+  if(logs.length === 0){
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--color-text-muted);padding:16px;">No system actions logged.</td></tr>';
+    return;
+  }
+  logs.forEach(log => {
+    const tr = document.createElement('tr');
+    const dt = new Date(log.Timestamp).toLocaleString('en-IN', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    const isDanger = log.Action.toLowerCase().includes('delete') || log.Action.toLowerCase().includes('purge') || log.Action.toLowerCase().includes('reject');
+    const badgeClass = isDanger ? 'rejected' : 'approved';
+    tr.innerHTML = `<td style="font-size:0.75rem;color:var(--color-text-muted);">${dt}</td>
+                    <td><strong>${log.User}</strong></td>
+                    <td><span class="badge ${badgeClass}">${log.Action}</span></td>
+                    <td style="font-size:0.8rem;color:var(--color-text-main);">${log.Details}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function filterSystemLogs(){
+  const q = document.getElementById('searchSystemLogs').value.toLowerCase();
+  const filtered = (localDB.logs || []).filter(log => 
+    log.User.toLowerCase().includes(q) ||
+    log.Action.toLowerCase().includes(q) ||
+    log.Details.toLowerCase().includes(q)
+  );
+  const tbody = document.querySelector('#systemLogsTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  if(filtered.length === 0){
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--color-text-muted);padding:16px;">No matching actions found.</td></tr>';
+    return;
+  }
+  filtered.forEach(log => {
+    const tr = document.createElement('tr');
+    const dt = new Date(log.Timestamp).toLocaleString('en-IN', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    const isDanger = log.Action.toLowerCase().includes('delete') || log.Action.toLowerCase().includes('purge') || log.Action.toLowerCase().includes('reject');
+    const badgeClass = isDanger ? 'rejected' : 'approved';
+    tr.innerHTML = `<td style="font-size:0.75rem;color:var(--color-text-muted);">${dt}</td>
+                    <td><strong>${log.User}</strong></td>
+                    <td><span class="badge ${badgeClass}">${log.Action}</span></td>
+                    <td style="font-size:0.8rem;color:var(--color-text-main);">${log.Details}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function clearSystemLogs(){
+  if(!confirm("Are you sure you want to clear the Action Ledger?")) return;
+  localDB.logs = [];
+  saveLocalDB();
+  buildSystemLogs();
+  if(typeof google !== 'undefined' && google.script && google.script.run && google.script.run.clearLogsSheet) {
+    google.script.run.clearLogsSheet();
+  }
 }
 
 function loadUsersTable(){
@@ -4842,7 +4957,7 @@ function saveAllocation() {
       'Payment Verified': '',
       'Last Updated': new Date().toISOString()
     };
-    localDB.allocations.push(newAlloc);
+    localDB.allocations.push(newAlloc); logSystemAction('Create Allocation', `Allocated ${newAlloc['Allocated Qty']} units of ${newAlloc['Model Name']} to ${newAlloc['AD Name']}`); logSystemAction('Create Allocation', `Allocated ${newAlloc['Allocated Qty']} units of ${newAlloc['Model Name']} to ${newAlloc['AD Name']}`);
   }
   
   saveDataToServer(() => {
@@ -4859,7 +4974,7 @@ function deleteAllAllocations() {
   if (!confirm("🚨 DOUBLE CONFIRMATION: Are you absolutely sure? All distributor allocations and POs will be deleted. Click OK to proceed.")) return;
   
   showLoader("Deleting All", "Removing all allocations...");
-  localDB.allocations = [];
+  logSystemAction('Purge Allocations', 'Purged all active allocations from system'); logSystemAction('Purge Allocations', 'Purged all active allocations from system'); localDB.allocations = [];
   saveDataToServer(() => {
     hideLoader();
     alert("All allocations deleted successfully!");
@@ -4871,7 +4986,7 @@ function deleteAllAllocations() {
 function deleteManualAllocation(id, adName, modelName) {
   if (confirm(`Are you sure you want to delete the allocation of ${modelName} for ${adName}?`)) {
     showLoader();
-    localDB.allocations = localDB.allocations.filter(a => a.ID !== id);
+    logSystemAction('Delete Allocation', `Deleted allocation ID ${id} for ${adName} (${modelName})`); localDB.allocations = localDB.allocations.filter(a => a.ID !== id);
     saveDataToServer(() => {
       hideLoader();
       alert("Allocation deleted successfully!");
