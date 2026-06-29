@@ -723,12 +723,45 @@
 
 
     <nav class="sidebar-nav" id="sidebarNav">
+      <!-- 1. Dashboard (All) -->
       <a href="#" class="nav-item active" id="navItem_dashboard" onclick="showSubTab('dashboard')">
         <i data-lucide="layout-dashboard"></i><span class="nav-label">Dashboard</span>
+      </a>
       
-      <!-- Admin only -->
+      <!-- 2. Sales Orders (Admin) -->
+      <a href="#" class="nav-item" id="navItem_salesorders" onclick="showSubTab('salesorders')">
+        <i data-lucide="clipboard-list"></i><span class="nav-label">Sales Orders</span>
+      </a>
       
-        
+      <!-- 3. Line Items (Admin) -->
+      <a href="#" class="nav-item" id="navItem_lineitems" onclick="showSubTab('lineitems')">
+        <i data-lucide="shopping-bag"></i><span class="nav-label">Line Items</span>
+      </a>
+      
+      <!-- 4. Allocation Ledger (All) -->
+      <a href="#" class="nav-item" id="navItem_ledger" onclick="showSubTab('ledger')">
+        <i data-lucide="book-open"></i><span class="nav-label">Allocation Ledger</span>
+      </a>
+      
+      <!-- 5. Master Updation (Admin) -->
+      <a href="#" class="nav-item" id="navItem_master" onclick="showSubTab('master')">
+        <i data-lucide="database"></i><span class="nav-label">Master Updation</span>
+      </a>
+      
+      <!-- 6. User Credentials (Admin) -->
+      <a href="#" class="nav-item" id="navItem_users" onclick="showSubTab('users')">
+        <i data-lucide="users"></i><span class="nav-label">User Credentials</span>
+      </a>
+      
+      <!-- 7. Action Ledger (Admin) -->
+      <a href="#" class="nav-item" id="navItem_systemlogs" onclick="showSubTab('systemlogs')">
+        <i data-lucide="list-todo"></i><span class="nav-label">Action Ledger</span>
+      </a>
+      
+      <!-- Non-Admin Panels (Placed at bottom of lists for other roles) -->
+      <!-- AD only -->
+      <a href="#" class="nav-item" id="navItem_confirm" onclick="showSubTab('confirm')">
+        <i data-lucide="check-circle"></i><span class="nav-label">Confirm Allocation</span>
       </a>
       <!-- Sales Head only -->
       <a href="#" class="nav-item" id="navItem_approvals" onclick="showSubTab('approvals')">
@@ -738,40 +771,14 @@
       <a href="#" class="nav-item" id="navItem_report" onclick="showSubTab('report')">
         <i data-lucide="file-text"></i><span class="nav-label">Allocation Report</span>
       </a>
-      <!-- AD only -->
-      <a href="#" class="nav-item" id="navItem_confirm" onclick="showSubTab('confirm')">
-        <i data-lucide="check-circle"></i><span class="nav-label">Confirm Allocation</span>
-      </a>
-      <!-- Admin only -->
-      <a href="#" class="nav-item" id="navItem_master" onclick="showSubTab('master')">
-        <i data-lucide="database"></i><span class="nav-label">Master Updation</span>
-      </a>
-      <a href="#" class="nav-item" id="navItem_salesorders" onclick="showSubTab('salesorders')">
-        <i data-lucide="clipboard-list"></i><span class="nav-label">Sales Orders</span>
-      </a>
-      <!-- All roles -->
-      <a href="#" class="nav-item" id="navItem_ledger" onclick="showSubTab('ledger')">
-        <i data-lucide="book-open"></i><span class="nav-label">Allocation Ledger</span>
-      </a>
-      <!-- Distributors section removed from sidebar -->
-      <!-- Admin only -->
-      <a href="#" class="nav-item" id="navItem_users" onclick="showSubTab('users')">
-        <i data-lucide="users"></i><span class="nav-label">User Credentials</span>
-      </a>
-      <a href="#" class="nav-item" id="navItem_systemlogs" onclick="showSubTab('systemlogs')">
-        <i data-lucide="list-todo"></i><span class="nav-label">Action Ledger</span>
-      </a>
-      <a href="#" class="nav-item" id="navItem_lineitems" onclick="showSubTab('lineitems')">
-        <i data-lucide="shopping-bag"></i><span class="nav-label">Line Items</span>
-      </a>
-      <!-- RSD only -->
       <a href="#" class="nav-item" id="navItem_territory" onclick="showSubTab('territory')">
         <i data-lucide="map-pin"></i><span class="nav-label">Territory Overview</span>
       </a>
       <a href="#" class="nav-item" id="navItem_broadcast" onclick="showSubTab('broadcast')">
         <i data-lucide="megaphone"></i><span class="nav-label">Broadcast Message</span>
       </a>
-      <!-- All roles -->
+      
+      <!-- General / Common -->
       <div style="height:1px;background:var(--border-color);margin:8px 6px;"></div>
       <a href="#" class="nav-item" id="navItem_about" onclick="showSubTab('about')">
         <i data-lucide="info"></i><span class="nav-label">About</span>
