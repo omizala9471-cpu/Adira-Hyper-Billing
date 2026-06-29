@@ -1791,8 +1791,8 @@
           <p style="font-size:0.82rem;color:var(--color-text-muted);">PO Value: <strong id="adHeroPOVal" style="color:var(--color-primary);">₹0</strong></p>
         </div>
 
-        <!-- Countdowns -->
-        <div class="countdown-grid">
+        <!-- Countdowns & Ledger Balance -->
+        <div class="countdown-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
           <div class="countdown-card">
             <div class="countdown-title">Order Confirmation</div>
             <div class="countdown-timer" id="timerConfirm">00h 00m 00s</div>
@@ -1800,6 +1800,10 @@
           <div class="countdown-card">
             <div class="countdown-title">Payment Settlement</div>
             <div class="countdown-timer" id="timerPayment">00h 00m 00s</div>
+          </div>
+          <div class="countdown-card" style="border-color: rgba(0, 212, 255, 0.15); background: linear-gradient(135deg, rgba(0, 212, 255, 0.03), rgba(0,0,0,0));">
+            <div class="countdown-title" style="color: var(--color-secondary);">Ledger Balance</div>
+            <div class="countdown-timer" id="adDashboardBalance" style="color: var(--color-secondary); font-size: 1.65rem;">₹0</div>
           </div>
         </div>
 
@@ -1879,7 +1883,7 @@
             <div class="summary-row"><span>Adjusted PO Value</span><span id="adSummaryPOVal">₹0</span></div>
             <div class="summary-row total"><span>Final PO Total</span><span id="adSummaryTotal">₹0</span></div>
             <div class="summary-row" style="display:none;border-top:1px dashed rgba(255,255,255,0.08);margin-top:8px;padding-top:8px;"><span>Credit Limit</span><span id="adSummaryCreditLimit">₹0</span></div>
-            <div class="summary-row" style="border-top:1px dashed rgba(255,255,255,0.08);margin-top:8px;padding-top:8px;border-bottom:1px dashed rgba(255,255,255,0.08);padding-bottom:8px;"><span>Outstanding Balance</span><span id="adSummaryOutstanding">₹0</span></div>
+            <div class="summary-row" style="border-top:1px dashed rgba(255,255,255,0.08);margin-top:8px;padding-top:8px;border-bottom:1px dashed rgba(255,255,255,0.08);padding-bottom:8px;"><span>Ledger Balance</span><span id="adSummaryOutstanding">₹0</span></div>
             <div class="summary-row" style="display:none;border-bottom:1px dashed rgba(255,255,255,0.08);padding-bottom:8px;"><span>Available Credit</span><span id="adSummaryAvailableCredit" style="color:var(--color-secondary);font-weight:700;">₹0</span></div>
             <div id="adCreditWarning" style="display:none !important;padding:12px;border-radius:10px;background:rgba(239,68,68,0.1);border:1px solid var(--color-danger);color:#fca5a5;font-size:0.8rem;text-align:center;">
               ⚠️ <strong>Credit Limit Exceeded</strong> by <span id="adCreditWarningAmount">₹0</span>
@@ -4307,10 +4311,25 @@ function recalculateADSummary(){
   const ledger=localDB.distributors.find(d=>d['AD Name'].toLowerCase()===currentUser.fullName.toLowerCase())||{'Credit Limit':300000,'Outstanding Balance':0};
   const lim=Number(ledger['Credit Limit'])||300000;const out=Number(ledger['Outstanding Balance'])||0;const av=lim-out;
   document.getElementById('adSummaryCreditLimit').innerText='₹'+lim.toLocaleString('en-IN');
-  document.getElementById('adSummaryOutstanding').innerText = out > 0 
-    ? '₹' + out.toLocaleString('en-IN') 
-    : (out < 0 ? '₹0 (Credit: ₹' + Math.abs(out).toLocaleString('en-IN') + ')' : '₹0');
+  
+  const cardBalanceStr = out > 0 
+    ? '₹' + out.toLocaleString('en-IN') + ' Dr' 
+    : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') + ' Cr' : '₹0');
+    
+  document.getElementById('adSummaryOutstanding').innerText = cardBalanceStr;
   document.getElementById('adSummaryAvailableCredit').innerText='₹'+av.toLocaleString('en-IN');
+  
+  const dbBalEl = document.getElementById('adDashboardBalance');
+  if (dbBalEl) {
+    dbBalEl.innerText = cardBalanceStr;
+    if (out > 0) {
+      dbBalEl.style.color = 'var(--color-warning)';
+    } else if (out < 0) {
+      dbBalEl.style.color = 'var(--color-success)';
+    } else {
+      dbBalEl.style.color = 'var(--color-text)';
+    }
+  }
   const warn=document.getElementById('adCreditWarning');
   warn.style.display='none';
 }
