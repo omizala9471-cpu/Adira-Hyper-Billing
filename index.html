@@ -725,10 +725,10 @@
     <nav class="sidebar-nav" id="sidebarNav">
       <a href="#" class="nav-item active" id="navItem_dashboard" onclick="showSubTab('dashboard')">
         <i data-lucide="layout-dashboard"></i><span class="nav-label">Dashboard</span>
-      </a>
+      
       <!-- Admin only -->
-      <a href="#" class="nav-item" id="navItem_livestatus" onclick="showSubTab('livestatus')">
-        <i data-lucide="play"></i><span class="nav-label">Live Allocations</span>
+      
+        
       </a>
       <!-- Sales Head only -->
       <a href="#" class="nav-item" id="navItem_approvals" onclick="showSubTab('approvals')">
@@ -928,164 +928,6 @@
 
         </div><!-- /adminPanel_dashboard -->
 
-        <!-- ADMIN: Live AD Allocations Status -->
-        <div class="tab-panel" id="adminPanel_livestatus">
-          <!-- Live Status Table -->
-          <div class="glass-panel" style="margin-bottom:20px;">
-            <div class="section-header">
-              <h3>Live AD Allocations Status</h3>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                
-                <div style="display:flex;gap:8px;align-items:center;">
-                  <div class="search-bar" style="min-width:200px;">
-                    <i data-lucide="search"></i>
-                    <input type="text" id="searchAdminTable" placeholder="Search AD, model..." oninput="filterAdminTable()">
-                  </div>
-                  <button class="btn-action" onclick="toggleAdvancedFilters('adminTableFiltersDrawer')" title="Range Filters" style="padding:6px 10px;">
-                    <i data-lucide="filter" style="width:14px; height:14px;"></i>
-                  </button>
-                </div>
-                <button class="btn-action" onclick="filterAdminByStatus('all')">All</button>
-                <button class="btn-action" onclick="filterAdminByStatus('Pending')">Pending</button>
-                <button class="btn-action" onclick="filterAdminByStatus('Confirmed')">Confirmed</button>
-                <button class="btn-action" onclick="filterAdminByStatus('Completed')">Completed</button>
-              </div>
-            </div>
-
-                        <!-- Advanced Filters Drawer -->
-            <div id="adminTableFiltersDrawer" class="advanced-filters-drawer" style="display:none; flex-direction:column; gap:8px; padding:12px 16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; margin-bottom:16px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                <span style="font-size:0.75rem; font-weight:700; color:var(--color-primary); text-transform:uppercase; letter-spacing:1px;">Range Filters</span>
-                <button class="btn-action danger" style="padding:2px 8px; font-size:0.68rem;" onclick="clearAdvancedFilters('adminTable')">Clear</button>
-              </div>
-              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:10px;">
-                <div>
-                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Start Date</label>
-                  <input type="date" id="adminTable_startDate" class="form-control" style="font-size:0.75rem; padding:4px 8px; height:auto;" onchange="filterAdminTable()">
-                </div>
-                <div>
-                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">End Date</label>
-                  <input type="date" id="adminTable_endDate" class="form-control" style="font-size:0.75rem; padding:4px 8px; height:auto;" onchange="filterAdminTable()">
-                </div>
-                <div>
-                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Min Value (₹)</label>
-                  <input type="number" id="adminTable_minVal" class="form-control" placeholder="0" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterAdminTable()">
-                </div>
-                <div>
-                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Max Value (₹)</label>
-                  <input type="number" id="adminTable_maxVal" class="form-control" placeholder="Max" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterAdminTable()">
-                </div>
-                <div>
-                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Min Qty</label>
-                  <input type="number" id="adminTable_minQty" class="form-control" placeholder="0" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterAdminTable()">
-                </div>
-                <div>
-                  <label style="font-size:0.68rem; color:var(--color-text-muted); display:block; margin-bottom:2px;">Max Qty</label>
-                  <input type="number" id="adminTable_maxQty" class="form-control" placeholder="Max" style="font-size:0.75rem; padding:4px 8px; height:auto;" oninput="filterAdminTable()">
-                </div>
-              </div>
-            </div>
-
-            <!-- AD Accordion drop-down container -->
-            <div id="adminAdAccordionContainer" style="display:flex; flex-direction:column; gap:12px; margin-top:10px;"></div>
-          </div>
-
-
-        </div>
-
-        <!-- ADMIN: Master Updation -->
-        <div class="tab-panel" id="adminPanel_master">
-          <div class="master-tabs" id="masterTabsNav">
-            <button class="master-tab-btn active" id="mtab_allocations" onclick="showMasterTab('allocations',this)"><i data-lucide="package" style="width:14px;height:14px;"></i> Allocations</button>
-            <button class="master-tab-btn" id="mtab_prices" onclick="showMasterTab('prices',this)"><i data-lucide="indian-rupee" style="width:14px;height:14px;"></i> Price List</button>
-            <button class="master-tab-btn" id="mtab_balances" onclick="showMasterTab('balances',this)"><i data-lucide="landmark" style="width:14px;height:14px;"></i> Balances</button>
-            <button class="master-tab-btn" id="mtab_scheme" onclick="showMasterTab('scheme',this)"><i data-lucide="settings" style="width:14px;height:14px;"></i> Scheme &amp; Deadlines</button>
-          </div>
-
-          <!-- Allocations Tab -->
-          <div class="master-tab-content active" id="masterTab_allocations">
-            <div class="glass-panel">
-              <h3 class="settings-title"><i data-lucide="package"></i> Upload Allocation Matrix</h3>
-              <label for="fileAllocations">
-                <div class="upload-zone">
-                  <i data-lucide="file-spreadsheet" style="width:52px;height:52px;color:var(--color-primary);"></i>
-                  <h4>Click to Upload Allocations File</h4>
-                  <p>Supports .xlsx, .xls, .xlsb, .csv format</p>
-                  <div class="upload-btn-hint"><i data-lucide="upload" style="width:14px;height:14px;"></i> Browse File</div>
-                </div>
-              </label>
-              <input type="file" id="fileAllocations" style="display:none;" accept=".xlsx,.xls,.xlsb,.csv" onchange="parseExcel('allocations',this);this.value=''">
-              <div id="allocUploadStatus" style="margin-top:12px;display:none;padding:12px;border-radius:8px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:var(--color-success);font-size:0.85rem;"></div>
-              <div style="display:flex;gap:12px;justify-content:space-between;align-items:center;margin-top:16px;">
-                <p style="font-size:0.78rem;color:var(--color-text-muted);">Required columns: AD Name, Contact Number, Area, Model Name, Allocated Qty, Price</p>
-                <button class="btn-action primary" onclick="downloadTemplate('allocations')"><i data-lucide="download"></i> Download Template</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Prices Tab -->
-          <div class="master-tab-content" id="masterTab_prices">
-            <div class="glass-panel">
-              <h3 class="settings-title"><i data-lucide="indian-rupee" style="color:var(--color-success);"></i> Upload Model Price List</h3>
-              <label for="filePrices">
-                <div class="upload-zone" style="border-color:rgba(16,185,129,0.25);background:rgba(16,185,129,0.02);">
-                  <i data-lucide="file-spreadsheet" style="width:52px;height:52px;color:var(--color-success);"></i>
-                  <h4>Click to Upload Price Catalogue</h4>
-                  <p>Supports .xlsx, .xls, .csv format</p>
-                  <div class="upload-btn-hint" style="background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.3);color:var(--color-success);"><i data-lucide="upload" style="width:14px;height:14px;"></i> Browse File</div>
-                </div>
-              </label>
-              <input type="file" id="filePrices" style="display:none;" accept=".xlsx,.xls,.csv" onchange="parseExcel('prices',this);this.value=''">
-              <div id="priceUploadStatus" style="margin-top:12px;display:none;padding:12px;border-radius:8px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:var(--color-success);font-size:0.85rem;"></div>
-              <div style="display:flex;gap:12px;justify-content:space-between;align-items:center;margin-top:16px;">
-                <p style="font-size:0.78rem;color:var(--color-text-muted);">Required columns: Model Name, Price</p>
-                <button class="btn-action success" onclick="downloadTemplate('prices')"><i data-lucide="download"></i> Download Template</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Balances Tab -->
-          <div class="master-tab-content" id="masterTab_balances">
-            <div class="glass-panel">
-              <h3 class="settings-title"><i data-lucide="landmark" style="color:var(--color-secondary);"></i> Upload AD Ledger Balances</h3>
-              <label for="fileBalances">
-                <div class="upload-zone" style="border-color:rgba(0,212,255,0.25);background:rgba(0,212,255,0.02);">
-                  <i data-lucide="landmark" style="width:52px;height:52px;color:var(--color-secondary);"></i>
-                  <h4>Click to Upload Distributor Balances</h4>
-                  <p>Supports .xlsx, .xls, .csv format</p>
-                  <div class="upload-btn-hint" style="background:rgba(0,212,255,0.1);border-color:rgba(0,212,255,0.3);color:var(--color-secondary);"><i data-lucide="upload" style="width:14px;height:14px;"></i> Browse File</div>
-                </div>
-              </label>
-              <input type="file" id="fileBalances" style="display:none;" accept=".xlsx,.xls,.csv" onchange="parseExcel('balances',this);this.value=''">
-              <div id="balanceUploadStatus" style="margin-top:12px;display:none;padding:12px;border-radius:8px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:var(--color-success);font-size:0.85rem;"></div>
-              <div style="display:flex;gap:12px;justify-content:space-between;align-items:center;margin-top:16px;">
-                <p style="font-size:0.78rem;color:var(--color-text-muted);">Required columns: AD Name, Outstanding Balance, Credit Limit</p>
-                <button class="btn-action info" onclick="downloadTemplate('balances')"><i data-lucide="download"></i> Download Template</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Scheme & Deadlines Tab -->
-          <div class="master-tab-content" id="masterTab_scheme">
-            <div class="glass-panel">
-              <h3 class="settings-title"><i data-lucide="settings"></i> Schemes Announcement &amp; Deadlines</h3>
-              <div class="form-group">
-                <label for="inputDeadlineConfirm">Confirmation Deadline — Time Only (Date auto-set to today)</label>
-                <input type="time" id="inputDeadlineConfirmTime" class="form-control" style="padding-left:12px;">
-              </div>
-              <div class="form-group">
-                <label for="inputDeadlinePayment">Payment Deadline — Time Only (Date auto-set to today)</label>
-                <input type="time" id="inputDeadlinePaymentTime" class="form-control" style="padding-left:12px;">
-              </div>
-              <div class="form-group">
-                <label for="inputAdminMemo">Announcements Banner / Memo</label>
-                <textarea id="inputAdminMemo" class="form-control" style="padding-left:12px;min-height:120px;" placeholder="Add announcement details..."></textarea>
-              </div>
-              <button class="btn-submit" style="margin-top:0;" onclick="saveAdminSettings()">Save Scheme Parameters</button>
-            </div>
-          </div>
-        </div>
-
         <!-- ADMIN: Sales Orders History -->
         <div class="tab-panel" id="adminPanel_salesorders">
           <div class="glass-panel">
@@ -1159,19 +1001,7 @@
               <button class="btn-action" onclick="clearBulkSelection()"><i data-lucide="x"></i> Clear</button>
             </div>
 
-            <div class="table-container">
-              <table id="salesOrdersTable">
-                <thead>
-                  <tr>
-                    <th class="checkbox-col" id="bulkCheckCol" style="display:none;"></th>
-                    <th>#</th><th>AD Name</th><th>Area</th><th>Model</th>
-                    <th>Alloc Qty</th><th>Confirmed Qty</th><th>PO Value</th>
-                    <th>Status</th><th>Approval</th><th>UTR</th><th>Last Updated</th><th style="text-align:right;">Action</th>
-                  </tr>
-                </thead>
-                <tbody></tbody>
-              </table>
-            </div>
+            <div id="salesOrdersAccordionContainer" style="margin-top:16px;"></div>
           </div>
         </div>
 
@@ -2635,13 +2465,13 @@ function loadRoleSpecificView(){
   document.getElementById('sidebarUserRole').className=`role-pill ${currentUser.role}`;
   document.getElementById('sidebarAvatar').innerText=currentUser.fullName.charAt(0).toUpperCase();
   // Hide all nav items first
-  ['navItem_dashboard','navItem_master','navItem_salesorders','navItem_ledger','navItem_distributors','navItem_users','navItem_territory','navItem_broadcast','navItem_livestatus','navItem_report','navItem_approvals','navItem_confirm'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  ['navItem_dashboard','navItem_master','navItem_salesorders','navItem_ledger','navItem_distributors','navItem_users','navItem_territory','navItem_broadcast','navItem_report','navItem_approvals','navItem_confirm'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
   // About is always visible for all roles
   showNavItem('navItem_about');
 
   const role=currentUser.role;
   if(role==='admin'){
-    ['navItem_dashboard','navItem_livestatus','navItem_master','navItem_salesorders','navItem_ledger','navItem_distributors','navItem_users'].forEach(id=>showNavItem(id));
+    ['navItem_dashboard','navItem_master','navItem_salesorders','navItem_ledger','navItem_distributors','navItem_users'].forEach(id=>showNavItem(id));
     document.getElementById('viewAdmin').classList.add('active');
     loadDataAndRender(()=>showSubTab('dashboard'));
   }else if(role==='rsd'){
@@ -2704,7 +2534,7 @@ function showSubTab(tab){
     dashboard:'Dashboard Overview',master:'Master Updation',salesorders:'Sales Orders History',
     ledger:'Allocation Ledger',distributors:'Distributors & Ledger',users:'User Credentials',
     territory:'Territory Overview',broadcast:'Broadcast Message',about:'About This Application',
-    livestatus:'Live Allocations Status',approvals:'Pending Approvals',report:'Territorial Allocation Report',
+    approvals:'Pending Approvals',report:'Territorial Allocation Report',
     confirm:'Confirm Allocation'
   };
   document.getElementById('currentNavTitle').innerText=titleMap[tab]||'Dashboard';
@@ -2725,10 +2555,10 @@ function showSubTab(tab){
   const role=currentUser.role;
   if(role==='admin'){
     document.querySelectorAll('#viewAdmin .tab-panel').forEach(p=>p.classList.remove('active'));
-    const pmap={dashboard:'adminPanel_dashboard',livestatus:'adminPanel_livestatus',master:'adminPanel_master',salesorders:'adminPanel_salesorders',ledger:'adminPanel_ledger',distributors:'adminPanel_distributors',users:'adminPanel_users'};
+    const pmap={dashboard:'adminPanel_dashboard',master:'adminPanel_master',salesorders:'adminPanel_salesorders',ledger:'adminPanel_ledger',distributors:'adminPanel_distributors',users:'adminPanel_users'};
     if(pmap[tab]){document.getElementById(pmap[tab]).classList.add('active');}
     if(tab==='dashboard'){buildAdminDashboard();}
-    else if(tab==='livestatus'){filterAdminTable();}
+    
     else if(tab==='master'){loadMasterSettings();}
     else if(tab==='salesorders'){buildSalesOrders();}
     else if(tab==='ledger'){buildLedger('admin');}
@@ -2898,7 +2728,7 @@ function buildAdminDashboard(){
     if (sortedAreas.length === 0) terrContainer.innerHTML = '<div style="color:var(--color-text-muted); font-size:0.8rem;">No data.</div>';
   }
 
-  renderAdminTable(localDB.allocations);
+  buildSalesOrders();
   buildActivityFeed();
 }
 
@@ -3110,7 +2940,7 @@ function toggleAdAccordion(id) {
 }
 
 function filterAdminByStatus(status){
-  if(status==='all')renderAdminTable(localDB.allocations);
+  if(status==='all')buildSalesOrders();
   else renderAdminTable(localDB.allocations.filter(a=>a.Status===status));
 }
 
@@ -3133,23 +2963,34 @@ function toggleBulkMode(cb){
   buildSalesOrders();
 }
 function toggleSelectAll(cb){
-  document.querySelectorAll('.row-check').forEach(c=>c.checked=cb.checked);
+  document.querySelectorAll('.party-check').forEach(c=>c.checked=cb.checked);
   updateBulkCount();
 }
 function updateBulkCount(){
-  const selected=document.querySelectorAll('.row-check:checked').length;
-  document.getElementById('selectedCount').innerText=selected+' orders selected';
+  const selected=document.querySelectorAll('.party-check:checked').length;
+  document.getElementById('selectedCount').innerText=selected+' party(parties) selected';
 }
 function clearBulkSelection(){
-  document.querySelectorAll('.row-check').forEach(c=>c.checked=false);
+  document.querySelectorAll('.party-check').forEach(c=>c.checked=false);
   const selectAll = document.getElementById('selectAllCheck');
   if (selectAll) selectAll.checked = false;
   updateBulkCount();
 }
 function bulkMarkPaymentReceived(){
-  const ids=Array.from(document.querySelectorAll('.row-check:checked')).map(c=>c.dataset.id);
-  if(ids.length===0){alert('No rows selected.');return;}
-  if(!confirm(`Mark payment received for ${ids.length} allocation(s)?`))return;
+  const selectedADs = Array.from(document.querySelectorAll('.party-check:checked')).map(c => c.dataset.adName);
+  if(selectedADs.length===0){alert('No parties selected.');return;}
+  
+  // Find all allocation IDs belonging to these ADs that are Confirmed (awaiting payment audit) or Pending verification
+  const ids = localDB.allocations
+    .filter(a => selectedADs.includes(a['AD Name']) && (a.Status === 'Confirmed' || a['Payment Verified'] === 'Pending'))
+    .map(a => a.ID);
+    
+  if(ids.length===0){
+    alert('No allocations needing payment verification found for the selected parties.');
+    return;
+  }
+  
+  if(!confirm(`Mark payment received for all allocations under the ${selectedADs.length} selected distributor(s)?`))return;
   showLoader('Processing','Updating payment status...');
   google.script.run
     .withSuccessHandler(res=>{hideLoader();if(res.success){clearBulkSelection();refreshDashboard();}else alert('Failed.');})
@@ -3177,31 +3018,182 @@ function handleApprovePO(id,approved){
 // SALES ORDERS
 // ============================================================
 function buildSalesOrders(){
-  const tbody=document.querySelector('#salesOrdersTable tbody');
-  tbody.innerHTML='';
-  const data=localDB.allocations;
-  const bulkMode=document.getElementById('enableBulkMode').checked;
-  document.getElementById('bulkCheckCol').style.display=bulkMode?'table-cell':'none';
-  const cols = bulkMode ? 13 : 12;
-  if(data.length===0){tbody.innerHTML=`<tr><td colspan="${cols}" style="text-align:center;color:var(--color-text-muted);">No allocation records found.</td></tr>`;return;}
-  data.forEach((item,i)=>{
-    const tr=document.createElement('tr');
-    const dt=item['Last Updated']?new Date(item['Last Updated']).toLocaleDateString('en-IN'):'—';
-    const cbCell=bulkMode?`<td class="checkbox-col"><input type="checkbox" class="row-check" data-id="${item.ID}" onchange="updateBulkCount()"></td>`:'';
-    tr.innerHTML=`${cbCell}<td>${i+1}</td><td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td><td>${getApprovalBadge(item['Sales Approval'], item.Status)}</td><td>${item['UTR Number']||'-'}</td><td>${dt}</td><td style="text-align:right;"><div style="display:flex; gap:4px; justify-content:flex-end;"><button class="btn-action primary" style="padding:5px 10px;font-size:0.75rem;" onclick="openEditAllocationModal('${item.ID}')" title="Edit Allocation"><i data-lucide="edit"></i></button><button class="btn-action danger" style="padding:5px 10px;font-size:0.75rem;" onclick="deleteManualAllocation('${item.ID}', '${item['AD Name']}', '${item['Model Name']}')" title="Delete Allocation"><i data-lucide="trash-2"></i></button></div></td>`;
-    tbody.appendChild(tr);
-  });
-  lucide.createIcons({node:tbody});
+  renderSalesOrdersAccordions(localDB.allocations);
 }
 
 function filterSalesOrders(){
   const q=document.getElementById('searchSalesOrders').value.toLowerCase();
   const st=document.getElementById('filterSalesOrderStatus').value;
-  const data=localDB.allocations.filter(a=>{
+  const filtered = localDB.allocations.filter(a=>{
     const matchQ=!q||(a['AD Name'].toLowerCase().includes(q)||(a['Model Name']||'').toLowerCase().includes(q)||(a.Area||'').toLowerCase().includes(q));
     const matchS=!st||a.Status===st;
     return matchQ&&matchS && matchRangeFilters(a, 'salesOrders');
   });
+  renderSalesOrdersAccordions(filtered);
+}
+
+function renderSalesOrdersAccordions(data){
+  const container=document.getElementById('salesOrdersAccordionContainer');
+  if(!container)return;
+  container.innerHTML='';
+  
+  const bulkMode=document.getElementById('enableBulkMode').checked;
+  
+  if(data.length===0){
+    container.innerHTML=`<div class="glass-panel" style="text-align:center;padding:24px;color:var(--color-text-muted);">No sales orders matched.</div>`;
+    return;
+  }
+  
+  // Group by AD Name
+  const adGroups={};
+  data.forEach(item=>{
+    const name=item['AD Name'];
+    if(!adGroups[name]){
+      adGroups[name]={
+        name: name,
+        area: item.Area || 'Other',
+        items: [],
+        totalPOVal: 0,
+        totalQty: 0,
+        statuses: new Set()
+      };
+    }
+    adGroups[name].items.push(item);
+    adGroups[name].totalQty += (Number(item['Allocated Qty']) || 0);
+    adGroups[name].totalPOVal += (Number(item['PO Amount']) || Number(item['Allocated Value']) || 0);
+    if(item.Status) adGroups[name].statuses.add(item.Status);
+  });
+  
+  // Render accordions for each AD
+  Object.values(adGroups).forEach((group, index) => {
+    const adId = 'so_acc_' + index;
+    const statusBadgesHtml = Array.from(group.statuses).map(s => getStatusBadge(s)).join(' ');
+    
+    const adCard = document.createElement('div');
+    adCard.className = 'glass-panel';
+    adCard.style.padding = '0';
+    adCard.style.marginBottom = '12px';
+    adCard.style.overflow = 'hidden';
+    
+    adCard.innerHTML = `
+      <!-- Accordion Header -->
+      <div onclick="toggleAdAccordion('${adId}')" style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; background:rgba(65, 105, 225, 0.03); cursor:pointer; user-select:none; border-bottom:1px solid rgba(65,105,225,0.06); transition:background 0.2s;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <!-- Party-wise Checkbox selection instead of model-wise -->
+          <input type="checkbox" class="party-check" data-ad-name="${group.name}" onclick="event.stopPropagation(); updateBulkCount()" style="width:16px; height:16px; margin-right:4px; display:${bulkMode ? 'inline-block' : 'none'}; cursor:pointer;">
+          <i data-lucide="chevron-down" id="icon_${adId}" style="width:18px; height:18px; color:var(--color-primary); transition:transform 0.2s;"></i>
+          <div>
+            <h4 style="margin:0; font-size:0.95rem; font-weight:800; color:var(--color-text-main);">${group.name}</h4>
+            <span style="font-size:0.74rem; color:var(--color-text-muted);"><i data-lucide="map-pin" style="width:11px; height:11px; display:inline-block; vertical-align:middle; margin-right:3px;"></i>${group.area}</span>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+          <div style="text-align:right;">
+            <div style="font-size:0.7rem; color:var(--color-text-muted); text-transform:uppercase;">Allocated Value</div>
+            <div style="font-weight:800; font-size:0.9rem; color:var(--color-primary);">₹${group.totalPOVal.toLocaleString('en-IN')}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:0.7rem; color:var(--color-text-muted); text-transform:uppercase;">Total Qty</div>
+            <div style="font-weight:700; font-size:0.85rem; color:var(--color-text-main);">${group.totalQty} Units</div>
+          </div>
+          <div style="display:flex; gap:4px; align-items:center;">
+            ${statusBadgesHtml}
+            <button class="btn-action" style="padding:5px 10px;font-size:0.75rem;margin-left:8px;" onclick="event.stopPropagation(); openWA('${group.name}')" title="Message AD"><i data-lucide="message-square"></i></button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Accordion Content (Nested Table) -->
+      <div id="content_${adId}" style="display:none; padding:15px; background:#ffffff;">
+        <div class="table-container" style="margin:0; border:none; box-shadow:none; overflow-x:auto;">
+          <table style="width:100%; border-collapse:collapse;">
+            <thead>
+              <tr>
+                <th>Model Name</th>
+                <th>Category</th>
+                <th>Alloc Qty</th>
+                <th>Conf Qty</th>
+                <th>PO Value</th>
+                <th>Status</th>
+                <th>Approval</th>
+                <th>Payment / UTR</th>
+                <th style="text-align:right;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${group.items.map(item => {
+                const sb = getStatusBadge(item.Status);
+                let ab = '';
+                if(item['Sales Approval'] === 'Pending Approval' || item['Sales Approval'] === 'Pending') {
+                  ab = `<div style="display:flex;flex-direction:column;gap:4px;">
+                          <span style="font-size:0.7rem;color:var(--color-warning);font-weight:700;">Qty Changed</span>
+                          <div style="display:flex;gap:4px;">
+                            <button class="btn-action success" style="padding:2px 6px;font-size:0.68rem;" onclick="handleApprovePO('${item.ID}',true)"><i data-lucide="check" style="width:12px;height:12px;"></i> Approve</button>
+                            <button class="btn-action danger" style="padding:2px 6px;font-size:0.68rem;" onclick="handleApprovePO('${item.ID}',false)"><i data-lucide="x" style="width:12px;height:12px;"></i> Reject</button>
+                          </div>
+                        </div>`;
+                } else {
+                  ab = getApprovalBadge(item['Sales Approval'], item.Status);
+                }
+                const cat = getModelCategory(item['Model Name']);
+                const catPill = cat === 'Mobile' ? '📱 Mobile' : '🎧 AIOT';
+                
+                let payCell = `<span style="color:var(--color-text-muted); font-size:0.75rem; font-style:italic;">Awaiting Confirmation...</span>`;
+                if(item['UTR Number']){
+                  const confDt = item['Last Updated'] ? new Date(item['Last Updated']).toLocaleString('en-IN', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '—';
+                  payCell = `<div>UTR: <strong>${item['UTR Number']}</strong></div>
+                             <div style="font-size:0.68rem; color:var(--color-text-muted); margin-top:2px;">Confirmed: ${confDt}</div>`;
+                  if(item['Payment Verified']==='Pending'){
+                    payCell += `<div style="margin-top:4px;display:flex;gap:4px;"><button class="btn-action success" style="padding:2px 6px;font-size:0.68rem;" onclick="handleVerifyPayment('${item.ID}',true)"><i data-lucide="check" style="width:12px;height:12px;"></i> Approve</button><button class="btn-action danger" style="padding:2px 6px;font-size:0.68rem;" onclick="handleVerifyPayment('${item.ID}',false)"><i data-lucide="x" style="width:12px;height:12px;"></i> Reject</button></div>`;
+                  } else {
+                    payCell += ` <span class="badge ${item['Payment Verified']==='Verified'?'approved':'rejected'}" style="margin-top:4px; display:inline-block;">${item['Payment Verified']}</span>`;
+                  }
+                }
+                
+                let confCell = '';
+                if(item.Status === 'Pending'){
+                  confCell = `<span style="color:var(--color-text-muted); font-size:0.75rem; font-style:italic;">Awaiting...</span>`;
+                } else {
+                  const alloc = Number(item['Allocated Qty']) || 0;
+                  const conf = Number(item['Confirmed Qty']) || 0;
+                  if(alloc !== conf) {
+                    confCell = `<strong style="color:#d97706;">${conf}</strong> <span style="font-size:0.68rem; color:var(--color-text-muted); font-weight:normal;">(diff)</span>`;
+                  } else {
+                    confCell = `<strong style="color:var(--color-success);">${conf}</strong>`;
+                  }
+                }
+                
+                return `
+                  <tr style="border-bottom:1px solid rgba(0,0,0,0.04);">
+                    <td><strong style="color:var(--color-text-main);">${item['Model Name']}</strong></td>
+                    <td style="font-size:0.75rem; color:var(--color-text-muted);">${catPill}</td>
+                    <td>${item['Allocated Qty']}</td>
+                    <td>${confCell}</td>
+                    <td style="font-weight:600; color:var(--color-text-main);">
+                      ${item.Status === 'Pending' ? '<span style="color:var(--color-text-muted); font-size:0.75rem; font-style:italic;">Awaiting...</span>' : '₹' + (Number(item['PO Amount']) || Number(item['Allocated Value']) || 0).toLocaleString('en-IN')}
+                    </td>
+                    <td>${sb}</td>
+                    <td>${ab}</td>
+                    <td>${payCell}</td>
+                    <td style="text-align:right;">
+                      <div style="display:flex; gap:4px; justify-content:flex-end;">
+                        <button class="btn-action primary" style="padding:5px 10px;font-size:0.75rem;" onclick="openEditAllocationModal('${item.ID}')" title="Edit Allocation"><i data-lucide="edit"></i></button>
+                        <button class="btn-action danger" style="padding:5px 10px;font-size:0.75rem;" onclick="deleteManualAllocation('${item.ID}', '${item['AD Name']}', '${item['Model Name']}')" title="Delete Allocation"><i data-lucide="trash-2"></i></button>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    container.appendChild(adCard);
+  });
+  
+  lucide.createIcons({node:container});
+});
   const tbody=document.querySelector('#salesOrdersTable tbody');
   tbody.innerHTML='';
   const bulkMode=document.getElementById('enableBulkMode').checked;
