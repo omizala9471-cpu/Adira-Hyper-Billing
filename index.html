@@ -3210,7 +3210,6 @@ function bulkMarkPaymentReceived(){
 function handleVerifyPayment(id,verified){
   showLoader('Verification','Processing...');
   logSystemAction(verified ? 'Approve UTR Payment' : 'Reject UTR Payment', `Verified payment status for allocation ID ${id}`);
-  logSystemAction(verified ? 'Approve UTR Payment' : 'Reject UTR Payment', `Verified payment status for allocation ID ${id}`);
   google.script.run
     .withSuccessHandler(res=>{hideLoader();if(res.success)refreshDashboard();})
     .withFailureHandler(e=>{hideLoader();alert('Error: '+e.toString());})
@@ -3219,7 +3218,6 @@ function handleVerifyPayment(id,verified){
 
 function handleApprovePO(id,approved){
   showLoader('Approval','Processing PO approval...');
-  logSystemAction(approved ? 'Approve PO Deviation' : 'Reject PO Deviation', `Processed deviation approval for allocation ID ${id}`);
   logSystemAction(approved ? 'Approve PO Deviation' : 'Reject PO Deviation', `Processed deviation approval for allocation ID ${id}`);
   google.script.run
     .withSuccessHandler(res=>{hideLoader();if(res.success)refreshDashboard();})
@@ -5188,7 +5186,7 @@ function saveAllocation() {
       'Payment Verified': '',
       'Last Updated': new Date().toISOString()
     };
-    localDB.allocations.push(newAlloc); logSystemAction('Create Allocation', `Allocated ${newAlloc['Allocated Qty']} units of ${newAlloc['Model Name']} to ${newAlloc['AD Name']}`); logSystemAction('Create Allocation', `Allocated ${newAlloc['Allocated Qty']} units of ${newAlloc['Model Name']} to ${newAlloc['AD Name']}`);
+    localDB.allocations.push(newAlloc); logSystemAction('Create Allocation', `Allocated ${newAlloc['Allocated Qty']} units of ${newAlloc['Model Name']} to ${newAlloc['AD Name']}`);
   }
   
   saveDataToServer(() => {
@@ -5205,7 +5203,7 @@ function deleteAllAllocations() {
   if (!confirm("🚨 DOUBLE CONFIRMATION: Are you absolutely sure? All distributor allocations and POs will be deleted. Click OK to proceed.")) return;
   
   showLoader("Deleting All", "Removing all allocations...");
-  logSystemAction('Purge Allocations', 'Purged all active allocations from system'); logSystemAction('Purge Allocations', 'Purged all active allocations from system'); localDB.allocations = [];
+  logSystemAction('Purge Allocations', 'Purged all active allocations from system'); localDB.allocations = [];
   saveDataToServer(() => {
     hideLoader();
     alert("All allocations deleted successfully!");
