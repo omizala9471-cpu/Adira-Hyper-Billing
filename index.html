@@ -1029,6 +1029,7 @@
               <h3><i data-lucide="clipboard-list" style="width:18px;height:18px;margin-right:8px;color:var(--color-primary);"></i>All Sales Orders</h3>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <button class="btn-action primary" onclick="openAddAllocationModal()"><i data-lucide="plus-circle"></i> Add Allocation</button>
+                <button class="btn-action danger" onclick="deleteAllAllocations()"><i data-lucide="trash-2"></i> Delete All</button>
                 <div style="display:flex;gap:8px;align-items:center;">
                   <div class="search-bar">
                     <i data-lucide="search"></i>
@@ -1106,6 +1107,7 @@
               <h3><i data-lucide="book-open" style="width:18px;height:18px;margin-right:8px;color:var(--color-primary);"></i>Allocation Ledger</h3>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
                 <button class="btn-action primary" onclick="openAddAllocationModal()"><i data-lucide="plus-circle"></i> Add Allocation</button>
+                <button class="btn-action danger" onclick="deleteAllAllocations()"><i data-lucide="trash-2"></i> Delete All</button>
                 <div style="display:flex;gap:8px;align-items:center;">
                   <div class="search-bar">
                     <i data-lucide="search"></i>
@@ -4848,6 +4850,20 @@ function saveAllocation() {
     closeAddAllocationModal();
     alert(editingAllocationId ? "Allocation changes saved!" : "Manual allocation added!");
     filterAdminTable();
+    buildAdminDashboard();
+  });
+}
+
+function deleteAllAllocations() {
+  if (!confirm("⚠️ WARNING: Are you sure you want to delete ALL allocations? This action is permanent and cannot be undone.")) return;
+  if (!confirm("🚨 DOUBLE CONFIRMATION: Are you absolutely sure? All distributor allocations and POs will be deleted. Click OK to proceed.")) return;
+  
+  showLoader("Deleting All", "Removing all allocations...");
+  localDB.allocations = [];
+  saveDataToServer(() => {
+    hideLoader();
+    alert("All allocations deleted successfully!");
+    buildSalesOrders();
     buildAdminDashboard();
   });
 }
