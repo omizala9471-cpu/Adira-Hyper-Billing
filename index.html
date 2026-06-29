@@ -2640,7 +2640,7 @@ function loadRoleSpecificView(){
 
   const role=currentUser.role;
   if(role==='admin'){
-    ['navItem_dashboard','navItem_master','navItem_salesorders','navItem_ledger','navItem_distributors','navItem_users'].forEach(id=>showNavItem(id));
+    ['navItem_dashboard','navItem_master','navItem_salesorders','navItem_ledger','navItem_distributors','navItem_users','navItem_systemlogs'].forEach(id=>showNavItem(id));
     document.getElementById('viewAdmin').classList.add('active');
     loadDataAndRender(()=>showSubTab('dashboard'));
   }else if(role==='rsd'){
