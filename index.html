@@ -997,9 +997,7 @@
                       <tr>
                         <th>AD Name</th>
                         <th>MD Code</th>
-                        <th>Credit Limit</th>
                         <th>Outstanding Balance</th>
-                        <th>Available Credit</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1244,7 +1242,7 @@
               <table id="adminDistTable">
                 <thead>
                   <tr>
-                    <th>AD Name</th><th>Area</th><th>Credit Limit</th><th>Outstanding</th><th>Available Credit</th><th>Contact</th>
+                    <th>AD Name</th><th>Area</th><th>Outstanding</th><th>Contact</th>
                   </tr>
                 </thead>
                 <tbody></tbody>
@@ -1531,7 +1529,7 @@
             <div class="table-container">
               <table id="rsdTerritoryTable">
                 <thead>
-                  <tr><th>AD Name</th><th>Area</th><th>AD Code</th><th>Credit Limit</th><th>Outstanding</th><th>PO Status</th><th>PO Value</th></tr>
+                  <tr><th>AD Name</th><th>Area</th><th>AD Code</th><th>Outstanding</th><th>PO Status</th><th>PO Value</th></tr>
                 </thead>
                 <tbody></tbody>
               </table>
@@ -1746,7 +1744,7 @@
             <div class="table-container">
               <table id="salesDistributorsTable">
                 <thead>
-                  <tr><th>AD Name</th><th>Area</th><th>Credit Limit</th><th>Outstanding</th><th>Available Credit</th></tr>
+                  <tr><th>AD Name</th><th>Area</th><th>Outstanding</th></tr>
                 </thead>
                 <tbody></tbody>
               </table>
@@ -1874,10 +1872,10 @@
             <div class="summary-row"><span>Allocated Value</span><span id="adSummaryAllocatedVal">₹0</span></div>
             <div class="summary-row"><span>Adjusted PO Value</span><span id="adSummaryPOVal">₹0</span></div>
             <div class="summary-row total"><span>Final PO Total</span><span id="adSummaryTotal">₹0</span></div>
-            <div class="summary-row" style="border-top:1px dashed rgba(255,255,255,0.08);margin-top:8px;padding-top:8px;"><span>Credit Limit</span><span id="adSummaryCreditLimit">₹0</span></div>
-            <div class="summary-row"><span>Outstanding Balance</span><span id="adSummaryOutstanding">₹0</span></div>
-            <div class="summary-row" style="border-bottom:1px dashed rgba(255,255,255,0.08);padding-bottom:8px;"><span>Available Credit</span><span id="adSummaryAvailableCredit" style="color:var(--color-secondary);font-weight:700;">₹0</span></div>
-            <div id="adCreditWarning" style="display:none;margin-top:12px;padding:12px;border-radius:10px;background:rgba(239,68,68,0.1);border:1px solid var(--color-danger);color:#fca5a5;font-size:0.8rem;text-align:center;">
+            <div class="summary-row" style="display:none;border-top:1px dashed rgba(255,255,255,0.08);margin-top:8px;padding-top:8px;"><span>Credit Limit</span><span id="adSummaryCreditLimit">₹0</span></div>
+            <div class="summary-row" style="border-top:1px dashed rgba(255,255,255,0.08);margin-top:8px;padding-top:8px;border-bottom:1px dashed rgba(255,255,255,0.08);padding-bottom:8px;"><span>Outstanding Balance</span><span id="adSummaryOutstanding">₹0</span></div>
+            <div class="summary-row" style="display:none;border-bottom:1px dashed rgba(255,255,255,0.08);padding-bottom:8px;"><span>Available Credit</span><span id="adSummaryAvailableCredit" style="color:var(--color-secondary);font-weight:700;">₹0</span></div>
+            <div id="adCreditWarning" style="display:none !important;padding:12px;border-radius:10px;background:rgba(239,68,68,0.1);border:1px solid var(--color-danger);color:#fca5a5;font-size:0.8rem;text-align:center;">
               ⚠️ <strong>Credit Limit Exceeded</strong> by <span id="adCreditWarningAmount">₹0</span>
             </div>
             <div style="margin:20px 0 14px;">
@@ -3849,9 +3847,9 @@ function buildDistributors(role){
       ? '₹' + out.toLocaleString('en-IN') 
       : (out < 0 ? '₹0 (Credit: ₹' + Math.abs(out).toLocaleString('en-IN') + ')' : '₹0');
     if(role==='admin'){
-      tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>₹${lim.toLocaleString('en-IN')}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">${displayOut}</td><td style="font-weight:700;color:${av<0?'var(--color-danger)':'var(--color-success)'}">₹${av.toLocaleString('en-IN')}</td><td style="color:var(--color-text-muted);font-size:0.78rem;">${item['Contact Number']||'-'}</td>`;
+      tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">${displayOut}</td><td style="color:var(--color-text-muted);font-size:0.78rem;">${item['Contact Number']||'-'}</td>`;
     }else{
-      tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>₹${lim.toLocaleString('en-IN')}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">${displayOut}</td><td style="font-weight:700;color:${av<0?'var(--color-danger)':'var(--color-success)'}">₹${av.toLocaleString('en-IN')}</td>`;
+      tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">${displayOut}</td>`;
     }
     tbody.appendChild(tr);
   });
@@ -3871,9 +3869,7 @@ function buildMasterBalancesTable() {
     const u = localDB.users.find(x => x.FullName.toLowerCase() === item['AD Name'].toLowerCase());
     const mdCode = u ? u.ADCode || '-' : '-';
     
-    const lim = Number(item['Credit Limit']) || 0;
     const out = Number(item['Outstanding Balance']) || 0;
-    const av = lim - out;
     
     const displayOut = out > 0 
       ? '₹' + out.toLocaleString('en-IN') 
@@ -3883,9 +3879,7 @@ function buildMasterBalancesTable() {
     tr.innerHTML = `
       <td><strong>${item['AD Name']}</strong></td>
       <td><code>${mdCode}</code></td>
-      <td>₹${lim.toLocaleString('en-IN')}</td>
       <td style="color:${out > 0 ? 'var(--color-warning)' : 'inherit'}">${displayOut}</td>
-      <td style="font-weight:700;color:${av < 0 ? 'var(--color-danger)' : 'var(--color-success)'}">₹${av.toLocaleString('en-IN')}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -3902,8 +3896,8 @@ function filterDistributors(role){
     const displayOut = out > 0 
       ? '₹' + out.toLocaleString('en-IN') 
       : (out < 0 ? '₹0 (Credit: ₹' + Math.abs(out).toLocaleString('en-IN') + ')' : '₹0');
-    if(role==='admin'){tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>₹${lim.toLocaleString('en-IN')}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">${displayOut}</td><td style="font-weight:700;color:${av<0?'var(--color-danger)':'var(--color-success)'}">₹${av.toLocaleString('en-IN')}</td><td style="color:var(--color-text-muted);font-size:0.78rem;">${item['Contact Number']||'-'}</td>`;}
-    else{tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>₹${lim.toLocaleString('en-IN')}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">${displayOut}</td><td style="font-weight:700;color:${av<0?'var(--color-danger)':'var(--color-success)'}">₹${av.toLocaleString('en-IN')}</td>`;}
+    if(role==='admin'){tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">${displayOut}</td><td style="color:var(--color-text-muted);font-size:0.78rem;">${item['Contact Number']||'-'}</td>`;}
+    else{tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">${displayOut}</td>`;}
     tbody.appendChild(tr);
   });
 }
@@ -4089,7 +4083,9 @@ function filterRSDTerritory(){
     const status=allocs.length>0?allocs[0].Status:'No Allocations';
     const poVal=allocs.reduce((s,a)=>s+(Number(a['PO Amount'])||0),0);
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td><strong>${adUser.FullName}</strong></td><td>${adUser.Area||''}</td><td><code>${adUser.ADCode||'-'}</code></td><td>₹${(Number(dist['Credit Limit'])||0).toLocaleString('en-IN')}</td><td>₹${(Number(dist['Outstanding Balance'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(status)}</td><td>₹${poVal.toLocaleString('en-IN')}</td>`;
+    const out=Number(dist['Outstanding Balance'])||0;
+    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') : (out < 0 ? '₹0 (Credit: ₹' + Math.abs(out).toLocaleString('en-IN') + ')' : '₹0');
+    tr.innerHTML=`<td><strong>${adUser.FullName}</strong></td><td>${adUser.Area||''}</td><td><code>${adUser.ADCode||'-'}</code></td><td style="color:${out>0?'var(--color-warning)':'inherit'}">${displayOut}</td><td>${getStatusBadge(status)}</td><td>₹${poVal.toLocaleString('en-IN')}</td>`;
     tbody.appendChild(tr);
   });
   lucide.createIcons({node:tbody});
@@ -4292,7 +4288,7 @@ function recalculateADSummary(){
     : (out < 0 ? '₹0 (Credit: ₹' + Math.abs(out).toLocaleString('en-IN') + ')' : '₹0');
   document.getElementById('adSummaryAvailableCredit').innerText='₹'+av.toLocaleString('en-IN');
   const warn=document.getElementById('adCreditWarning');
-  if(poTotal>av){warn.style.display='block';document.getElementById('adCreditWarningAmount').innerText='₹'+(poTotal-av).toLocaleString('en-IN');}else warn.style.display='none';
+  warn.style.display='none';
 }
 
 function submitADSelections(){
