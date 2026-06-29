@@ -2700,11 +2700,6 @@ async function handleLogin(){
 }
 
 function loginSuccess(user){
-  if(user && user.Role === 'ad' && localDB.settings && localDB.settings.maintenanceMode === 'on') {
-    alert("⚠️ System is currently under maintenance. Distributor login is temporarily disabled.");
-    currentUser=null;
-    return;
-  }
   currentUser=user;
   document.getElementById('viewLogin').classList.remove('active');
   document.getElementById('appLayout').style.display='flex';
@@ -2771,6 +2766,11 @@ function loadDataAndRender(callback){
       hideLoader();
       if(res.success){
         localDB.settings=res.settings||localDB.settings;
+        if(localDB.settings && localDB.settings.maintenanceMode === 'on' && currentUser && currentUser.role === 'ad') {
+          alert("⚠️ System is currently under maintenance. Distributor portal is temporarily disabled.");
+          logout();
+          return;
+        }
         if(res.prices){
           if(Array.isArray(res.prices)){
             const normP={};
