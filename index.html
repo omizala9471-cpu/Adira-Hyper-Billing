@@ -2675,6 +2675,15 @@ window.addEventListener('DOMContentLoaded',()=>{
     for(const u of localDB.users){if(!u.Salt){u.Salt=generateSalt();u.Password=await hashPassword(u.Password,u.Salt);up=true;}}
     if(up)saveLocalDB();
   })();
+
+  // Handle Enter key for login
+  const handleEnterLogin = (e) => {
+    if (e.key === 'Enter') handleLogin();
+  };
+  const inputUser = document.getElementById('loginUser');
+  const inputPass = document.getElementById('loginPass');
+  if (inputUser) inputUser.addEventListener('keydown', handleEnterLogin);
+  if (inputPass) inputPass.addEventListener('keydown', handleEnterLogin);
 });
 
 function saveLocalDB(){try{localStorage.setItem('adira_db_v2',JSON.stringify(localDB));}catch(e){}}
