@@ -3193,34 +3193,6 @@ function renderSalesOrdersAccordions(data){
   });
   
   lucide.createIcons({node:container});
-});
-  const tbody=document.querySelector('#salesOrdersTable tbody');
-  tbody.innerHTML='';
-  const bulkMode=document.getElementById('enableBulkMode').checked;
-  document.getElementById('bulkCheckCol').style.display=bulkMode?'table-cell':'none';
-  const cols = bulkMode ? 12 : 11;
-  if(data.length===0){tbody.innerHTML=`<tr><td colspan="${cols}" style="text-align:center;color:var(--color-text-muted);">No sales orders matched.</td></tr>`;return;}
-
-  const mobiles = data.filter(item => getModelCategory(item['Model Name']) === 'Mobile');
-  const aiots = data.filter(item => getModelCategory(item['Model Name']) === 'AIOT');
-
-  const renderRow = (item, i) => {
-    const tr=document.createElement('tr');
-    const dt=item['Last Updated']?new Date(item['Last Updated']).toLocaleDateString('en-IN'):'—';
-    const cbCell=bulkMode?`<td class="checkbox-col"><input type="checkbox" class="row-check" data-id="${item.ID}" onchange="updateBulkCount()"></td>`:'';
-    tr.innerHTML=`${cbCell}<td>${i+1}</td><td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td><td>${getApprovalBadge(item['Sales Approval'], item.Status)}</td><td>${item['UTR Number']||'-'}</td><td>${dt}</td><td style="text-align:right;"><div style="display:flex; gap:4px; justify-content:flex-end;"><button class="btn-action primary" style="padding:5px 10px;font-size:0.75rem;" onclick="openEditAllocationModal('${item.ID}')" title="Edit Allocation"><i data-lucide="edit"></i></button><button class="btn-action danger" style="padding:5px 10px;font-size:0.75rem;" onclick="deleteManualAllocation('${item.ID}', '${item['AD Name']}', '${item['Model Name']}')" title="Delete Allocation"><i data-lucide="trash-2"></i></button></div></td>`;
-    tbody.appendChild(tr);
-  };
-
-  if (mobiles.length > 0) {
-    renderSectionHeader(tbody, "📱 Mobile Phones", cols);
-    mobiles.forEach((item, index) => renderRow(item, index));
-  }
-  if (aiots.length > 0) {
-    renderSectionHeader(tbody, "🎧 AIOT Products", cols);
-    aiots.forEach((item, index) => renderRow(item, mobiles.length + index));
-  }
-  lucide.createIcons({node:tbody});
 }
 
 // ============================================================
