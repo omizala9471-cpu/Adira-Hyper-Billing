@@ -2546,6 +2546,47 @@ window.addEventListener('DOMContentLoaded',()=>{
 
 function saveLocalDB(){try{localStorage.setItem('adira_db_v2',JSON.stringify(localDB));}catch(e){}}
 
+function saveDataToServer(callback) {
+  saveLocalDB();
+  
+  if (typeof database !== 'undefined' && database) {
+    // Firebase connection is active
+    const upd = {};
+    localDB.allocations.forEach(item => {
+      upd[item.ID] = item;
+    });
+    database.ref('allocations').set(upd)
+      .then(() => {
+        if (callback) callback();
+      })
+      .catch(e => {
+        hideLoader();
+        alert('Error saving data to Firebase: ' + e.toString());
+      });
+  } else if (typeof google !== 'undefined' && google.script && google.script.run) {
+    // Google Apps Script mode
+    google.script.run
+      .withSuccessHandler(res => {
+        if (res && res.success) {
+          if (callback) callback();
+        } else {
+          hideLoader();
+          alert('Error saving data to Google Sheets: ' + (res ? res.message : 'Unknown error'));
+        }
+      })
+      .withFailureHandler(e => {
+        hideLoader();
+        alert('Error communicating with Google Sheets: ' + e.toString());
+      })
+      .saveAllocationsRaw(localDB.allocations);
+  } else {
+    // Local demo / localStorage fallback
+    setTimeout(() => {
+      if (callback) callback();
+    }, 300);
+  }
+}
+
 // ============================================================
 // AUTH
 // ============================================================
