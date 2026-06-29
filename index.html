@@ -1166,7 +1166,7 @@
                     <th class="checkbox-col" id="bulkCheckCol" style="display:none;"></th>
                     <th>#</th><th>AD Name</th><th>Area</th><th>Model</th>
                     <th>Alloc Qty</th><th>Confirmed Qty</th><th>PO Value</th>
-                    <th>Status</th><th>Approval</th><th>UTR</th><th>Last Updated</th>
+                    <th>Status</th><th>Approval</th><th>UTR</th><th>Last Updated</th><th style="text-align:right;">Action</th>
                   </tr>
                 </thead>
                 <tbody></tbody>
@@ -3184,13 +3184,13 @@ function buildSalesOrders(){
   const data=localDB.allocations;
   const bulkMode=document.getElementById('enableBulkMode').checked;
   document.getElementById('bulkCheckCol').style.display=bulkMode?'table-cell':'none';
-  const cols = bulkMode ? 12 : 11;
+  const cols = bulkMode ? 13 : 12;
   if(data.length===0){tbody.innerHTML=`<tr><td colspan="${cols}" style="text-align:center;color:var(--color-text-muted);">No allocation records found.</td></tr>`;return;}
   data.forEach((item,i)=>{
     const tr=document.createElement('tr');
     const dt=item['Last Updated']?new Date(item['Last Updated']).toLocaleDateString('en-IN'):'—';
     const cbCell=bulkMode?`<td class="checkbox-col"><input type="checkbox" class="row-check" data-id="${item.ID}" onchange="updateBulkCount()"></td>`:'';
-    tr.innerHTML=`${cbCell}<td>${i+1}</td><td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td><td>${getApprovalBadge(item['Sales Approval'], item.Status)}</td><td>${item['UTR Number']||'-'}</td><td>${dt}</td>`;
+    tr.innerHTML=`${cbCell}<td>${i+1}</td><td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td><td>${getApprovalBadge(item['Sales Approval'], item.Status)}</td><td>${item['UTR Number']||'-'}</td><td>${dt}</td><td style="text-align:right;"><div style="display:flex; gap:4px; justify-content:flex-end;"><button class="btn-action primary" style="padding:5px 10px;font-size:0.75rem;" onclick="openEditAllocationModal('${item.ID}')" title="Edit Allocation"><i data-lucide="edit"></i></button><button class="btn-action danger" style="padding:5px 10px;font-size:0.75rem;" onclick="deleteManualAllocation('${item.ID}', '${item['AD Name']}', '${item['Model Name']}')" title="Delete Allocation"><i data-lucide="trash-2"></i></button></div></td>`;
     tbody.appendChild(tr);
   });
   lucide.createIcons({node:tbody});
@@ -3218,7 +3218,7 @@ function filterSalesOrders(){
     const tr=document.createElement('tr');
     const dt=item['Last Updated']?new Date(item['Last Updated']).toLocaleDateString('en-IN'):'—';
     const cbCell=bulkMode?`<td class="checkbox-col"><input type="checkbox" class="row-check" data-id="${item.ID}" onchange="updateBulkCount()"></td>`:'';
-    tr.innerHTML=`${cbCell}<td>${i+1}</td><td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td><td>${getApprovalBadge(item['Sales Approval'], item.Status)}</td><td>${item['UTR Number']||'-'}</td><td>${dt}</td>`;
+    tr.innerHTML=`${cbCell}<td>${i+1}</td><td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td><td>${getApprovalBadge(item['Sales Approval'], item.Status)}</td><td>${item['UTR Number']||'-'}</td><td>${dt}</td><td style="text-align:right;"><div style="display:flex; gap:4px; justify-content:flex-end;"><button class="btn-action primary" style="padding:5px 10px;font-size:0.75rem;" onclick="openEditAllocationModal('${item.ID}')" title="Edit Allocation"><i data-lucide="edit"></i></button><button class="btn-action danger" style="padding:5px 10px;font-size:0.75rem;" onclick="deleteManualAllocation('${item.ID}', '${item['AD Name']}', '${item['Model Name']}')" title="Delete Allocation"><i data-lucide="trash-2"></i></button></div></td>`;
     tbody.appendChild(tr);
   };
 
