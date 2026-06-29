@@ -990,7 +990,13 @@
               </div>
               
               <div style="margin-top:24px;border-top:1px solid rgba(255,255,255,0.08);padding-top:20px;">
-                <h3 class="settings-title" style="margin-bottom:12px;display:flex;align-items:center;gap:8px;"><i data-lucide="list"></i> Current AD-wise Balances</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:12px;">
+                  <h3 class="settings-title" style="margin-bottom:0;display:flex;align-items:center;gap:8px;"><i data-lucide="list"></i> Current AD-wise Balances</h3>
+                  <div class="search-box" style="width:280px; margin-bottom:0;">
+                    <i data-lucide="search" style="width:16px;height:16px;position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--color-text-muted);"></i>
+                    <input type="text" id="searchMasterBalances" placeholder="Search by AD Name or MD Code..." class="form-control" oninput="filterMasterBalancesTable()" style="padding-left:36px;height:36px;background:rgba(255,255,255,0.03);border:1px solid var(--border-color);border-radius:8px;color:var(--color-text);">
+                  </div>
+                </div>
                 <div class="table-responsive">
                   <table class="table-billing" id="masterBalancesTable">
                     <thead>
@@ -3856,21 +3862,38 @@ function buildDistributors(role){
 }
 
 function buildMasterBalancesTable() {
+  const searchInput = document.getElementById('searchMasterBalances');
+  if (searchInput) searchInput.value = '';
+  filterMasterBalancesTable();
+}
+
+function filterMasterBalancesTable() {
+  const q = document.getElementById('searchMasterBalances') ? document.getElementById('searchMasterBalances').value.toLowerCase() : '';
   const tbody = document.querySelector('#masterBalancesTable tbody');
   if (!tbody) return;
   tbody.innerHTML = '';
   
   if (localDB.distributors.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);">No balances recorded.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--color-text-muted);">No balances recorded.</td></tr>`;
     return;
   }
   
-  localDB.distributors.forEach(item => {
+  const filtered = localDB.distributors.filter(item => {
+    const u = localDB.users.find(x => x.FullName.toLowerCase() === item['AD Name'].toLowerCase());
+    const mdCode = u ? u.ADCode || '' : '';
+    return item['AD Name'].toLowerCase().includes(q) || mdCode.toLowerCase().includes(q);
+  });
+  
+  if (filtered.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center;color:var(--color-text-muted);">No matching balances found.</td></tr>`;
+    return;
+  }
+  
+  filtered.forEach(item => {
     const u = localDB.users.find(x => x.FullName.toLowerCase() === item['AD Name'].toLowerCase());
     const mdCode = u ? u.ADCode || '-' : '-';
     
     const out = Number(item['Outstanding Balance']) || 0;
-    
     const displayOut = out > 0 
       ? '₹' + out.toLocaleString('en-IN') 
       : (out < 0 ? '₹0 (Credit: ₹' + Math.abs(out).toLocaleString('en-IN') + ')' : '₹0');
@@ -3883,6 +3906,7 @@ function buildMasterBalancesTable() {
     `;
     tbody.appendChild(tr);
   });
+  lucide.createIcons({node:tbody});
 }
 
 function filterDistributors(role){
