@@ -1318,6 +1318,7 @@
                   <i data-lucide="upload-cloud"></i> Import Excel
                   <input type="file" id="excelLineItemsFile" accept=".xlsx,.xls" style="display:none;" onchange="parseExcel('lineitems',this);this.value='';">
                 </label>
+                <button class="btn-action" onclick="downloadTemplate('lineitems')" style="display:inline-flex;align-items:center;gap:8px;margin-top:0;"><i data-lucide="download"></i> Download Template</button>
               </div>
             </div>
             <div id="lineItemsUploadStatus" style="margin-top:12px;margin-bottom:12px;display:none;padding:12px;border-radius:8px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:var(--color-success);font-size:0.85rem;"></div>
@@ -4162,6 +4163,10 @@ function clearSystemLogs(){
   }
 }
 
+function escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 function buildLineItemsTable() {
   const tbody = document.querySelector('#lineItemsTable tbody');
   if(!tbody) return;
@@ -4174,15 +4179,27 @@ function buildLineItemsTable() {
   }
   models.forEach((model, i) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${i+1}</td>
-                    <td><strong>${model}</strong></td>
-                    <td style="text-align:right;font-weight:600;color:var(--color-success);">₹${prices[model].toLocaleString('en-IN')}</td>
-                    <td style="text-align:right;">
-                      <div style="display:flex;gap:4px;justify-content:flex-end;">
-                        <button class="btn-action primary" style="padding:5px 10px;font-size:0.75rem;" onclick="openProductModal('edit', '${model}')" title="Edit Price"><i data-lucide="edit"></i></button>
-                        <button class="btn-action danger" style="padding:5px 10px;font-size:0.75rem;" onclick="deleteProduct('${model}')" title="Delete Product"><i data-lucide="trash-2"></i></button>
-                      </div>
-                    </td>`;
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn-action primary';
+    editBtn.style.cssText = 'padding:5px 10px;font-size:0.75rem;';
+    editBtn.title = 'Edit Price';
+    editBtn.innerHTML = '<i data-lucide="edit"></i>';
+    editBtn.addEventListener('click', () => openProductModal('edit', model));
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-action danger';
+    delBtn.style.cssText = 'padding:5px 10px;font-size:0.75rem;';
+    delBtn.title = 'Delete Product';
+    delBtn.innerHTML = '<i data-lucide="trash-2"></i>';
+    delBtn.addEventListener('click', () => deleteProduct(model));
+
+    const actDiv = document.createElement('div');
+    actDiv.style.cssText = 'display:flex;gap:4px;justify-content:flex-end;';
+    actDiv.appendChild(editBtn);
+    actDiv.appendChild(delBtn);
+
+    tr.innerHTML = `<td>${i+1}</td><td><strong>${escapeHtml(model)}</strong></td><td style="text-align:right;font-weight:600;color:var(--color-success);">₹${prices[model].toLocaleString('en-IN')}</td><td style="text-align:right;"></td>`;
+    tr.lastElementChild.appendChild(actDiv);
     tbody.appendChild(tr);
   });
   lucide.createIcons({node:tbody});
@@ -4201,15 +4218,27 @@ function filterLineItemsTable() {
   }
   models.forEach((model, i) => {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${i+1}</td>
-                    <td><strong>${model}</strong></td>
-                    <td style="text-align:right;font-weight:600;color:var(--color-success);">₹${prices[model].toLocaleString('en-IN')}</td>
-                    <td style="text-align:right;">
-                      <div style="display:flex;gap:4px;justify-content:flex-end;">
-                        <button class="btn-action primary" style="padding:5px 10px;font-size:0.75rem;" onclick="openProductModal('edit', '${model}')" title="Edit Price"><i data-lucide="edit"></i></button>
-                        <button class="btn-action danger" style="padding:5px 10px;font-size:0.75rem;" onclick="deleteProduct('${model}')" title="Delete Product"><i data-lucide="trash-2"></i></button>
-                      </div>
-                    </td>`;
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn-action primary';
+    editBtn.style.cssText = 'padding:5px 10px;font-size:0.75rem;';
+    editBtn.title = 'Edit Price';
+    editBtn.innerHTML = '<i data-lucide="edit"></i>';
+    editBtn.addEventListener('click', () => openProductModal('edit', model));
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-action danger';
+    delBtn.style.cssText = 'padding:5px 10px;font-size:0.75rem;';
+    delBtn.title = 'Delete Product';
+    delBtn.innerHTML = '<i data-lucide="trash-2"></i>';
+    delBtn.addEventListener('click', () => deleteProduct(model));
+
+    const actDiv = document.createElement('div');
+    actDiv.style.cssText = 'display:flex;gap:4px;justify-content:flex-end;';
+    actDiv.appendChild(editBtn);
+    actDiv.appendChild(delBtn);
+
+    tr.innerHTML = `<td>${i+1}</td><td><strong>${escapeHtml(model)}</strong></td><td style="text-align:right;font-weight:600;color:var(--color-success);">₹${prices[model].toLocaleString('en-IN')}</td><td style="text-align:right;"></td>`;
+    tr.lastElementChild.appendChild(actDiv);
     tbody.appendChild(tr);
   });
   lucide.createIcons({node:tbody});
@@ -4282,11 +4311,21 @@ function deleteProduct(model) {
   });
 }
 
+function sanitizeFirebaseKey(key) {
+  // Firebase keys cannot contain . # $ [ ] /
+  return key.replace(/[.#$\[\]/]/g, '_');
+}
+
 function savePricesToServer(callback) {
   saveLocalDB();
   
   if(typeof database !== 'undefined' && database) {
-    database.ref('prices').set(localDB.prices)
+    // Store as array to avoid key sanitization issues with special chars
+    const pricesArray = Object.keys(localDB.prices).map(model => ({
+      modelName: model,
+      price: localDB.prices[model]
+    }));
+    database.ref('prices').set(pricesArray)
       .then(() => { if (callback) callback(); })
       .catch(e => { hideLoader(); alert("Firebase Sync Error: " + e.toString()); });
   }
@@ -5328,6 +5367,14 @@ function downloadTemplate(type){
   } else if(type==='balances'){
     data=[['AD Name','Outstanding Balance','Credit Limit'],['AD Rajkot',150000,400000]];
     name='Balances_Template';
+  } else if(type==='lineitems'){
+    data=[
+      ['Item code','Item Name','AD Price With GST'],
+      ['RMX3782','realme C67 5G 128GB',14499],
+      ['RMX3890','realme 12+ 5G 256GB (Dark Matter)',28999],
+      ['RMX4115','realme narzo 70x 5G 128GB',13499]
+    ];
+    name='Line_Items_Template';
   }
   XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'Template');
   XLSX.writeFile(wb,name+'.xlsx');
