@@ -2164,12 +2164,14 @@
     </div>
     <div class="form-group" style="margin-bottom:12px;">
       <label for="newAlloc_adName">Distributor Name (AD)</label>
+      <input type="text" id="searchNewAlloc_adName" class="form-control" placeholder="🔍 Search AD..." style="padding-left:12px; height:32px; font-size:0.8rem; margin-bottom:6px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08);" oninput="filterNewAllocADs()">
       <select id="newAlloc_adName" class="form-control" style="padding-left:10px; background:rgba(10,16,32,0.95);" onchange="autoFillNewAllocDetails()">
         <option value="">Select AD...</option>
       </select>
     </div>
     <div class="form-group" style="margin-bottom:12px;">
       <label for="newAlloc_modelName">Model Name</label>
+      <input type="text" id="searchNewAlloc_modelName" class="form-control" placeholder="🔍 Search Model..." style="padding-left:12px; height:32px; font-size:0.8rem; margin-bottom:6px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08);" oninput="filterNewAllocModels()">
       <select id="newAlloc_modelName" class="form-control" style="padding-left:10px; background:rgba(10,16,32,0.95);" onchange="autoFillNewAllocDetails()">
         <option value="">Select Model...</option>
       </select>
@@ -5557,6 +5559,11 @@ function openAddAllocationModal() {
   document.getElementById('newAlloc_adName').disabled = false;
   document.getElementById('newAlloc_modelName').disabled = false;
   
+  const searchAD = document.getElementById('searchNewAlloc_adName');
+  const searchModel = document.getElementById('searchNewAlloc_modelName');
+  if (searchAD) { searchAD.value = ''; searchAD.disabled = false; }
+  if (searchModel) { searchModel.value = ''; searchModel.disabled = false; }
+  
   const adSelect = document.getElementById('newAlloc_adName');
   const modelSelect = document.getElementById('newAlloc_modelName');
   
@@ -5601,6 +5608,11 @@ function openEditAllocationModal(id) {
   adSelect.disabled = true;
   modelSelect.disabled = true;
   
+  const searchAD = document.getElementById('searchNewAlloc_adName');
+  const searchModel = document.getElementById('searchNewAlloc_modelName');
+  if (searchAD) { searchAD.value = ''; searchAD.disabled = true; }
+  if (searchModel) { searchModel.value = ''; searchModel.disabled = true; }
+  
   document.getElementById('newAlloc_qty').value = item['Allocated Qty'] || '';
   document.getElementById('newAlloc_price').value = item.Price || '';
   document.getElementById('newAlloc_area').value = item.Area || '';
@@ -5613,6 +5625,40 @@ function openEditAllocationModal(id) {
 
 function closeAddAllocationModal() {
   closeModal('modalAddAllocation');
+}
+
+function filterNewAllocADs() {
+  const q = document.getElementById('searchNewAlloc_adName').value.toLowerCase();
+  const adSelect = document.getElementById('newAlloc_adName');
+  if (!adSelect) return;
+  
+  const selectedVal = adSelect.value;
+  adSelect.innerHTML = '<option value="">Select AD...</option>';
+  
+  const adUsers = localDB.users.filter(u => u.Role === 'ad');
+  const adNames = [...new Set(adUsers.map(u => u.FullName))].sort();
+  
+  const filtered = adNames.filter(name => name.toLowerCase().includes(q));
+  filtered.forEach(name => {
+    const isSel = name === selectedVal ? 'selected' : '';
+    adSelect.innerHTML += `<option value="${name}" ${isSel}>${name}</option>`;
+  });
+}
+
+function filterNewAllocModels() {
+  const q = document.getElementById('searchNewAlloc_modelName').value.toLowerCase();
+  const modelSelect = document.getElementById('newAlloc_modelName');
+  if (!modelSelect) return;
+  
+  const selectedVal = modelSelect.value;
+  modelSelect.innerHTML = '<option value="">Select Model...</option>';
+  
+  const models = Object.keys(localDB.prices).sort();
+  const filtered = models.filter(m => m.toLowerCase().includes(q));
+  filtered.forEach(model => {
+    const isSel = model === selectedVal ? 'selected' : '';
+    modelSelect.innerHTML += `<option value="${model}" ${isSel}>${model}</option>`;
+  });
 }
 
 function autoFillNewAllocDetails() {
