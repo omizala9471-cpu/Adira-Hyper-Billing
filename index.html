@@ -3818,10 +3818,13 @@ function buildDistributors(role){
   localDB.distributors.forEach(item=>{
     const tr=document.createElement('tr');
     const lim=Number(item['Credit Limit'])||0;const out=Number(item['Outstanding Balance'])||0;const av=lim-out;
+    const displayOut = out > 0 
+      ? '₹' + out.toLocaleString('en-IN') 
+      : (out < 0 ? '₹0 (Credit: ₹' + Math.abs(out).toLocaleString('en-IN') + ')' : '₹0');
     if(role==='admin'){
-      tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>₹${lim.toLocaleString('en-IN')}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">₹${out.toLocaleString('en-IN')}</td><td style="font-weight:700;color:${av<0?'var(--color-danger)':'var(--color-success)'}">₹${av.toLocaleString('en-IN')}</td><td style="color:var(--color-text-muted);font-size:0.78rem;">${item['Contact Number']||'-'}</td>`;
+      tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>₹${lim.toLocaleString('en-IN')}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">${displayOut}</td><td style="font-weight:700;color:${av<0?'var(--color-danger)':'var(--color-success)'}">₹${av.toLocaleString('en-IN')}</td><td style="color:var(--color-text-muted);font-size:0.78rem;">${item['Contact Number']||'-'}</td>`;
     }else{
-      tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>₹${lim.toLocaleString('en-IN')}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">₹${out.toLocaleString('en-IN')}</td><td style="font-weight:700;color:${av<0?'var(--color-danger)':'var(--color-success)'}">₹${av.toLocaleString('en-IN')}</td>`;
+      tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>₹${lim.toLocaleString('en-IN')}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">${displayOut}</td><td style="font-weight:700;color:${av<0?'var(--color-danger)':'var(--color-success)'}">₹${av.toLocaleString('en-IN')}</td>`;
     }
     tbody.appendChild(tr);
   });
@@ -3835,8 +3838,11 @@ function filterDistributors(role){
   const tbody=document.querySelector('#'+tableId+' tbody');tbody.innerHTML='';
   filtered.forEach(item=>{
     const tr=document.createElement('tr');const lim=Number(item['Credit Limit'])||0;const out=Number(item['Outstanding Balance'])||0;const av=lim-out;
-    if(role==='admin'){tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>₹${lim.toLocaleString('en-IN')}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">₹${out.toLocaleString('en-IN')}</td><td style="font-weight:700;color:${av<0?'var(--color-danger)':'var(--color-success)'}">₹${av.toLocaleString('en-IN')}</td><td style="color:var(--color-text-muted);font-size:0.78rem;">${item['Contact Number']||'-'}</td>`;}
-    else{tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>₹${lim.toLocaleString('en-IN')}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">₹${out.toLocaleString('en-IN')}</td><td style="font-weight:700;color:${av<0?'var(--color-danger)':'var(--color-success)'}">₹${av.toLocaleString('en-IN')}</td>`;}
+    const displayOut = out > 0 
+      ? '₹' + out.toLocaleString('en-IN') 
+      : (out < 0 ? '₹0 (Credit: ₹' + Math.abs(out).toLocaleString('en-IN') + ')' : '₹0');
+    if(role==='admin'){tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>₹${lim.toLocaleString('en-IN')}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">${displayOut}</td><td style="font-weight:700;color:${av<0?'var(--color-danger)':'var(--color-success)'}">₹${av.toLocaleString('en-IN')}</td><td style="color:var(--color-text-muted);font-size:0.78rem;">${item['Contact Number']||'-'}</td>`;}
+    else{tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>₹${lim.toLocaleString('en-IN')}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">${displayOut}</td><td style="font-weight:700;color:${av<0?'var(--color-danger)':'var(--color-success)'}">₹${av.toLocaleString('en-IN')}</td>`;}
     tbody.appendChild(tr);
   });
 }
@@ -4220,7 +4226,9 @@ function recalculateADSummary(){
   const ledger=localDB.distributors.find(d=>d['AD Name'].toLowerCase()===currentUser.fullName.toLowerCase())||{'Credit Limit':300000,'Outstanding Balance':0};
   const lim=Number(ledger['Credit Limit'])||300000;const out=Number(ledger['Outstanding Balance'])||0;const av=lim-out;
   document.getElementById('adSummaryCreditLimit').innerText='₹'+lim.toLocaleString('en-IN');
-  document.getElementById('adSummaryOutstanding').innerText='₹'+out.toLocaleString('en-IN');
+  document.getElementById('adSummaryOutstanding').innerText = out > 0 
+    ? '₹' + out.toLocaleString('en-IN') 
+    : (out < 0 ? '₹0 (Credit: ₹' + Math.abs(out).toLocaleString('en-IN') + ')' : '₹0');
   document.getElementById('adSummaryAvailableCredit').innerText='₹'+av.toLocaleString('en-IN');
   const warn=document.getElementById('adCreditWarning');
   if(poTotal>av){warn.style.display='block';document.getElementById('adCreditWarningAmount').innerText='₹'+(poTotal-av).toLocaleString('en-IN');}else warn.style.display='none';
@@ -5189,38 +5197,47 @@ function processBalances(rows) {
   const processed = [];
   const firstRow = rows[0];
   
-  let accountKey = null;
+  let mdCodeKey = null;
   let balanceKey = null;
+  let accountKey = null;
   
   Object.keys(firstRow).forEach(key => {
     const keyLower = key.trim().toLowerCase();
-    if (keyLower === 'account' || keyLower === 'ad name' || keyLower === 'distributor' || keyLower === 'customer' || keyLower === 'name') {
+    if (keyLower === 'md code' || keyLower === 'mdcode' || keyLower === 'code' || keyLower === 'md') {
+      mdCodeKey = key;
+    } else if (keyLower === 'account' || keyLower === 'ad name' || keyLower === 'distributor' || keyLower === 'customer' || keyLower === 'name') {
       accountKey = key;
     }
   });
   
-  if (!accountKey) {
-    accountKey = Object.keys(firstRow)[1];
-  }
-  
   Object.keys(firstRow).forEach(key => {
     const keyLower = key.trim().toLowerCase();
-    if (keyLower.includes('balance') || keyLower.includes('outstanding') || keyLower.includes('ledger') || keyLower.includes('jun') || keyLower.includes('jul') || keyLower.includes('aug') || keyLower.includes('out') || keyLower.includes('bal')) {
+    if (keyLower.includes('balance') || keyLower.includes('outstanding') || keyLower.includes('ledger') || keyLower.includes('out') || keyLower.includes('bal')) {
       balanceKey = key;
     }
   });
   
   if (!balanceKey) {
-    balanceKey = Object.keys(firstRow)[3] || Object.keys(firstRow)[Object.keys(firstRow).length - 1];
+    balanceKey = Object.keys(firstRow)[1] || Object.keys(firstRow)[Object.keys(firstRow).length - 1];
   }
   
   rows.forEach(row => {
-    const adName = row[accountKey];
+    const mdCode = mdCodeKey ? (row[mdCodeKey] || '').toString().trim() : '';
+    const adName = accountKey ? (row[accountKey] || '').toString().trim() : '';
     const balanceVal = row[balanceKey];
     
-    if (adName && adName.toString().toLowerCase().trim() !== 'total' && adName.toString().toLowerCase().trim() !== 'grand total' && !adName.toString().toLowerCase().startsWith('account group')) {
+    let resolvedADName = '';
+    if (mdCode) {
+      const u = localDB.users.find(x => x.ADCode && x.ADCode.toLowerCase().trim() === mdCode.toLowerCase());
+      if (u) resolvedADName = u.FullName;
+    }
+    if (!resolvedADName && adName) {
+      resolvedADName = adName;
+    }
+    
+    if (resolvedADName && resolvedADName.toLowerCase() !== 'total' && resolvedADName.toLowerCase() !== 'grand total' && !resolvedADName.toLowerCase().startsWith('account group')) {
       processed.push({
-        adName: adName.toString().trim(),
+        adName: resolvedADName,
         outstandingBalance: isNaN(Number(balanceVal)) ? 0 : Number(balanceVal),
         creditLimit: 300000
       });
@@ -5657,7 +5674,7 @@ function downloadTemplate(type){
     data=[['Model Name','Price'],['realme GT 6 12GB/256GB',35000]];
     name='Prices_Template';
   } else if(type==='balances'){
-    data=[['AD Name','Outstanding Balance','Credit Limit'],['AD Rajkot',150000,400000]];
+    data=[['Md Code','Balance'],['AD-GJ-001',150000]];
     name='Balances_Template';
   } else if(type==='lineitems'){
     data=[
