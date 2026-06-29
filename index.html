@@ -3146,19 +3146,185 @@ function renderAdminTable(data){
         </div>
       </div>
     `;
-    container.appendChild(adCard);
+      container.appendChild(adCard);
+    
+    // Add openWA DOM button safely
+    const waContainer = adCard.querySelector('.wa-action-' + adId);
+    if(waContainer) {
+      const waBtn = document.createElement('button');
+      waBtn.className = 'btn-action';
+      waBtn.style.cssText = 'padding:5px 10px;font-size:0.75rem;margin-left:8px;';
+      waBtn.title = 'Message AD';
+      waBtn.innerHTML = '<i data-lucide="message-square"></i>';
+      waBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openWA(group.name);
+      });
+      waContainer.appendChild(waBtn);
+      lucide.createIcons({node: waContainer});
+    }
   });
   
+  // Store groups for accordion content building
+  container._soGroups = groups;
   lucide.createIcons({node:container});
 }
 
+function buildAccordionContent(el, adId) {
+  const container = document.getElementById('salesOrdersAccordionContainer');
+  if(!container || !container._soGroups) return;
+  const group = container._soGroups.find(g => g.id === adId);
+  if(!group) return;
+
+  el.innerHTML = '';
+  const wrapper = document.createElement('div');
+  wrapper.className = 'table-container';
+  wrapper.style.cssText = 'margin:0; border:none; box-shadow:none; overflow-x:auto;';
+
+  const table = document.createElement('table');
+  table.style.cssText = 'width:100%; border-collapse:collapse;';
+  table.innerHTML = `<thead><tr>
+    <th>Model Name</th><th>Category</th><th>Alloc Qty</th><th>Conf Qty</th>
+    <th>PO Value</th><th>Status</th><th>Approval</th><th>Payment / UTR</th>
+    <th style="text-align:right;">Action</th>
+  </tr></thead>`;
+
+  const tbody = document.createElement('tbody');
+
+  group.items.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid rgba(0,0,0,0.04)';
+
+    const sb = getStatusBadge(item.Status);
+    const cat = getModelCategory(item['Model Name']);
+    const catPill = cat === 'Mobile' ? '📱 Mobile' : '🎧 AIOT';
+
+    // confCell
+    let confCellHtml = '';
+    if(item.Status === 'Pending'){
+      confCellHtml = `<span style="color:var(--color-text-muted);font-size:0.75rem;font-style:italic;">Awaiting...</span>`;
+    } else {
+      const alloc = Number(item['Allocated Qty'])||0;
+      const conf = Number(item['Confirmed Qty'])||0;
+      confCellHtml = alloc!==conf
+        ? `<strong style="color:#d97706;">${conf}</strong> <span style="font-size:0.68rem;color:var(--color-text-muted);">(diff)</span>`
+        : `<strong style="color:var(--color-success);">${conf}</strong>`;
+    }
+
+    // poVal
+    const poValHtml = item.Status === 'Pending'
+      ? `<span style="color:var(--color-text-muted);font-size:0.75rem;font-style:italic;">Awaiting...</span>`
+      : `₹${(Number(item['PO Amount'])||Number(item['Allocated Value'])||0).toLocaleString('en-IN')}`;
+
+    tr.innerHTML = `
+      <td><strong style="color:var(--color-text-main);">${escapeHtml(item['Model Name'])}</strong></td>
+      <td style="font-size:0.75rem;color:var(--color-text-muted);">${catPill}</td>
+      <td>${item['Allocated Qty']}</td>
+      <td>${confCellHtml}</td>
+      <td style="font-weight:600;color:var(--color-text-main);">${poValHtml}</td>
+      <td>${sb}</td>
+      <td class="ab-cell-${escapeHtml(item.ID)}"></td>
+      <td class="pay-cell-${escapeHtml(item.ID)}"></td>
+      <td style="text-align:right;" class="act-cell-${escapeHtml(item.ID)}"></td>
+    `;
+
+    // Approval cell - DOM-based
+    const abCell = tr.querySelector('.ab-cell-' + CSS.escape(item.ID));
+    if(item['Sales Approval'] === 'Pending Approval' || item['Sales Approval'] === 'Pending') {
+      const abDiv = document.createElement('div');
+      abDiv.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
+      abDiv.innerHTML = `<span style="font-size:0.7rem;color:var(--color-warning);font-weight:700;">Qty Changed</span>`;
+      const btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex;gap:4px;';
+      const appBtn = document.createElement('button');
+      appBtn.className = 'btn-action success';
+      appBtn.style.cssText = 'padding:2px 6px;font-size:0.68rem;';
+      appBtn.innerHTML = '<i data-lucide="check" style="width:12px;height:12px;"></i> Approve';
+      appBtn.addEventListener('click', () => handleApprovePO(item.ID, true));
+      const rejBtn = document.createElement('button');
+      rejBtn.className = 'btn-action danger';
+      rejBtn.style.cssText = 'padding:2px 6px;font-size:0.68rem;';
+      rejBtn.innerHTML = '<i data-lucide="x" style="width:12px;height:12px;"></i> Reject';
+      rejBtn.addEventListener('click', () => handleApprovePO(item.ID, false));
+      btnRow.appendChild(appBtn);
+      btnRow.appendChild(rejBtn);
+      abDiv.appendChild(btnRow);
+      abCell.appendChild(abDiv);
+    } else {
+      abCell.innerHTML = getApprovalBadge(item['Sales Approval'], item.Status);
+    }
+
+    // Payment cell - DOM-based
+    const payCell = tr.querySelector('.pay-cell-' + CSS.escape(item.ID));
+    if(item['UTR Number']){
+      const confDt = item['Last Updated'] ? new Date(item['Last Updated']).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '—';
+      payCell.innerHTML = `<div>UTR: <strong>${escapeHtml(item['UTR Number'])}</strong></div><div style="font-size:0.68rem;color:var(--color-text-muted);margin-top:2px;">Confirmed: ${confDt}</div>`;
+      if(item['Payment Verified']==='Pending'){
+        const pBtnRow = document.createElement('div');
+        pBtnRow.style.cssText = 'margin-top:4px;display:flex;gap:4px;';
+        const pvApp = document.createElement('button');
+        pvApp.className = 'btn-action success';
+        pvApp.style.cssText = 'padding:2px 6px;font-size:0.68rem;';
+        pvApp.innerHTML = '<i data-lucide="check" style="width:12px;height:12px;"></i> Approve';
+        pvApp.addEventListener('click', () => handleVerifyPayment(item.ID, true));
+        const pvRej = document.createElement('button');
+        pvRej.className = 'btn-action danger';
+        pvRej.style.cssText = 'padding:2px 6px;font-size:0.68rem;';
+        pvRej.innerHTML = '<i data-lucide="x" style="width:12px;height:12px;"></i> Reject';
+        pvRej.addEventListener('click', () => handleVerifyPayment(item.ID, false));
+        pBtnRow.appendChild(pvApp);
+        pBtnRow.appendChild(pvRej);
+        payCell.appendChild(pBtnRow);
+      } else {
+        const badge = document.createElement('span');
+        badge.className = 'badge ' + (item['Payment Verified']==='Verified'?'approved':'rejected');
+        badge.style.cssText = 'margin-top:4px;display:inline-block;';
+        badge.textContent = item['Payment Verified'];
+        payCell.appendChild(badge);
+      }
+    } else {
+      payCell.innerHTML = `<span style="color:var(--color-text-muted);font-size:0.75rem;font-style:italic;">Awaiting Confirmation...</span>`;
+    }
+
+    // Action cell - DOM-based (safe for all special chars)
+    const actCell = tr.querySelector('.act-cell-' + CSS.escape(item.ID));
+    const actDiv = document.createElement('div');
+    actDiv.style.cssText = 'display:flex;gap:4px;justify-content:flex-end;';
+    const editBtn = document.createElement('button');
+    editBtn.className = 'btn-action primary';
+    editBtn.style.cssText = 'padding:5px 10px;font-size:0.75rem;';
+    editBtn.title = 'Edit Allocation';
+    editBtn.innerHTML = '<i data-lucide="edit"></i>';
+    editBtn.addEventListener('click', () => openEditAllocationModal(item.ID));
+    const delBtn = document.createElement('button');
+    delBtn.className = 'btn-action danger';
+    delBtn.style.cssText = 'padding:5px 10px;font-size:0.75rem;';
+    delBtn.title = 'Delete Allocation';
+    delBtn.innerHTML = '<i data-lucide="trash-2"></i>';
+    delBtn.addEventListener('click', () => deleteManualAllocation(item.ID, item['AD Name'], item['Model Name']));
+    actDiv.appendChild(editBtn);
+    actDiv.appendChild(delBtn);
+    actCell.appendChild(actDiv);
+
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  wrapper.appendChild(table);
+  el.appendChild(wrapper);
+  lucide.createIcons({node: el});
+}
+
 function toggleAdAccordion(id) {
-  const content = document.getElementById('content_' + id);
+  const contentEl = document.getElementById('content_' + id);
   const icon = document.getElementById('icon_' + id);
-  if (content && icon) {
-    const isHidden = content.style.display === 'none';
-    content.style.display = isHidden ? 'block' : 'none';
+  if (contentEl && icon) {
+    const isHidden = contentEl.style.display === 'none';
+    contentEl.style.display = isHidden ? 'block' : 'none';
     icon.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+    if (isHidden) {
+      buildAccordionContent(contentEl, id);
+    }
   }
 }
 
@@ -3289,9 +3455,11 @@ function renderSalesOrdersAccordions(data){
     if(item.Status) adGroups[name].statuses.add(item.Status);
   });
   
+  const groupsArray = Object.values(adGroups);
   // Render accordions for each AD
-  Object.values(adGroups).forEach((group, index) => {
+  groupsArray.forEach((group, index) => {
     const adId = 'so_acc_' + index;
+    group.id = adId; // Set ID property for easy lookup
     const statusBadgesHtml = Array.from(group.statuses).map(s => getStatusBadge(s)).join(' ');
     
     const adCard = document.createElement('div');
@@ -3321,102 +3489,37 @@ function renderSalesOrdersAccordions(data){
             <div style="font-size:0.7rem; color:var(--color-text-muted); text-transform:uppercase;">Total Qty</div>
             <div style="font-weight:700; font-size:0.85rem; color:var(--color-text-main);">${group.totalQty} Units</div>
           </div>
-          <div style="display:flex; gap:4px; align-items:center;">
+          <div style="display:flex; gap:4px; align-items:center;" class="wa-action-${adId}">
             ${statusBadgesHtml}
-            <button class="btn-action" style="padding:5px 10px;font-size:0.75rem;margin-left:8px;" onclick="event.stopPropagation(); openWA('${group.name}')" title="Message AD"><i data-lucide="message-square"></i></button>
           </div>
         </div>
       </div>
       
       <!-- Accordion Content (Nested Table) -->
-      <div id="content_${adId}" style="display:none; padding:15px; background:#ffffff;">
-        <div class="table-container" style="margin:0; border:none; box-shadow:none; overflow-x:auto;">
-          <table style="width:100%; border-collapse:collapse;">
-            <thead>
-              <tr>
-                <th>Model Name</th>
-                <th>Category</th>
-                <th>Alloc Qty</th>
-                <th>Conf Qty</th>
-                <th>PO Value</th>
-                <th>Status</th>
-                <th>Approval</th>
-                <th>Payment / UTR</th>
-                <th style="text-align:right;">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${group.items.map(item => {
-                const sb = getStatusBadge(item.Status);
-                let ab = '';
-                if(item['Sales Approval'] === 'Pending Approval' || item['Sales Approval'] === 'Pending') {
-                  ab = `<div style="display:flex;flex-direction:column;gap:4px;">
-                          <span style="font-size:0.7rem;color:var(--color-warning);font-weight:700;">Qty Changed</span>
-                          <div style="display:flex;gap:4px;">
-                            <button class="btn-action success" style="padding:2px 6px;font-size:0.68rem;" onclick="handleApprovePO('${item.ID}',true)"><i data-lucide="check" style="width:12px;height:12px;"></i> Approve</button>
-                            <button class="btn-action danger" style="padding:2px 6px;font-size:0.68rem;" onclick="handleApprovePO('${item.ID}',false)"><i data-lucide="x" style="width:12px;height:12px;"></i> Reject</button>
-                          </div>
-                        </div>`;
-                } else {
-                  ab = getApprovalBadge(item['Sales Approval'], item.Status);
-                }
-                const cat = getModelCategory(item['Model Name']);
-                const catPill = cat === 'Mobile' ? '📱 Mobile' : '🎧 AIOT';
-                
-                let payCell = `<span style="color:var(--color-text-muted); font-size:0.75rem; font-style:italic;">Awaiting Confirmation...</span>`;
-                if(item['UTR Number']){
-                  const confDt = item['Last Updated'] ? new Date(item['Last Updated']).toLocaleString('en-IN', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'}) : '—';
-                  payCell = `<div>UTR: <strong>${item['UTR Number']}</strong></div>
-                             <div style="font-size:0.68rem; color:var(--color-text-muted); margin-top:2px;">Confirmed: ${confDt}</div>`;
-                  if(item['Payment Verified']==='Pending'){
-                    payCell += `<div style="margin-top:4px;display:flex;gap:4px;"><button class="btn-action success" style="padding:2px 6px;font-size:0.68rem;" onclick="handleVerifyPayment('${item.ID}',true)"><i data-lucide="check" style="width:12px;height:12px;"></i> Approve</button><button class="btn-action danger" style="padding:2px 6px;font-size:0.68rem;" onclick="handleVerifyPayment('${item.ID}',false)"><i data-lucide="x" style="width:12px;height:12px;"></i> Reject</button></div>`;
-                  } else {
-                    payCell += ` <span class="badge ${item['Payment Verified']==='Verified'?'approved':'rejected'}" style="margin-top:4px; display:inline-block;">${item['Payment Verified']}</span>`;
-                  }
-                }
-                
-                let confCell = '';
-                if(item.Status === 'Pending'){
-                  confCell = `<span style="color:var(--color-text-muted); font-size:0.75rem; font-style:italic;">Awaiting...</span>`;
-                } else {
-                  const alloc = Number(item['Allocated Qty']) || 0;
-                  const conf = Number(item['Confirmed Qty']) || 0;
-                  if(alloc !== conf) {
-                    confCell = `<strong style="color:#d97706;">${conf}</strong> <span style="font-size:0.68rem; color:var(--color-text-muted); font-weight:normal;">(diff)</span>`;
-                  } else {
-                    confCell = `<strong style="color:var(--color-success);">${conf}</strong>`;
-                  }
-                }
-                
-                return `
-                  <tr style="border-bottom:1px solid rgba(0,0,0,0.04);">
-                    <td><strong style="color:var(--color-text-main);">${item['Model Name']}</strong></td>
-                    <td style="font-size:0.75rem; color:var(--color-text-muted);">${catPill}</td>
-                    <td>${item['Allocated Qty']}</td>
-                    <td>${confCell}</td>
-                    <td style="font-weight:600; color:var(--color-text-main);">
-                      ${item.Status === 'Pending' ? '<span style="color:var(--color-text-muted); font-size:0.75rem; font-style:italic;">Awaiting...</span>' : '₹' + (Number(item['PO Amount']) || Number(item['Allocated Value']) || 0).toLocaleString('en-IN')}
-                    </td>
-                    <td>${sb}</td>
-                    <td>${ab}</td>
-                    <td>${payCell}</td>
-                    <td style="text-align:right;">
-                      <div style="display:flex; gap:4px; justify-content:flex-end;">
-                        <button class="btn-action primary" style="padding:5px 10px;font-size:0.75rem;" onclick="openEditAllocationModal('${item.ID}')" title="Edit Allocation"><i data-lucide="edit"></i></button>
-                        <button class="btn-action danger" style="padding:5px 10px;font-size:0.75rem;" onclick="deleteManualAllocation('${item.ID}', '${item['AD Name']}', '${item['Model Name']}')" title="Delete Allocation"><i data-lucide="trash-2"></i></button>
-                      </div>
-                    </td>
-                  </tr>
-                `;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>
+      <div id="content_${adId}" style="display:none; padding:15px; background:#ffffff;" data-group-idx="${index}">
       </div>
     `;
-    container.appendChild(adCard);
+      container.appendChild(adCard);
+    
+    // Add openWA DOM button safely
+    const waContainer = adCard.querySelector('.wa-action-' + adId);
+    if(waContainer) {
+      const waBtn = document.createElement('button');
+      waBtn.className = 'btn-action';
+      waBtn.style.cssText = 'padding:5px 10px;font-size:0.75rem;margin-left:8px;';
+      waBtn.title = 'Message AD';
+      waBtn.innerHTML = '<i data-lucide="message-square"></i>';
+      waBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openWA(group.name);
+      });
+      waContainer.appendChild(waBtn);
+      lucide.createIcons({node: waContainer});
+    }
   });
   
+  // Store groups for accordion content building
+  container._soGroups = groupsArray;
   lucide.createIcons({node:container});
 }
 
@@ -4428,12 +4531,36 @@ function renderUsersTable(users){
           </button>
         </div>
       </td>
-      <td>
-        <div style="display:flex;gap:6px;">
-          <button class="btn-action info" onclick="editUser('${u.Username}','${u.FullName}','${u.Role}','${u.Area||''}','${u.ADCode||''}','${u.MappedRSD||''}')"><i data-lucide="edit-3"></i> Edit</button>
-          <button class="btn-action danger" onclick="confirmDeleteUser('${u.Username}')"><i data-lucide="trash-2"></i></button>
-        </div>
-      </td>`;
+      <td class="user-actions-${u.Username.replace(/[^a-zA-Z0-9]/g, '_')}"></td>`;
+
+    // DOM-based buttons to handle special characters safely
+    setTimeout(() => {
+      const parentCell = tbody.querySelector('.user-actions-' + CSS.escape(u.Username.replace(/[^a-zA-Z0-9]/g, '_')));
+      if (parentCell) {
+        parentCell.innerHTML = '';
+        const div = document.createElement('div');
+        div.style.cssText = 'display:flex;gap:6px;';
+        
+        const editBtn = document.createElement('button');
+        editBtn.className = 'btn-action info';
+        editBtn.innerHTML = '<i data-lucide="edit-3"></i> Edit';
+        editBtn.addEventListener('click', () => {
+          editUser(u.Username, u.FullName, u.Role, u.Area || '', u.ADCode || '', u.MappedRSD || '');
+        });
+        
+        const delBtn = document.createElement('button');
+        delBtn.className = 'btn-action danger';
+        delBtn.innerHTML = '<i data-lucide="trash-2"></i>';
+        delBtn.addEventListener('click', () => {
+          confirmDeleteUser(u.Username);
+        });
+        
+        div.appendChild(editBtn);
+        div.appendChild(delBtn);
+        parentCell.appendChild(div);
+        lucide.createIcons({node: parentCell});
+      }
+    }, 0);
     tbody.appendChild(tr);
   });
   lucide.createIcons({node:tbody});
