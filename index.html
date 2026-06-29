@@ -1090,7 +1090,7 @@
             <div class="section-header">
               <h3><i data-lucide="book-open" style="width:18px;height:18px;margin-right:8px;color:var(--color-primary);"></i>Allocation Ledger</h3>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                <button class="btn-action primary" onclick="openAddAllocationModal()"><i data-lucide="plus-circle"></i> Add Allocation</button>
+                <!-- Add Allocation button removed from Allocation Ledger -->
                 <button class="btn-action danger" onclick="deleteAllAllocations()"><i data-lucide="trash-2"></i> Delete All</button>
                 <div style="display:flex;gap:8px;align-items:center;">
                   <div class="search-bar">
@@ -1101,7 +1101,7 @@
                     <i data-lucide="filter" style="width:14px; height:14px;"></i>
                   </button>
                 </div>
-                <button class="btn-action primary" onclick="exportFinalizedPO()"><i data-lucide="file-spreadsheet"></i> Export Finalized PO</button>
+                <!-- Export Finalized PO button removed from Allocation Ledger -->
               </div>
             </div>
                         <!-- Advanced Filters Drawer -->
@@ -2714,7 +2714,15 @@ function loadDataAndRender(callback){
       hideLoader();
       if(res.success){
         localDB.settings=res.settings||localDB.settings;
-        if(res.prices&&typeof res.prices==='object')localDB.prices=res.prices;
+        if(res.prices){
+          if(Array.isArray(res.prices)){
+            const normP={};
+            res.prices.forEach(p=>{ if(p&&p.modelName) normP[p.modelName]=p.price; });
+            localDB.prices=normP;
+          } else if(typeof res.prices==='object'){
+            localDB.prices=res.prices;
+          }
+        }
         if(Array.isArray(res.allocations))localDB.allocations=res.allocations;
         if(Array.isArray(res.distributors))localDB.distributors=res.distributors;
         if(Array.isArray(res.users))localDB.users=res.users; if(Array.isArray(res.logs)) { localDB.logs=res.logs; } else { localDB.logs=[]; } if(Array.isArray(res.logs))localDB.logs=res.logs;
@@ -4320,7 +4328,8 @@ function savePricesToServer(callback) {
   saveLocalDB();
   
   if(typeof database !== 'undefined' && database) {
-    // Store as array to avoid key sanitization issues with special chars
+    // Store as array to support special characters in model names
+    // getDashboardData normalizes array back to {modelName: price} map
     const pricesArray = Object.keys(localDB.prices).map(model => ({
       modelName: model,
       price: localDB.prices[model]
