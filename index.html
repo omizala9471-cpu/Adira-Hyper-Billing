@@ -761,6 +761,9 @@
       <a href="#" class="nav-item" id="navItem_systemlogs" onclick="showSubTab('systemlogs')">
         <i data-lucide="list-todo"></i><span class="nav-label">Action Ledger</span>
       </a>
+      <a href="#" class="nav-item" id="navItem_lineitems" onclick="showSubTab('lineitems')">
+        <i data-lucide="shopping-bag"></i><span class="nav-label">Line Items</span>
+      </a>
       <!-- RSD only -->
       <a href="#" class="nav-item" id="navItem_territory" onclick="showSubTab('territory')">
         <i data-lucide="map-pin"></i><span class="nav-label">Territory Overview</span>
@@ -931,7 +934,7 @@
 <div class="tab-panel" id="adminPanel_master">
           <div class="master-tabs" id="masterTabsNav">
             <button class="master-tab-btn active" id="mtab_allocations" onclick="showMasterTab('allocations',this)"><i data-lucide="package" style="width:14px;height:14px;"></i> Allocations</button>
-            <button class="master-tab-btn" id="mtab_prices" onclick="showMasterTab('prices',this)"><i data-lucide="indian-rupee" style="width:14px;height:14px;"></i> Price List</button>
+            <!-- Price List button removed -->
             <button class="master-tab-btn" id="mtab_balances" onclick="showMasterTab('balances',this)"><i data-lucide="landmark" style="width:14px;height:14px;"></i> Balances</button>
             <button class="master-tab-btn" id="mtab_scheme" onclick="showMasterTab('scheme',this)"><i data-lucide="settings" style="width:14px;height:14px;"></i> Scheme &amp; Deadlines</button>
           </div>
@@ -957,26 +960,7 @@
             </div>
           </div>
 
-          <!-- Prices Tab -->
-          <div class="master-tab-content" id="masterTab_prices">
-            <div class="glass-panel">
-              <h3 class="settings-title"><i data-lucide="indian-rupee" style="color:var(--color-success);"></i> Upload Model Price List</h3>
-              <label for="filePrices">
-                <div class="upload-zone" style="border-color:rgba(16,185,129,0.25);background:rgba(16,185,129,0.02);">
-                  <i data-lucide="file-spreadsheet" style="width:52px;height:52px;color:var(--color-success);"></i>
-                  <h4>Click to Upload Price Catalogue</h4>
-                  <p>Supports .xlsx, .xls, .csv format</p>
-                  <div class="upload-btn-hint" style="background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.3);color:var(--color-success);"><i data-lucide="upload" style="width:14px;height:14px;"></i> Browse File</div>
-                </div>
-              </label>
-              <input type="file" id="filePrices" style="display:none;" accept=".xlsx,.xls,.csv" onchange="parseExcel('prices',this);this.value=''">
-              <div id="priceUploadStatus" style="margin-top:12px;display:none;padding:12px;border-radius:8px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:var(--color-success);font-size:0.85rem;"></div>
-              <div style="display:flex;gap:12px;justify-content:space-between;align-items:center;margin-top:16px;">
-                <p style="font-size:0.78rem;color:var(--color-text-muted);">Required columns: Model Name, Price</p>
-                <button class="btn-action success" onclick="downloadTemplate('prices')"><i data-lucide="download"></i> Download Template</button>
-              </div>
-            </div>
-          </div>
+          <!-- Prices Tab Content Removed -->
 
           <!-- Balances Tab -->
           <div class="master-tab-content" id="masterTab_balances">
@@ -1318,6 +1302,35 @@
             </div>
           </div>
         </div><!-- /adminPanel_systemlogs -->
+
+        <!-- ADMIN: Line Items -->
+        <div class="tab-panel" id="adminPanel_lineitems">
+          <div class="glass-panel">
+            <div class="section-header">
+              <h3><i data-lucide="shopping-bag" style="width:18px;height:18px;margin-right:8px;color:var(--color-primary);"></i>Line Items Catalogue</h3>
+              <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+                <div class="search-bar" style="min-width:260px;">
+                  <i data-lucide="search"></i>
+                  <input type="text" id="searchLineItems" placeholder="Search products..." oninput="filterLineItemsTable()">
+                </div>
+                <button class="btn-action primary" onclick="openProductModal()"><i data-lucide="plus-circle"></i> Add Product</button>
+              </div>
+            </div>
+            <div class="table-container">
+              <table id="lineItemsTable">
+                <thead>
+                  <tr>
+                    <th style="width:80px;">#</th>
+                    <th>Model Name / Line Item</th>
+                    <th style="width:200px;text-align:right;">Price (DP Rate)</th>
+                    <th style="width:160px;text-align:right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /adminPanel_lineitems -->
 
       </div><!-- /viewAdmin -->
 
@@ -2095,6 +2108,32 @@
   </div>
 </div>
 
+<!-- Product Modal -->
+<div class="modal" id="modalProduct">
+  <div class="modal-content" style="max-width:460px;">
+    <div class="modal-header">
+      <h3 id="productModalTitle">Add Product</h3>
+      <button class="btn-close-modal" onclick="closeProductModal()">&times;</button>
+    </div>
+    <div class="modal-body" style="padding-top:16px;">
+      <input type="hidden" id="productAction" value="add">
+      <input type="hidden" id="oldProductModelName">
+      <div class="form-group">
+        <label for="productModelName">Model Name / Description</label>
+        <input type="text" id="productModelName" class="form-control" style="padding-left:12px;" required placeholder="e.g. realme C67 5G 128GB">
+      </div>
+      <div class="form-group">
+        <label for="productPrice">DP Rate (₹)</label>
+        <input type="number" id="productPrice" class="form-control" style="padding-left:12px;" required placeholder="e.g. 12500" min="0">
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:20px;">
+        <button class="btn-action" onclick="closeProductModal()">Cancel</button>
+        <button class="btn-action primary" onclick="submitProductForm()"><i data-lucide="check"></i> Save Product</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Status / Loader Modal -->
 <div class="modal" id="modalStatus">
   <div class="modal-content" style="max-width:300px;text-align:center;">
@@ -2635,13 +2674,13 @@ function loadRoleSpecificView(){
   document.getElementById('sidebarUserRole').className=`role-pill ${currentUser.role}`;
   document.getElementById('sidebarAvatar').innerText=currentUser.fullName.charAt(0).toUpperCase();
   // Hide all nav items first
-  ['navItem_dashboard','navItem_master','navItem_salesorders','navItem_ledger','navItem_users','navItem_territory','navItem_broadcast','navItem_report','navItem_approvals','navItem_confirm','navItem_systemlogs'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  ['navItem_dashboard','navItem_master','navItem_salesorders','navItem_ledger','navItem_users','navItem_territory','navItem_broadcast','navItem_report','navItem_approvals','navItem_confirm','navItem_systemlogs','navItem_lineitems'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
   // About is always visible for all roles
   showNavItem('navItem_about');
 
   const role=currentUser.role;
   if(role==='admin'){
-    ['navItem_dashboard','navItem_master','navItem_salesorders','navItem_ledger','navItem_users','navItem_systemlogs'].forEach(id=>showNavItem(id));
+    ['navItem_dashboard','navItem_master','navItem_salesorders','navItem_ledger','navItem_users','navItem_systemlogs','navItem_lineitems'].forEach(id=>showNavItem(id));
     document.getElementById('viewAdmin').classList.add('active');
     loadDataAndRender(()=>showSubTab('dashboard'));
   }else if(role==='rsd'){
@@ -2725,7 +2764,7 @@ function showSubTab(tab){
   const role=currentUser.role;
   if(role==='admin'){
     document.querySelectorAll('#viewAdmin .tab-panel').forEach(p=>p.classList.remove('active'));
-    const pmap={dashboard:'adminPanel_dashboard',master:'adminPanel_master',salesorders:'adminPanel_salesorders',ledger:'adminPanel_ledger',distributors:'adminPanel_distributors',users:'adminPanel_users',systemlogs:'adminPanel_systemlogs'};
+    const pmap={dashboard:'adminPanel_dashboard',master:'adminPanel_master',salesorders:'adminPanel_salesorders',ledger:'adminPanel_ledger',distributors:'adminPanel_distributors',users:'adminPanel_users',systemlogs:'adminPanel_systemlogs',lineitems:'adminPanel_lineitems'};
     if(pmap[tab]){document.getElementById(pmap[tab]).classList.add('active');}
     if(tab==='dashboard'){buildAdminDashboard();}
     
@@ -2733,7 +2772,7 @@ function showSubTab(tab){
     else if(tab==='salesorders'){buildSalesOrders();}
     else if(tab==='ledger'){buildLedger('admin');}
     else if(tab==='distributors'){buildDistributors('admin');}
-    else if(tab==='users'){loadUsersTable();}else if(tab==='systemlogs'){buildSystemLogs();}else if(tab==='systemlogs'){buildSystemLogs();}
+    else if(tab==='users'){loadUsersTable();}else if(tab==='systemlogs'){buildSystemLogs();}else if(tab==='lineitems'){buildLineItemsTable();}else if(tab==='systemlogs'){buildSystemLogs();}else if(tab==='lineitems'){buildLineItemsTable();}
   }else if(role==='rsd'){
     document.querySelectorAll('#viewRSD .tab-panel').forEach(p=>p.classList.remove('active'));
     const pmap={dashboard:'rsdPanel_dashboard',report:'rsdPanel_report',territory:'rsdPanel_territory',ledger:'rsdPanel_ledger',broadcast:'rsdPanel_broadcast'};
@@ -4117,6 +4156,148 @@ function clearSystemLogs(){
   }
   if(typeof google !== 'undefined' && google.script && google.script.run && google.script.run.clearLogsSheet) {
     google.script.run.clearLogsSheet();
+  }
+}
+
+function buildLineItemsTable() {
+  const tbody = document.querySelector('#lineItemsTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  const prices = localDB.prices || {};
+  const models = Object.keys(prices).sort();
+  if(models.length === 0){
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--color-text-muted);padding:16px;">No products in catalogue.</td></tr>';
+    return;
+  }
+  models.forEach((model, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td>
+                    <td><strong>${model}</strong></td>
+                    <td style="text-align:right;font-weight:600;color:var(--color-success);">₹${prices[model].toLocaleString('en-IN')}</td>
+                    <td style="text-align:right;">
+                      <div style="display:flex;gap:4px;justify-content:flex-end;">
+                        <button class="btn-action primary" style="padding:5px 10px;font-size:0.75rem;" onclick="openProductModal('edit', '${model}')" title="Edit Price"><i data-lucide="edit"></i></button>
+                        <button class="btn-action danger" style="padding:5px 10px;font-size:0.75rem;" onclick="deleteProduct('${model}')" title="Delete Product"><i data-lucide="trash-2"></i></button>
+                      </div>
+                    </td>`;
+    tbody.appendChild(tr);
+  });
+  lucide.createIcons({node:tbody});
+}
+
+function filterLineItemsTable() {
+  const q = document.getElementById('searchLineItems').value.toLowerCase();
+  const tbody = document.querySelector('#lineItemsTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  const prices = localDB.prices || {};
+  const models = Object.keys(prices).sort().filter(m => m.toLowerCase().includes(q));
+  if(models.length === 0){
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--color-text-muted);padding:16px;">No matching products.</td></tr>';
+    return;
+  }
+  models.forEach((model, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td>
+                    <td><strong>${model}</strong></td>
+                    <td style="text-align:right;font-weight:600;color:var(--color-success);">₹${prices[model].toLocaleString('en-IN')}</td>
+                    <td style="text-align:right;">
+                      <div style="display:flex;gap:4px;justify-content:flex-end;">
+                        <button class="btn-action primary" style="padding:5px 10px;font-size:0.75rem;" onclick="openProductModal('edit', '${model}')" title="Edit Price"><i data-lucide="edit"></i></button>
+                        <button class="btn-action danger" style="padding:5px 10px;font-size:0.75rem;" onclick="deleteProduct('${model}')" title="Delete Product"><i data-lucide="trash-2"></i></button>
+                      </div>
+                    </td>`;
+    tbody.appendChild(tr);
+  });
+  lucide.createIcons({node:tbody});
+}
+
+function openProductModal(action = 'add', model = '') {
+  document.getElementById('productAction').value = action;
+  const title = document.getElementById('productModalTitle');
+  const inputModel = document.getElementById('productModelName');
+  const inputPrice = document.getElementById('productPrice');
+  
+  if (action === 'edit') {
+    title.innerText = 'Edit Product Price';
+    inputModel.value = model;
+    inputModel.disabled = true;
+    inputPrice.value = localDB.prices[model] || 0;
+    document.getElementById('oldProductModelName').value = model;
+  } else {
+    title.innerText = 'Add Product';
+    inputModel.value = '';
+    inputModel.disabled = false;
+    inputPrice.value = '';
+    document.getElementById('oldProductModelName').value = '';
+  }
+  
+  const modal = document.getElementById('modalProduct');
+  if (modal) {
+    modal.classList.add('show');
+    lucide.createIcons({node: modal});
+  }
+}
+
+function closeProductModal() {
+  const modal = document.getElementById('modalProduct');
+  if (modal) modal.classList.remove('show');
+}
+
+function submitProductForm() {
+  const action = document.getElementById('productAction').value;
+  const model = document.getElementById('productModelName').value.trim();
+  const price = Number(document.getElementById('productPrice').value) || 0;
+  
+  if (!model || price < 0) {
+    alert("Please enter a valid product name and price.");
+    return;
+  }
+  
+  showLoader('Saving Product', 'Updating product catalogue...');
+  
+  localDB.prices[model] = price;
+  logSystemAction(action === 'edit' ? 'Edit Product' : 'Add Product', `${action === 'edit' ? 'Updated price of' : 'Added'} ${model} to ₹${price}`);
+  
+  savePricesToServer(() => {
+    hideLoader();
+    closeProductModal();
+    alert(action === 'edit' ? "Product price updated!" : "Product added successfully!");
+    buildLineItemsTable();
+  });
+}
+
+function deleteProduct(model) {
+  if(!confirm(`Are you sure you want to delete ${model} from the catalogue?`)) return;
+  showLoader('Deleting Product', 'Removing item...');
+  delete localDB.prices[model];
+  logSystemAction('Delete Product', `Deleted ${model} from product catalogue`);
+  savePricesToServer(() => {
+    hideLoader();
+    alert("Product deleted successfully!");
+    buildLineItemsTable();
+  });
+}
+
+function savePricesToServer(callback) {
+  saveLocalDB();
+  
+  if(typeof database !== 'undefined' && database) {
+    database.ref('prices').set(localDB.prices)
+      .then(() => { if (callback) callback(); })
+      .catch(e => { hideLoader(); alert("Firebase Sync Error: " + e.toString()); });
+  }
+  else if(typeof google !== 'undefined' && google.script && google.script.run) {
+    const list = Object.keys(localDB.prices).map(model => ({ modelName: model, price: localDB.prices[model] }));
+    google.script.run
+      .withSuccessHandler(res => {
+        if (res && res.success) { if (callback) callback(); }
+        else { hideLoader(); alert("Sheets Sync Error: " + (res ? res.message : 'Unknown')); }
+      })
+      .withFailureHandler(e => { hideLoader(); alert("Sheets Connection Error: " + e.toString()); })
+      .updatePrices(list);
+  } else {
+    setTimeout(() => { if (callback) callback(); }, 300);
   }
 }
 
