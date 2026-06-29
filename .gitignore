@@ -8,7 +8,6 @@ cloudflared
 # Google Apps Script configuration and files
 .clasp.json
 appsscript.json
-Code.js
 Allocation template.xlsx
 adira_allocations_template-23-06.xlsb
 Balance Template.xls
