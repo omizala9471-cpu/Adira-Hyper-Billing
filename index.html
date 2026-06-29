@@ -985,8 +985,28 @@
               <input type="file" id="fileBalances" style="display:none;" accept=".xlsx,.xls,.csv" onchange="parseExcel('balances',this);this.value=''">
               <div id="balanceUploadStatus" style="margin-top:12px;display:none;padding:12px;border-radius:8px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:var(--color-success);font-size:0.85rem;"></div>
               <div style="display:flex;gap:12px;justify-content:space-between;align-items:center;margin-top:16px;">
-                <p style="font-size:0.78rem;color:var(--color-text-muted);">Required columns: AD Name, Outstanding Balance, Credit Limit</p>
+                <p style="font-size:0.78rem;color:var(--color-text-muted);">Required columns: Md Code, Balance</p>
                 <button class="btn-action info" onclick="downloadTemplate('balances')"><i data-lucide="download"></i> Download Template</button>
+              </div>
+              
+              <div style="margin-top:24px;border-top:1px solid rgba(255,255,255,0.08);padding-top:20px;">
+                <h3 class="settings-title" style="margin-bottom:12px;display:flex;align-items:center;gap:8px;"><i data-lucide="list"></i> Current AD-wise Balances</h3>
+                <div class="table-responsive">
+                  <table class="table-billing" id="masterBalancesTable">
+                    <thead>
+                      <tr>
+                        <th>AD Name</th>
+                        <th>MD Code</th>
+                        <th>Credit Limit</th>
+                        <th>Outstanding Balance</th>
+                        <th>Available Credit</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <!-- Populated dynamically -->
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
@@ -2800,6 +2820,9 @@ function loadDataAndRender(callback){
 
 function refreshDashboard(){
   loadDataAndRender(()=>{
+    if (document.getElementById('masterTab_balances') && document.getElementById('masterTab_balances').classList.contains('active')) {
+      buildMasterBalancesTable();
+    }
     const role=currentUser.role;
     if(role==='admin')showSubTab('dashboard');
     else if(role==='rsd')buildRSDDashboard();
@@ -2901,6 +2924,10 @@ function showMasterTab(tab, btn){
   const el=document.getElementById('masterTab_'+tab);
   if(el)el.classList.add('active');
   lucide.createIcons();
+  
+  if (tab === 'balances') {
+    buildMasterBalancesTable();
+  }
 }
 
 function loadMasterSettings(){
@@ -3826,6 +3853,40 @@ function buildDistributors(role){
     }else{
       tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>₹${lim.toLocaleString('en-IN')}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">${displayOut}</td><td style="font-weight:700;color:${av<0?'var(--color-danger)':'var(--color-success)'}">₹${av.toLocaleString('en-IN')}</td>`;
     }
+    tbody.appendChild(tr);
+  });
+}
+
+function buildMasterBalancesTable() {
+  const tbody = document.querySelector('#masterBalancesTable tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  
+  if (localDB.distributors.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);">No balances recorded.</td></tr>`;
+    return;
+  }
+  
+  localDB.distributors.forEach(item => {
+    const u = localDB.users.find(x => x.FullName.toLowerCase() === item['AD Name'].toLowerCase());
+    const mdCode = u ? u.ADCode || '-' : '-';
+    
+    const lim = Number(item['Credit Limit']) || 0;
+    const out = Number(item['Outstanding Balance']) || 0;
+    const av = lim - out;
+    
+    const displayOut = out > 0 
+      ? '₹' + out.toLocaleString('en-IN') 
+      : (out < 0 ? '₹0 (Credit: ₹' + Math.abs(out).toLocaleString('en-IN') + ')' : '₹0');
+      
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${item['AD Name']}</strong></td>
+      <td><code>${mdCode}</code></td>
+      <td>₹${lim.toLocaleString('en-IN')}</td>
+      <td style="color:${out > 0 ? 'var(--color-warning)' : 'inherit'}">${displayOut}</td>
+      <td style="font-weight:700;color:${av < 0 ? 'var(--color-danger)' : 'var(--color-success)'}">₹${av.toLocaleString('en-IN')}</td>
+    `;
     tbody.appendChild(tr);
   });
 }
