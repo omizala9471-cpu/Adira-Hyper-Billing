@@ -33,6 +33,10 @@
     "rsdAnnouncements": {
       ".read": "true",
       ".write": "true"
+    },
+    "logs": {
+      ".read": "true",
+      ".write": "true"
     }
   }
 }
