@@ -3802,16 +3802,14 @@ function toggleRSDADFilter(adName) {
 
 function getRSDADNames() {
   if (!currentUser) return [];
-  const areaLower = (currentUser.area || '').toLowerCase();
   return localDB.users
-    .filter(u => u.Role === 'ad' && (u.MappedRSD === currentUser.username || (u.Area && u.Area.toLowerCase() === areaLower)))
+    .filter(u => u.Role === 'ad' && u.MappedRSD === currentUser.username)
     .map(u => u.FullName.toLowerCase());
 }
 
 function getRSDADUsers() {
   if (!currentUser) return [];
-  const areaLower = (currentUser.area || '').toLowerCase();
-  return localDB.users.filter(u => u.Role === 'ad' && (u.MappedRSD === currentUser.username || (u.Area && u.Area.toLowerCase() === areaLower)));
+  return localDB.users.filter(u => u.Role === 'ad' && u.MappedRSD === currentUser.username);
 }
 
 // ============================================================
