@@ -937,6 +937,7 @@
             <!-- Price List button removed -->
             <button class="master-tab-btn" id="mtab_balances" onclick="showMasterTab('balances',this)"><i data-lucide="landmark" style="width:14px;height:14px;"></i> Balances</button>
             <button class="master-tab-btn" id="mtab_scheme" onclick="showMasterTab('scheme',this)"><i data-lucide="settings" style="width:14px;height:14px;"></i> Scheme &amp; Deadlines</button>
+            <button class="master-tab-btn" id="mtab_controls" onclick="showMasterTab('controls',this)"><i data-lucide="shield-check" style="width:14px;height:14px;"></i> Controls &amp; Approvals</button>
           </div>
 
           <!-- Allocations Tab -->
@@ -995,11 +996,18 @@
                 <label for="inputDeadlinePayment">Payment Deadline — Time Only (Date auto-set to today)</label>
                 <input type="time" id="inputDeadlinePaymentTime" class="form-control" style="padding-left:12px;">
               </div>
-              <div class="form-group">
+              <div class="form-group" style="margin-bottom:20px;">
                 <label for="inputAdminMemo">Announcements Banner / Memo</label>
                 <textarea id="inputAdminMemo" class="form-control" style="padding-left:12px;min-height:120px;" placeholder="Add announcement details..."></textarea>
               </div>
-              <h3 class="settings-title" style="margin-top:24px;border-top:1px solid rgba(255,255,255,0.08);padding-top:16px;"><i data-lucide="shield-check"></i> System Control &amp; Approvals</h3>
+              <button class="btn-submit" style="margin-top:0;" onclick="saveAdminSettings()">Save Scheme Parameters</button>
+            </div>
+          </div>
+
+          <!-- Controls & Approvals Tab -->
+          <div class="master-tab-content" id="masterTab_controls">
+            <div class="glass-panel">
+              <h3 class="settings-title"><i data-lucide="shield-check"></i> System Control &amp; Approvals</h3>
               <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
                 <div class="form-group" style="margin-bottom:0;">
                   <label for="inputApprovalAuthority">PO Deviation Approval Authority</label>
@@ -1043,7 +1051,7 @@
                   <input type="number" id="inputMinOrderQty" class="form-control" style="padding-left:12px;" min="0" placeholder="e.g. 5">
                 </div>
               </div>
-              <button class="btn-submit" style="margin-top:0;" onclick="saveAdminSettings()">Save Scheme Parameters</button>
+              <button class="btn-submit" style="margin-top:0;" onclick="saveAdminSettings()">Save Control Parameters</button>
             </div>
           </div>
         </div>
