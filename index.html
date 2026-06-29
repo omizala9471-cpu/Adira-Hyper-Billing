@@ -1314,8 +1314,13 @@
                   <input type="text" id="searchLineItems" placeholder="Search products..." oninput="filterLineItemsTable()">
                 </div>
                 <button class="btn-action primary" onclick="openProductModal()"><i data-lucide="plus-circle"></i> Add Product</button>
+                <label class="btn-action info" style="cursor:pointer;display:inline-flex;align-items:center;gap:8px;margin-top:0;">
+                  <i data-lucide="upload-cloud"></i> Import Excel
+                  <input type="file" id="excelLineItemsFile" accept=".xlsx,.xls" style="display:none;" onchange="parseExcel('lineitems',this);this.value='';">
+                </label>
               </div>
             </div>
+            <div id="lineItemsUploadStatus" style="margin-top:12px;margin-bottom:12px;display:none;padding:12px;border-radius:8px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:var(--color-success);font-size:0.85rem;"></div>
             <div class="table-container">
               <table id="lineItemsTable">
                 <thead>
@@ -4299,6 +4304,38 @@ function savePricesToServer(callback) {
   }
 }
 
+function processLineItemsExcel(rows) {
+  if (rows.length === 0) {
+    showUploadStatus('lineItemsUploadStatus', 'File is empty.', true);
+    return;
+  }
+  
+  showLoader('Importing', 'Processing line items...');
+  
+  let count = 0;
+  rows.forEach(row => {
+    // Columns: Item code, Item Name, AD Price With GST
+    const code = (row['Item code'] || row['Item Code'] || row['code'] || '').toString().trim();
+    const name = (row['Item Name'] || row['Item name'] || row['itemName'] || row['Name'] || '').toString().trim();
+    const priceStr = row['AD Price With GST'] || row['Price'] || row['price'] || 0;
+    const price = Number(priceStr) || 0;
+    
+    if (name && price >= 0) {
+      const modelKey = code ? `${name} (${code})` : name;
+      localDB.prices[modelKey] = price;
+      count++;
+    }
+  });
+  
+  logSystemAction('Bulk Import Products', `Imported ${count} products into catalogue from Excel`);
+  
+  savePricesToServer(() => {
+    hideLoader();
+    showUploadStatus('lineItemsUploadStatus', `${count} products imported successfully!`);
+    buildLineItemsTable();
+  });
+}
+
 function loadUsersTable(){
   const tbody=document.querySelector('#usersTable tbody');
   tbody.innerHTML='<tr><td colspan="6" style="text-align:center;">Loading...</td></tr>';
@@ -4638,11 +4675,14 @@ function parseExcel(type,input){
           headerRow = findHeaderRowRange(ws, ['Model Name', 'Price']);
         } else if(type==='balances'){
           headerRow = findHeaderRowRange(ws, ['AD Name', 'Outstanding Balance', 'Account', 'Credit Limit']);
+        } else if(type==='lineitems'){
+          headerRow = findHeaderRowRange(ws, ['Item Name', 'Item code', 'AD Price With GST', 'Price', 'Name']);
         }
         const data=XLSX.utils.sheet_to_json(ws,{range: headerRow, defval:''});
         if(type==='allocations')processAllocations(data);
         else if(type==='prices')processPrices(data);
         else if(type==='balances')processBalances(data);
+        else if(type==='lineitems')processLineItemsExcel(data);
       }
     }catch(err){alert('Error parsing file: '+err.message);}
   };
