@@ -2164,17 +2164,13 @@
     </div>
     <div class="form-group" style="margin-bottom:12px;">
       <label for="newAlloc_adName">Distributor Name (AD)</label>
-      <input type="text" id="searchNewAlloc_adName" class="form-control" placeholder="🔍 Search AD..." style="padding-left:12px; height:32px; font-size:0.8rem; margin-bottom:6px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08);" oninput="filterNewAllocADs()">
-      <select id="newAlloc_adName" class="form-control" style="padding-left:10px; background:rgba(10,16,32,0.95);" onchange="autoFillNewAllocDetails()">
-        <option value="">Select AD...</option>
-      </select>
+      <input type="text" id="newAlloc_adName" list="list_adNames" class="form-control" placeholder="Select or type AD..." style="padding-left:12px;" onchange="autoFillNewAllocDetails()">
+      <datalist id="list_adNames"></datalist>
     </div>
     <div class="form-group" style="margin-bottom:12px;">
       <label for="newAlloc_modelName">Model Name</label>
-      <input type="text" id="searchNewAlloc_modelName" class="form-control" placeholder="🔍 Search Model..." style="padding-left:12px; height:32px; font-size:0.8rem; margin-bottom:6px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08);" oninput="filterNewAllocModels()">
-      <select id="newAlloc_modelName" class="form-control" style="padding-left:10px; background:rgba(10,16,32,0.95);" onchange="autoFillNewAllocDetails()">
-        <option value="">Select Model...</option>
-      </select>
+      <input type="text" id="newAlloc_modelName" list="list_models" class="form-control" placeholder="Select or type Model..." style="padding-left:12px;" onchange="autoFillNewAllocDetails()">
+      <datalist id="list_models"></datalist>
     </div>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px;">
       <div class="form-group" style="margin-bottom:0;">
@@ -2800,7 +2796,10 @@ function loadRoleSpecificView(){
     document.getElementById('viewAD').classList.add('active');
     loadDataAndRender(()=>showSubTab('dashboard'));
   }
-  lucide.createIcons();
+  const sidebarNav = document.getElementById('sidebarNav');
+  if (sidebarNav) {
+    lucide.createIcons({ node: sidebarNav });
+  }
 }
 
 function showNavItem(id){const el=document.getElementById(id);if(el)el.style.display='flex';}
@@ -2942,7 +2941,9 @@ function showMasterTab(tab, btn){
   if(activeBtn) activeBtn.classList.add('active');
   const el=document.getElementById('masterTab_'+tab);
   if(el)el.classList.add('active');
-  lucide.createIcons();
+  if (el) {
+    lucide.createIcons({ node: el });
+  }
   
   if (tab === 'balances') {
     buildMasterBalancesTable();
@@ -5556,31 +5557,33 @@ function openAddAllocationModal() {
   document.getElementById('modalAddAllocationTitle').innerText = 'Add New Allocation';
   document.getElementById('btnSubmitAllocation').innerHTML = '<i data-lucide="check"></i> Add Allocation';
   
-  document.getElementById('newAlloc_adName').disabled = false;
-  document.getElementById('newAlloc_modelName').disabled = false;
-  
-  const searchAD = document.getElementById('searchNewAlloc_adName');
-  const searchModel = document.getElementById('searchNewAlloc_modelName');
-  if (searchAD) { searchAD.value = ''; searchAD.disabled = false; }
-  if (searchModel) { searchModel.value = ''; searchModel.disabled = false; }
-  
   const adSelect = document.getElementById('newAlloc_adName');
   const modelSelect = document.getElementById('newAlloc_modelName');
   
   if (adSelect && modelSelect) {
-    adSelect.innerHTML = '<option value="">Select AD...</option>';
-    modelSelect.innerHTML = '<option value="">Select Model...</option>';
+    adSelect.disabled = false;
+    modelSelect.disabled = false;
+    adSelect.value = '';
+    modelSelect.value = '';
     
-    const adUsers = localDB.users.filter(u => u.Role === 'ad');
-    const adNames = [...new Set(adUsers.map(u => u.FullName))].sort();
-    adNames.forEach(name => {
-      adSelect.innerHTML += `<option value="${name}">${name}</option>`;
-    });
+    const adDatalist = document.getElementById('list_adNames');
+    const modelDatalist = document.getElementById('list_models');
     
-    const models = Object.keys(localDB.prices).sort();
-    models.forEach(model => {
-      modelSelect.innerHTML += `<option value="${model}">${model}</option>`;
-    });
+    if (adDatalist && modelDatalist) {
+      adDatalist.innerHTML = '';
+      modelDatalist.innerHTML = '';
+      
+      const adUsers = localDB.users.filter(u => u.Role === 'ad');
+      const adNames = [...new Set(adUsers.map(u => u.FullName))].sort();
+      adNames.forEach(name => {
+        adDatalist.innerHTML += `<option value="${name}">`;
+      });
+      
+      const models = Object.keys(localDB.prices).sort();
+      models.forEach(model => {
+        modelDatalist.innerHTML += `<option value="${model}">`;
+      });
+    }
     
     document.getElementById('newAlloc_qty').value = '';
     document.getElementById('newAlloc_price').value = '';
@@ -5602,16 +5605,11 @@ function openEditAllocationModal(id) {
   const adSelect = document.getElementById('newAlloc_adName');
   const modelSelect = document.getElementById('newAlloc_modelName');
   
-  adSelect.innerHTML = `<option value="${item['AD Name']}">${item['AD Name']}</option>`;
-  modelSelect.innerHTML = `<option value="${item['Model Name']}">${item['Model Name']}</option>`;
+  adSelect.value = item['AD Name'];
+  modelSelect.value = item['Model Name'];
   
   adSelect.disabled = true;
   modelSelect.disabled = true;
-  
-  const searchAD = document.getElementById('searchNewAlloc_adName');
-  const searchModel = document.getElementById('searchNewAlloc_modelName');
-  if (searchAD) { searchAD.value = ''; searchAD.disabled = true; }
-  if (searchModel) { searchModel.value = ''; searchModel.disabled = true; }
   
   document.getElementById('newAlloc_qty').value = item['Allocated Qty'] || '';
   document.getElementById('newAlloc_price').value = item.Price || '';
@@ -5625,40 +5623,6 @@ function openEditAllocationModal(id) {
 
 function closeAddAllocationModal() {
   closeModal('modalAddAllocation');
-}
-
-function filterNewAllocADs() {
-  const q = document.getElementById('searchNewAlloc_adName').value.toLowerCase();
-  const adSelect = document.getElementById('newAlloc_adName');
-  if (!adSelect) return;
-  
-  const selectedVal = adSelect.value;
-  adSelect.innerHTML = '<option value="">Select AD...</option>';
-  
-  const adUsers = localDB.users.filter(u => u.Role === 'ad');
-  const adNames = [...new Set(adUsers.map(u => u.FullName))].sort();
-  
-  const filtered = adNames.filter(name => name.toLowerCase().includes(q));
-  filtered.forEach(name => {
-    const isSel = name === selectedVal ? 'selected' : '';
-    adSelect.innerHTML += `<option value="${name}" ${isSel}>${name}</option>`;
-  });
-}
-
-function filterNewAllocModels() {
-  const q = document.getElementById('searchNewAlloc_modelName').value.toLowerCase();
-  const modelSelect = document.getElementById('newAlloc_modelName');
-  if (!modelSelect) return;
-  
-  const selectedVal = modelSelect.value;
-  modelSelect.innerHTML = '<option value="">Select Model...</option>';
-  
-  const models = Object.keys(localDB.prices).sort();
-  const filtered = models.filter(m => m.toLowerCase().includes(q));
-  filtered.forEach(model => {
-    const isSel = model === selectedVal ? 'selected' : '';
-    modelSelect.innerHTML += `<option value="${model}" ${isSel}>${model}</option>`;
-  });
 }
 
 function autoFillNewAllocDetails() {
