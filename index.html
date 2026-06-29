@@ -936,6 +936,7 @@
               <h3>Live AD Allocations Status</h3>
               <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
                 <button class="btn-action primary" onclick="openAddAllocationModal()"><i data-lucide="plus-circle"></i> Add Allocation</button>
+                
                 <div style="display:flex;gap:8px;align-items:center;">
                   <div class="search-bar" style="min-width:200px;">
                     <i data-lucide="search"></i>
@@ -951,13 +952,7 @@
                 <button class="btn-action" onclick="filterAdminByStatus('Completed')">Completed</button>
               </div>
             </div>
-            <!-- Bulk Payment Actions -->
-            <div class="bulk-actions" id="bulkActionsBar" style="display:none;">
-              <input type="checkbox" id="selectAllCheck" onchange="toggleSelectAll(this)">
-              <span id="selectedCount">0 selected</span>
-              <button class="btn-action success" onclick="bulkMarkPaymentReceived()"><i data-lucide="check-circle"></i> Mark Payment Received</button>
-              <button class="btn-action" onclick="clearBulkSelection()"><i data-lucide="x"></i> Clear</button>
-            </div>
+
                         <!-- Advanced Filters Drawer -->
             <div id="adminTableFiltersDrawer" class="advanced-filters-drawer" style="display:none; flex-direction:column; gap:8px; padding:12px 16px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:12px; margin-bottom:16px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
@@ -991,11 +986,7 @@
                 </div>
               </div>
             </div>
-            <div style="margin-bottom:8px;">
-              <label style="font-size:0.78rem;color:var(--color-text-muted);display:flex;align-items:center;gap:6px;cursor:pointer;">
-                <input type="checkbox" id="enableBulkMode" onchange="toggleBulkMode(this)"> Enable multi-select for payment
-              </label>
-            </div>
+
             <!-- AD Accordion drop-down container -->
             <div id="adminAdAccordionContainer" style="display:flex; flex-direction:column; gap:12px; margin-top:10px;"></div>
           </div>
@@ -1102,6 +1093,7 @@
             <div class="section-header">
               <h3><i data-lucide="clipboard-list" style="width:18px;height:18px;margin-right:8px;color:var(--color-primary);"></i>All Sales Orders</h3>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn-action primary" onclick="openAddAllocationModal()"><i data-lucide="plus-circle"></i> Add Allocation</button>
                 <div style="display:flex;gap:8px;align-items:center;">
                   <div class="search-bar">
                     <i data-lucide="search"></i>
@@ -1154,10 +1146,25 @@
                 </div>
               </div>
             </div>
+            <!-- Bulk Multi-Select controls moved to Sales Orders -->
+            <div style="margin-bottom:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+              <label style="font-size:0.78rem;color:var(--color-text-main);display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;">
+                <input type="checkbox" id="enableBulkMode" onchange="toggleBulkMode(this)"> Enable multi-select for payment
+              </label>
+            </div>
+            
+            <div class="bulk-actions" id="bulkActionsBar" style="display:none; margin-bottom:12px;">
+              <input type="checkbox" id="selectAllCheck" onchange="toggleSelectAll(this)">
+              <span id="selectedCount">0 selected</span>
+              <button class="btn-action success" onclick="bulkMarkPaymentReceived()"><i data-lucide="check-circle"></i> Mark Payment Received</button>
+              <button class="btn-action" onclick="clearBulkSelection()"><i data-lucide="x"></i> Clear</button>
+            </div>
+
             <div class="table-container">
               <table id="salesOrdersTable">
                 <thead>
                   <tr>
+                    <th class="checkbox-col" id="bulkCheckCol" style="display:none;"></th>
                     <th>#</th><th>AD Name</th><th>Area</th><th>Model</th>
                     <th>Alloc Qty</th><th>Confirmed Qty</th><th>PO Value</th>
                     <th>Status</th><th>Approval</th><th>UTR</th><th>Last Updated</th>
@@ -1175,6 +1182,7 @@
             <div class="section-header">
               <h3><i data-lucide="book-open" style="width:18px;height:18px;margin-right:8px;color:var(--color-primary);"></i>Allocation Ledger</h3>
               <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button class="btn-action primary" onclick="openAddAllocationModal()"><i data-lucide="plus-circle"></i> Add Allocation</button>
                 <div style="display:flex;gap:8px;align-items:center;">
                   <div class="search-bar">
                     <i data-lucide="search"></i>
@@ -2978,8 +2986,7 @@ function renderAdminTable(data){
       <!-- Accordion Header -->
       <div onclick="toggleAdAccordion('${adId}')" style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; background:rgba(65, 105, 225, 0.03); cursor:pointer; user-select:none; border-bottom:1px solid rgba(65,105,225,0.06); transition:background 0.2s;">
         <div style="display:flex; align-items:center; gap:12px;">
-          <!-- Party-wise Checkbox selection instead of model-wise -->
-          <input type="checkbox" class="party-check" data-ad-name="${group.name}" onclick="event.stopPropagation(); updateBulkCount()" style="width:16px; height:16px; margin-right:4px; display:${bulkMode ? 'inline-block' : 'none'}; cursor:pointer;">
+
           <i data-lucide="chevron-down" id="icon_${adId}" style="width:18px; height:18px; color:var(--color-primary); transition:transform 0.2s;"></i>
           <div>
             <h4 style="margin:0; font-size:0.95rem; font-weight:800; color:var(--color-text-main);">${group.name}</h4>
@@ -3126,37 +3133,26 @@ function filterAdminTable(){
 function toggleBulkMode(cb){
   const bar=document.getElementById('bulkActionsBar');
   bar.style.display=cb.checked?'flex':'none';
-  renderAdminTable(localDB.allocations);
+  buildSalesOrders();
 }
 function toggleSelectAll(cb){
-  document.querySelectorAll('.party-check').forEach(c=>c.checked=cb.checked);
+  document.querySelectorAll('.row-check').forEach(c=>c.checked=cb.checked);
   updateBulkCount();
 }
 function updateBulkCount(){
-  const selected=document.querySelectorAll('.party-check:checked').length;
-  document.getElementById('selectedCount').innerText=selected+' party(parties) selected';
+  const selected=document.querySelectorAll('.row-check:checked').length;
+  document.getElementById('selectedCount').innerText=selected+' orders selected';
 }
 function clearBulkSelection(){
-  document.querySelectorAll('.party-check').forEach(c=>c.checked=false);
+  document.querySelectorAll('.row-check').forEach(c=>c.checked=false);
   const selectAll = document.getElementById('selectAllCheck');
   if (selectAll) selectAll.checked = false;
   updateBulkCount();
 }
 function bulkMarkPaymentReceived(){
-  const selectedADs = Array.from(document.querySelectorAll('.party-check:checked')).map(c => c.dataset.adName);
-  if(selectedADs.length===0){alert('No parties selected.');return;}
-  
-  // Find all allocation IDs belonging to these ADs that are Confirmed (awaiting payment audit) or Pending verification
-  const ids = localDB.allocations
-    .filter(a => selectedADs.includes(a['AD Name']) && (a.Status === 'Confirmed' || a['Payment Verified'] === 'Pending'))
-    .map(a => a.ID);
-    
-  if(ids.length===0){
-    alert('No allocations needing payment verification found for the selected parties.');
-    return;
-  }
-  
-  if(!confirm(`Mark payment received for all allocations under the ${selectedADs.length} selected distributor(s)?`))return;
+  const ids=Array.from(document.querySelectorAll('.row-check:checked')).map(c=>c.dataset.id);
+  if(ids.length===0){alert('No rows selected.');return;}
+  if(!confirm(`Mark payment received for ${ids.length} allocation(s)?`))return;
   showLoader('Processing','Updating payment status...');
   google.script.run
     .withSuccessHandler(res=>{hideLoader();if(res.success){clearBulkSelection();refreshDashboard();}else alert('Failed.');})
@@ -3187,11 +3183,15 @@ function buildSalesOrders(){
   const tbody=document.querySelector('#salesOrdersTable tbody');
   tbody.innerHTML='';
   const data=localDB.allocations;
-  if(data.length===0){tbody.innerHTML=`<tr><td colspan="11" style="text-align:center;color:var(--color-text-muted);">No allocation records found.</td></tr>`;return;}
+  const bulkMode=document.getElementById('enableBulkMode').checked;
+  document.getElementById('bulkCheckCol').style.display=bulkMode?'table-cell':'none';
+  const cols = bulkMode ? 12 : 11;
+  if(data.length===0){tbody.innerHTML=`<tr><td colspan="${cols}" style="text-align:center;color:var(--color-text-muted);">No allocation records found.</td></tr>`;return;}
   data.forEach((item,i)=>{
     const tr=document.createElement('tr');
     const dt=item['Last Updated']?new Date(item['Last Updated']).toLocaleDateString('en-IN'):'—';
-    tr.innerHTML=`<td>${i+1}</td><td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td><td>${getApprovalBadge(item['Sales Approval'], item.Status)}</td><td>${item['UTR Number']||'-'}</td><td>${dt}</td>`;
+    const cbCell=bulkMode?`<td class="checkbox-col"><input type="checkbox" class="row-check" data-id="${item.ID}" onchange="updateBulkCount()"></td>`:'';
+    tr.innerHTML=`${cbCell}<td>${i+1}</td><td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td><td>${getApprovalBadge(item['Sales Approval'], item.Status)}</td><td>${item['UTR Number']||'-'}</td><td>${dt}</td>`;
     tbody.appendChild(tr);
   });
   lucide.createIcons({node:tbody});
@@ -3207,7 +3207,9 @@ function filterSalesOrders(){
   });
   const tbody=document.querySelector('#salesOrdersTable tbody');
   tbody.innerHTML='';
-  const cols = 11;
+  const bulkMode=document.getElementById('enableBulkMode').checked;
+  document.getElementById('bulkCheckCol').style.display=bulkMode?'table-cell':'none';
+  const cols = bulkMode ? 12 : 11;
   if(data.length===0){tbody.innerHTML=`<tr><td colspan="${cols}" style="text-align:center;color:var(--color-text-muted);">No sales orders matched.</td></tr>`;return;}
 
   const mobiles = data.filter(item => getModelCategory(item['Model Name']) === 'Mobile');
@@ -3216,7 +3218,8 @@ function filterSalesOrders(){
   const renderRow = (item, i) => {
     const tr=document.createElement('tr');
     const dt=item['Last Updated']?new Date(item['Last Updated']).toLocaleDateString('en-IN'):'—';
-    tr.innerHTML=`<td>${i+1}</td><td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td><td>${getApprovalBadge(item['Sales Approval'], item.Status)}</td><td>${item['UTR Number']||'-'}</td><td>${dt}</td>`;
+    const cbCell=bulkMode?`<td class="checkbox-col"><input type="checkbox" class="row-check" data-id="${item.ID}" onchange="updateBulkCount()"></td>`:'';
+    tr.innerHTML=`${cbCell}<td>${i+1}</td><td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</td><td>₹${(Number(item['PO Amount'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(item.Status)}</td><td>${getApprovalBadge(item['Sales Approval'], item.Status)}</td><td>${item['UTR Number']||'-'}</td><td>${dt}</td>`;
     tbody.appendChild(tr);
   };
 
