@@ -999,6 +999,50 @@
                 <label for="inputAdminMemo">Announcements Banner / Memo</label>
                 <textarea id="inputAdminMemo" class="form-control" style="padding-left:12px;min-height:120px;" placeholder="Add announcement details..."></textarea>
               </div>
+              <h3 class="settings-title" style="margin-top:24px;border-top:1px solid rgba(255,255,255,0.08);padding-top:16px;"><i data-lucide="shield-check"></i> System Control &amp; Approvals</h3>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div class="form-group" style="margin-bottom:0;">
+                  <label for="inputApprovalAuthority">PO Deviation Approval Authority</label>
+                  <select id="inputApprovalAuthority" class="form-control" style="padding-left:12px;background:rgba(10,16,32,0.95);">
+                    <option value="both">Both Sales Head &amp; Billing Admin</option>
+                    <option value="sales">Sales Head Only</option>
+                    <option value="admin">Billing Admin Only</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label for="inputAllowADReopen">Allow AD to Re-open Confirmed POs</label>
+                  <select id="inputAllowADReopen" class="form-control" style="padding-left:12px;background:rgba(10,16,32,0.95);">
+                    <option value="no">No, Lock POs on Confirmation</option>
+                    <option value="yes">Yes, Allow edits until scheme deadlines</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:16px;">
+                <div class="form-group" style="margin-bottom:0;">
+                  <label for="inputUTRVerification">UTR Verification Policy</label>
+                  <select id="inputUTRVerification" class="form-control" style="padding-left:12px;background:rgba(10,16,32,0.95);">
+                    <option value="verified">Verification Required by Billing Admin</option>
+                    <option value="auto">Auto-Approve UTRs (No verification needed)</option>
+                  </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label for="inputMaintenanceMode">System Maintenance Mode</label>
+                  <select id="inputMaintenanceMode" class="form-control" style="padding-left:12px;background:rgba(10,16,32,0.95);">
+                    <option value="off">System Active (Normal Operations)</option>
+                    <option value="on">Under Maintenance (Block AD logins)</option>
+                  </select>
+                </div>
+              </div>
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:20px;">
+                <div class="form-group" style="margin-bottom:0;">
+                  <label for="inputGracePeriod">Grace Period after Deadline (Minutes)</label>
+                  <input type="number" id="inputGracePeriod" class="form-control" style="padding-left:12px;" min="0" placeholder="e.g. 15">
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label for="inputMinOrderQty">Minimum Order Qty (per allocation)</label>
+                  <input type="number" id="inputMinOrderQty" class="form-control" style="padding-left:12px;" min="0" placeholder="e.g. 5">
+                </div>
+              </div>
               <button class="btn-submit" style="margin-top:0;" onclick="saveAdminSettings()">Save Scheme Parameters</button>
             </div>
           </div>
@@ -2648,6 +2692,11 @@ async function handleLogin(){
 }
 
 function loginSuccess(user){
+  if(user && user.Role === 'ad' && localDB.settings && localDB.settings.maintenanceMode === 'on') {
+    alert("⚠️ System is currently under maintenance. Distributor login is temporarily disabled.");
+    currentUser=null;
+    return;
+  }
   currentUser=user;
   document.getElementById('viewLogin').classList.remove('active');
   document.getElementById('appLayout').style.display='flex';
@@ -2848,6 +2897,13 @@ function loadMasterSettings(){
   document.getElementById('inputDeadlineConfirmTime').value=cd?cd.slice(11,16):'18:00';
   document.getElementById('inputDeadlinePaymentTime').value=pd?pd.slice(11,16):'20:00';
   document.getElementById('inputAdminMemo').value=localDB.settings.writeUp||'';
+  
+  document.getElementById('inputApprovalAuthority').value=localDB.settings.approvalAuthority||'both';
+  document.getElementById('inputAllowADReopen').value=localDB.settings.allowADReopen||'no';
+  document.getElementById('inputUTRVerification').value=localDB.settings.utrVerification||'verified';
+  document.getElementById('inputMaintenanceMode').value=localDB.settings.maintenanceMode||'off';
+  document.getElementById('inputGracePeriod').value=localDB.settings.gracePeriod!==undefined?localDB.settings.gracePeriod:15;
+  document.getElementById('inputMinOrderQty').value=localDB.settings.minOrderQty!==undefined?localDB.settings.minOrderQty:0;
 }
 
 // ============================================================
@@ -3231,25 +3287,35 @@ function buildAccordionContent(el, adId) {
     // Approval cell - DOM-based
     const abCell = tr.querySelector('.ab-cell-' + CSS.escape(item.ID));
     if(item['Sales Approval'] === 'Pending Approval' || item['Sales Approval'] === 'Pending') {
-      const abDiv = document.createElement('div');
-      abDiv.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
-      abDiv.innerHTML = `<span style="font-size:0.7rem;color:var(--color-warning);font-weight:700;">Qty Changed</span>`;
-      const btnRow = document.createElement('div');
-      btnRow.style.cssText = 'display:flex;gap:4px;';
-      const appBtn = document.createElement('button');
-      appBtn.className = 'btn-action success';
-      appBtn.style.cssText = 'padding:2px 6px;font-size:0.68rem;';
-      appBtn.innerHTML = '<i data-lucide="check" style="width:12px;height:12px;"></i> Approve';
-      appBtn.addEventListener('click', () => handleApprovePO(item.ID, true));
-      const rejBtn = document.createElement('button');
-      rejBtn.className = 'btn-action danger';
-      rejBtn.style.cssText = 'padding:2px 6px;font-size:0.68rem;';
-      rejBtn.innerHTML = '<i data-lucide="x" style="width:12px;height:12px;"></i> Reject';
-      rejBtn.addEventListener('click', () => handleApprovePO(item.ID, false));
-      btnRow.appendChild(appBtn);
-      btnRow.appendChild(rejBtn);
-      abDiv.appendChild(btnRow);
-      abCell.appendChild(abDiv);
+      const authSetting = localDB.settings.approvalAuthority || 'both';
+      const isAuthorized = authSetting === 'both' 
+        || (authSetting === 'admin' && currentUser.role === 'admin')
+        || (authSetting === 'sales' && (currentUser.role === 'sales' || currentUser.role === 'rsd'));
+        
+      if (isAuthorized) {
+        const abDiv = document.createElement('div');
+        abDiv.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
+        abDiv.innerHTML = `<span style="font-size:0.7rem;color:var(--color-warning);font-weight:700;">Qty Changed</span>`;
+        const btnRow = document.createElement('div');
+        btnRow.style.cssText = 'display:flex;gap:4px;';
+        const appBtn = document.createElement('button');
+        appBtn.className = 'btn-action success';
+        appBtn.style.cssText = 'padding:2px 6px;font-size:0.68rem;';
+        appBtn.innerHTML = '<i data-lucide="check" style="width:12px;height:12px;"></i> Approve';
+        appBtn.addEventListener('click', () => handleApprovePO(item.ID, true));
+        const rejBtn = document.createElement('button');
+        rejBtn.className = 'btn-action danger';
+        rejBtn.style.cssText = 'padding:2px 6px;font-size:0.68rem;';
+        rejBtn.innerHTML = '<i data-lucide="x" style="width:12px;height:12px;"></i> Reject';
+        rejBtn.addEventListener('click', () => handleApprovePO(item.ID, false));
+        btnRow.appendChild(appBtn);
+        btnRow.appendChild(rejBtn);
+        abDiv.appendChild(btnRow);
+        abCell.appendChild(abDiv);
+      } else {
+        const labelText = authSetting === 'admin' ? 'Awaiting Admin Approval' : 'Awaiting Sales Approval';
+        abCell.innerHTML = `<span style="font-size:0.7rem;color:var(--color-warning);font-weight:700;font-style:italic;">${labelText}</span>`;
+      }
     } else {
       abCell.innerHTML = getApprovalBadge(item['Sales Approval'], item.Status);
     }
@@ -3994,7 +4060,12 @@ function buildSalesDashboard(){
     const tr=document.createElement('tr');
     const diff=(Number(item['PO Amount'])||0)-(Number(item['Allocated Value'])||0);
     const diffStr=diff>=0?'+₹'+diff.toLocaleString('en-IN'):'-₹'+Math.abs(diff).toLocaleString('en-IN');
-    tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td><strong>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</strong></td><td>₹${(Number(item.Price)||0).toLocaleString('en-IN')}</td><td style="font-weight:700;color:${diff>=0?'var(--color-success)':'var(--color-danger)'}">${diffStr}</td><td><div style="display:flex;gap:6px;"><button class="btn-action success" onclick="handleSalesDecision('${item.ID}',true)"><i data-lucide="check"></i> Approve</button><button class="btn-action danger" onclick="handleSalesDecision('${item.ID}',false)"><i data-lucide="x"></i> Reject</button></div></td>`;
+    const authSetting = localDB.settings.approvalAuthority || 'both';
+    const isAuthorized = authSetting === 'both' || authSetting === 'sales';
+    const actionCell = isAuthorized 
+      ? `<div style="display:flex;gap:6px;"><button class="btn-action success" onclick="handleSalesDecision('${item.ID}',true)"><i data-lucide="check"></i> Approve</button><button class="btn-action danger" onclick="handleSalesDecision('${item.ID}',false)"><i data-lucide="x"></i> Reject</button></div>`
+      : `<span style="font-size:0.75rem;color:var(--color-warning);font-style:italic;">Awaiting Admin Approval</span>`;
+    tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td><strong>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</strong></td><td>₹${(Number(item.Price)||0).toLocaleString('en-IN')}</td><td style="font-weight:700;color:${diff>=0?'var(--color-success)':'var(--color-danger)'}">${diffStr}</td><td>${actionCell}</td>`;
     tbody.appendChild(tr);
   });
   lucide.createIcons({node:tbody});
@@ -4006,7 +4077,12 @@ function filterSalesApprovals(){
   const tbody=document.querySelector('#salesApprovalsTable tbody');tbody.innerHTML='';
   data.forEach(item=>{
     const tr=document.createElement('tr');const diff=(Number(item['PO Amount'])||0)-(Number(item['Allocated Value'])||0);const diffStr=diff>=0?'+₹'+diff.toLocaleString('en-IN'):'-₹'+Math.abs(diff).toLocaleString('en-IN');
-    tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td><strong>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</strong></td><td>₹${(Number(item.Price)||0).toLocaleString('en-IN')}</td><td style="font-weight:700;color:${diff>=0?'var(--color-success)':'var(--color-danger)'}">${diffStr}</td><td><div style="display:flex;gap:6px;"><button class="btn-action success" onclick="handleSalesDecision('${item.ID}',true)"><i data-lucide="check"></i> Approve</button><button class="btn-action danger" onclick="handleSalesDecision('${item.ID}',false)"><i data-lucide="x"></i> Reject</button></div></td>`;
+    const authSetting = localDB.settings.approvalAuthority || 'both';
+    const isAuthorized = authSetting === 'both' || authSetting === 'sales';
+    const actionCell = isAuthorized 
+      ? `<div style="display:flex;gap:6px;"><button class="btn-action success" onclick="handleSalesDecision('${item.ID}',true)"><i data-lucide="check"></i> Approve</button><button class="btn-action danger" onclick="handleSalesDecision('${item.ID}',false)"><i data-lucide="x"></i> Reject</button></div>`
+      : `<span style="font-size:0.75rem;color:var(--color-warning);font-style:italic;">Awaiting Admin Approval</span>`;
+    tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item['Model Name']}</td><td>${item['Allocated Qty']}</td><td><strong>${item.Status==='Pending'?0:(item['Confirmed Qty']||0)}</strong></td><td>₹${(Number(item.Price)||0).toLocaleString('en-IN')}</td><td style="font-weight:700;color:${diff>=0?'var(--color-success)':'var(--color-danger)'}">${diffStr}</td><td>${actionCell}</td>`;
     tbody.appendChild(tr);
   });
   lucide.createIcons({node:tbody});
@@ -4061,7 +4137,11 @@ function buildADDashboard(){
     const price=Number(item.Price)||Number(localDB.prices[item['Model Name']])||0;
     const allocQty=Number(item['Allocated Qty']);
     const baseVal=allocQty*price;
-    const locked=item.Status==='Confirmed'||item.Status==='Completed'||item.Status==='Dispatched';
+    const reopenSetting = localDB.settings.allowADReopen || 'no';
+    let locked = item.Status==='Completed'||item.Status==='Dispatched';
+    if (!locked && item.Status === 'Confirmed' && reopenSetting === 'no') {
+      locked = true;
+    }
     tr.innerHTML=`<td><strong>${item['Model Name']}</strong></td><td>${allocQty}</td><td>₹${price.toLocaleString('en-IN')}</td><td>₹${baseVal.toLocaleString('en-IN')}</td><td><input type="number" class="input-qty" min="0" max="${allocQty}" value="${(item.Status==='Pending')?0:(item['Confirmed Qty']||0)}" oninput="recalculateADSummary()" data-model="${item['Model Name']}" data-price="${price}" ${locked?'readonly':''} style="${locked?'opacity:0.6;':''}"></td><td class="po-row-total" style="font-weight:700;">₹${baseVal.toLocaleString('en-IN')}</td>`;
     tbody.appendChild(tr);
   };
@@ -4075,9 +4155,23 @@ function buildADDashboard(){
     aiots.forEach(renderRow);
   }
 
-  // Check lock
+  // Live Maintenance mode kick-out
+  if(localDB.settings && localDB.settings.maintenanceMode === 'on' && currentUser && currentUser.role === 'ad') {
+    alert("⚠️ System has been put under maintenance by the administrator. Logging out...");
+    logout();
+    return;
+  }
+
+  // Check lock with gracePeriod
   const confDeadline=localDB.settings.confirmationDeadline;
-  if(confDeadline&&new Date()>new Date(confDeadline)){
+  const graceMin=Number(localDB.settings.gracePeriod)||0;
+  let isPastDeadline = false;
+  if(confDeadline){
+    const deadlineDate = new Date(new Date(confDeadline).getTime() + graceMin * 60 * 1000);
+    if(new Date() > deadlineDate) isPastDeadline = true;
+  }
+  
+  if(isPastDeadline){
     document.getElementById('adLockedOverlay').classList.add('show');
   }else{
     document.getElementById('adLockedOverlay').classList.remove('show');
@@ -4122,24 +4216,54 @@ function submitADSelections(){
   const confirmations=[];
   inputs.forEach(inp=>confirmations.push({modelName:inp.dataset.model,confirmedQty:Number(inp.value)||0}));
   const utr=document.getElementById('adUtrNumber').value.trim();
-  showLoader('Submitting PO','Recording PO details...');
+  
+  // Validation for Minimum Order Quantity
+  const minOrderQty = Number(localDB.settings.minOrderQty) || 0;
+  if (minOrderQty > 0) {
+    for (let conf of confirmations) {
+      if (conf.confirmedQty > 0 && conf.confirmedQty < minOrderQty) {
+        alert(`⚠️ Minimum required order quantity per model is ${minOrderQty} units. Please adjust your quantity for "${conf.modelName}".`);
+        return;
+      }
+    }
+  }
+
+  showLoader('Submitting PO','Syncing confirmation details with server...');
   setTimeout(()=>{
-    hideLoader();
     confirmations.forEach(conf=>{
       const m=localDB.allocations.find(a=>a['AD Name'].toLowerCase()===currentUser.fullName.toLowerCase()&&a['Model Name']===conf.modelName);
-      if(m){m['Confirmed Qty']=conf.confirmedQty;m['PO Amount']=conf.confirmedQty*m.Price;m.Status=utr?'Confirmed':'Confirmed';m['Last Updated']=new Date().toISOString();m['Sales Approval']=(conf.confirmedQty!==m['Allocated Qty'])?'Pending Approval':'Approved';if(utr)m['UTR Number']=utr;}
+      if(m){
+        m['Confirmed Qty']=conf.confirmedQty;
+        m['PO Amount']=conf.confirmedQty*m.Price;
+        m.Status='Confirmed';
+        m['Last Updated']=new Date().toISOString();
+        m['Sales Approval']=(conf.confirmedQty!==m['Allocated Qty'])?'Pending Approval':'Approved';
+        if(utr){
+          m['UTR Number']=utr;
+          const utrPolicy = localDB.settings.utrVerification || 'verified';
+          if (utrPolicy === 'auto') {
+            m['Payment Verified'] = 'Verified';
+            m.Status = 'Completed';
+          } else {
+            m['Payment Verified'] = 'Pending';
+          }
+        }
+      }
     });
-    saveLocalDB();
-    alert('PO Confirmed!');
-    buildADDashboard();
-    // Prepare WA message
-    let totalPO=0;let text=`*REALME PO CONFIRMATION - ADIRA TELECOM*\n\n*Distributor:* ${currentUser.fullName}\n*Status:* ${utr?'PO Submitted & Payment Shared':'PO Confirmed (Payment Pending)'}\n`;
-    if(utr)text+=`*Bank UTR:* ${utr}\n`;
-    text+=`------------------------------------\n`;
-    confirmations.forEach(c=>{const it=localDB.allocations.find(a=>a['AD Name'].toLowerCase()===currentUser.fullName.toLowerCase()&&a['Model Name']===c.modelName);if(it){const v=c.confirmedQty*it.Price;totalPO+=v;text+=`• ${c.modelName}: ${c.confirmedQty} Qty | ₹${v.toLocaleString('en-IN')}\n`;}});
-    text+=`------------------------------------\n*Total PO Amount:* ₹${totalPO.toLocaleString('en-IN')}\n\nPortal: ${window.location.href}`;
-    document.getElementById('whatsappMsgText').value=text;
-    openModal('modalWhatsApp');
+    
+    saveDataToServer(() => {
+      hideLoader();
+      alert('PO Confirmed and Saved successfully!');
+      buildADDashboard();
+      // Prepare WA message
+      let totalPO=0;let text=`*REALME PO CONFIRMATION - ADIRA TELECOM*\n\n*Distributor:* ${currentUser.fullName}\n*Status:* ${utr?'PO Submitted & Payment Shared':'PO Confirmed (Payment Pending)'}\n`;
+      if(utr)text+=`*Bank UTR:* ${utr}\n`;
+      text+=`------------------------------------\n`;
+      confirmations.forEach(c=>{const it=localDB.allocations.find(a=>a['AD Name'].toLowerCase()===currentUser.fullName.toLowerCase()&&a['Model Name']===c.modelName);if(it){const v=c.confirmedQty*it.Price;totalPO+=v;text+=`• ${c.modelName}: ${c.confirmedQty} Qty | ₹${v.toLocaleString('en-IN')}\n`;}});
+      text+=`------------------------------------\n*Total PO Amount:* ₹${totalPO.toLocaleString('en-IN')}\n\nPortal: ${window.location.href}`;
+      document.getElementById('whatsappMsgText').value=text;
+      openModal('modalWhatsApp');
+    });
   },500);
 }
 
@@ -4150,7 +4274,14 @@ function startCountdownTimers(){
   if(countdownInterval)clearInterval(countdownInterval);
   function update(){
     const conf=localDB.settings.confirmationDeadline;const pay=localDB.settings.paymentDeadline;
-    document.getElementById('timerConfirm').innerText=conf?formatCountdown(new Date(conf)):'Not Set';
+    const graceMin=Number(localDB.settings.gracePeriod)||0;
+    
+    let confTarget = null;
+    if (conf) {
+      confTarget = new Date(new Date(conf).getTime() + graceMin * 60 * 1000);
+    }
+    
+    document.getElementById('timerConfirm').innerText=confTarget?formatCountdown(confTarget):'Not Set';
     document.getElementById('timerPayment').innerText=pay?formatCountdown(new Date(pay)):'Not Set';
   }
   update();countdownInterval=setInterval(update,1000);
@@ -4790,7 +4921,26 @@ function saveAdminSettings(){
   const confTime=document.getElementById('inputDeadlineConfirmTime').value;
   const payTime=document.getElementById('inputDeadlinePaymentTime').value;
   const memo=document.getElementById('inputAdminMemo').value;
-  const payload={writeUp:memo,confirmationDeadline:confTime?todayDate+'T'+confTime:'',paymentDeadline:payTime?todayDate+'T'+payTime:''};
+  
+  const approvalAuthority=document.getElementById('inputApprovalAuthority').value;
+  const allowADReopen=document.getElementById('inputAllowADReopen').value;
+  const utrVerification=document.getElementById('inputUTRVerification').value;
+  const maintenanceMode=document.getElementById('inputMaintenanceMode').value;
+  const gracePeriod=Number(document.getElementById('inputGracePeriod').value)||0;
+  const minOrderQty=Number(document.getElementById('inputMinOrderQty').value)||0;
+  
+  const payload={
+    writeUp:memo,
+    confirmationDeadline:confTime?todayDate+'T'+confTime:'',
+    paymentDeadline:payTime?todayDate+'T'+payTime:'',
+    approvalAuthority,
+    allowADReopen,
+    utrVerification,
+    maintenanceMode,
+    gracePeriod,
+    minOrderQty
+  };
+  
   showLoader('Saving','Updating scheme parameters...');
   google.script.run
     .withSuccessHandler(res=>{hideLoader();if(res.success){localDB.settings=payload;saveLocalDB();alert('Parameters saved!');}else alert('Error saving.')})

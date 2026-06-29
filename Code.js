@@ -101,7 +101,13 @@ function getDashboardData(userRole, username) {
     const settings = {
       writeUp: 'Welcome to Adira Telecom Allocation Portal. Please confirm your stock allocations before the deadline.',
       confirmationDeadline: '',
-      paymentDeadline: ''
+      paymentDeadline: '',
+      approvalAuthority: 'both',
+      allowADReopen: 'no',
+      utrVerification: 'verified',
+      gracePeriod: 0,
+      minOrderQty: 0,
+      maintenanceMode: 'off'
     };
     if (settingsData.length > 1) {
       for (let i = 1; i < settingsData.length; i++) {
@@ -110,6 +116,12 @@ function getDashboardData(userRole, username) {
         if (key === 'writeUp') settings.writeUp = val;
         if (key === 'confirmationDeadline') settings.confirmationDeadline = val;
         if (key === 'paymentDeadline') settings.paymentDeadline = val;
+        if (key === 'approvalAuthority') settings.approvalAuthority = val;
+        if (key === 'allowADReopen') settings.allowADReopen = val;
+        if (key === 'utrVerification') settings.utrVerification = val;
+        if (key === 'gracePeriod') settings.gracePeriod = val;
+        if (key === 'minOrderQty') settings.minOrderQty = val;
+        if (key === 'maintenanceMode') settings.maintenanceMode = val;
       }
     }
     
@@ -208,6 +220,12 @@ function setSystemSettings(settings) {
     sheet.appendRow(['writeUp', settings.writeUp]);
     sheet.appendRow(['confirmationDeadline', settings.confirmationDeadline]);
     sheet.appendRow(['paymentDeadline', settings.paymentDeadline]);
+    sheet.appendRow(['approvalAuthority', settings.approvalAuthority || 'both']);
+    sheet.appendRow(['allowADReopen', settings.allowADReopen || 'no']);
+    sheet.appendRow(['utrVerification', settings.utrVerification || 'verified']);
+    sheet.appendRow(['gracePeriod', settings.gracePeriod || 0]);
+    sheet.appendRow(['minOrderQty', settings.minOrderQty || 0]);
+    sheet.appendRow(['maintenanceMode', settings.maintenanceMode || 'off']);
     return { success: true };
   } catch (error) {
     return { success: false, message: 'Settings Save Error: ' + error.toString() };
