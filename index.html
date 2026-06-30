@@ -10,10 +10,1442 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest">
+// ============================================================
+// 📦 MULTI-UTR PAYMENT FIELDS
+// ============================================================
+function addUTRFieldRow() {
+  const container = document.getElementById('utrFieldsContainer');
+  const div = document.createElement('div');
+  div.className = 'utr-row';
+  div.style.cssText = 'display:grid; grid-template-columns: 2fr 1fr auto; gap:6px; align-items:center; margin-top:6px;';
+  div.innerHTML = `
+    <input type="text" class="form-control utr-input-code" placeholder="UTR Number" style="padding-left:12px; height:34px; font-size:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); color:var(--color-text-main);">
+    <input type="number" class="form-control utr-input-amount" placeholder="Amount" style="padding-left:8px; height:34px; font-size:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); color:var(--color-text-main);" oninput="updateUTRTotalAmount()">
+    <button type="button" class="btn-action danger" style="padding:6px; font-size:0.7rem; height:34px; display:flex; align-items:center; justify-content:center;" onclick="this.closest('.utr-row').remove(); updateUTRTotalAmount();"><i data-lucide="trash-2" style="width:12px; height:12px;"></i></button>
+  `;
+  container.appendChild(div);
+  lucide.createIcons({node: div});
+}
+function updateUTRTotalAmount() {
+  let sum = 0;
+  document.querySelectorAll('.utr-input-amount').forEach(inp => {
+    sum += Number(inp.value) || 0;
+  });
+  document.getElementById('utrSumDisplay').innerText = '₹' + Math.round(sum).toLocaleString('en-IN');
+}
+
+// ============================================================
+// 📜 VIRTUAL ACCOUNT LEDGER STATEMENT GENERATOR
+// ============================================================
+function getAccountStatementData(adName) {
+  const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === adName.toLowerCase());
+  if (!dist) return [];
+  
+  const baseOutstanding = Number(dist['Outstanding Balance']) || 0;
+  
+  // Gather all allocations for this AD
+  const allocs = localDB.allocations.filter(a => a['AD Name'].toLowerCase() === adName.toLowerCase());
+  
+  const events = [];
+  // Add Opening Balance
+  events.push({
+    date: '—',
+    type: 'Opening Balance',
+    details: 'Uploaded base outstanding',
+    debit: 0,
+    credit: 0,
+    balance: baseOutstanding,
+    timestamp: 0
+  });
+  
+  // Group allocations by confirmation timestamp or group
+  const groups = {};
+  allocs.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const key = a['Confirmed At'] || 'PO';
+      if (!groups[key]) {
+        groups[key] = {
+          date: a['Confirmed At'] ? new Date(a['Confirmed At']).toLocaleDateString('en-IN') : 'Today',
+          timestamp: a['Confirmed At'] ? new Date(a['Confirmed At']).getTime() : Date.now(),
+          totalVal: 0,
+          models: [],
+          utr: a['UTR Number'] || '',
+          paymentStatus: a['Payment Verified'] || 'Pending'
+        };
+      }
+      groups[key].totalVal += (Number(a['PO Value']) || 0);
+      groups[key].models.push(`${a['Model Name']} (${a['Confirmed Qty']}x)`);
+    }
+  });
+  
+  Object.keys(groups).forEach(key => {
+    const g = groups[key];
+    // Add PO Confirmation (Debit)
+    events.push({
+      date: g.date,
+      type: 'PO Confirmed',
+      details: `Models: ${g.models.join(', ')}`,
+      debit: g.totalVal,
+      credit: 0,
+      timestamp: g.timestamp
+    });
+    
+    // If Payment is verified/approved, add Payment Credit
+    if (g.paymentStatus === 'Approved') {
+      events.push({
+        date: g.date,
+        type: 'Payment Credit',
+        details: `UTR: ${g.utr || 'N/A'} (Verified)`,
+        debit: 0,
+        credit: g.totalVal,
+        timestamp: g.timestamp + 1 // Ensure payment sorted after PO confirmation
+      });
+    }
+  });
+  
+  // Sort events chronologically
+  events.sort((a, b) => a.timestamp - b.timestamp);
+  
+  // Calculate running balance
+  let running = baseOutstanding;
+  events.forEach((ev, idx) => {
+    if (idx > 0) {
+      running = running + ev.debit - ev.credit;
+      ev.balance = running;
+    }
+  });
+  
+  return events;
+}
+
+function buildADStatementTab() {
+  const events = getAccountStatementData(currentUser.fullName);
+  const tbody = document.querySelector('#adStatementTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  events.forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ev.date}</td>
+      <td><strong>${ev.type}</strong></td>
+      <td style="font-size:0.75rem; color:var(--color-text-muted);">${ev.details}</td>
+      <td style="color:${ev.debit > 0 ? 'var(--color-danger)' : 'inherit'};">${ev.debit > 0 ? '₹'+Math.round(ev.debit).toLocaleString('en-IN') : '—'}</td>
+      <td style="color:${ev.credit > 0 ? 'var(--color-success)' : 'inherit'};">${ev.credit > 0 ? '₹'+Math.round(ev.credit).toLocaleString('en-IN') : '—'}</td>
+      <td style="font-weight:700; color:${ev.balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">${ev.balance < 0 ? '-' : ''}₹${Math.round(Math.abs(ev.balance)).toLocaleString('en-IN')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildAdminStatementsTab() {
+  const select = document.getElementById('adminStatementADSelect');
+  if (!select) return;
+  // Populate select options if empty
+  if (select.children.length <= 1) {
+    select.innerHTML = '<option value="">-- Choose Distributor --</option>';
+    localDB.distributors.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d['AD Name'];
+      opt.innerText = d['AD Name'];
+      select.appendChild(opt);
+    });
+  }
+  
+  const adName = select.value;
+  const tbody = document.querySelector('#adminStatementTable tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  
+  if (!adName) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--color-text-muted); padding:20px;">Please select a distributor to view statement.</td></tr>`;
+    return;
+  }
+  
+  const events = getAccountStatementData(adName);
+  events.forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ev.date}</td>
+      <td><strong>${ev.type}</strong></td>
+      <td style="font-size:0.75rem; color:var(--color-text-muted);">${ev.details}</td>
+      <td style="color:${ev.debit > 0 ? 'var(--color-danger)' : 'inherit'};">${ev.debit > 0 ? '₹'+Math.round(ev.debit).toLocaleString('en-IN') : '—'}</td>
+      <td style="color:${ev.credit > 0 ? 'var(--color-success)' : 'inherit'};">${ev.credit > 0 ? '₹'+Math.round(ev.credit).toLocaleString('en-IN') : '—'}</td>
+      <td style="font-weight:700; color:${ev.balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">${ev.balance < 0 ? '-' : ''}₹${Math.round(Math.abs(ev.balance)).toLocaleString('en-IN')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ============================================================
+// ⏰ ONE-CLICK WHATSAPP DEADLINE ALERT PING
+// ============================================================
+function openWhatsAppPingModal() {
+  const tbody = document.querySelector('#modalWhatsAppPingTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  
+  const adGroups = {};
+  localDB.allocations.forEach(a => {
+    const ad = a['AD Name'];
+    if (!adGroups[ad]) {
+      adGroups[ad] = {
+        name: ad,
+        totalPOVal: 0,
+        hasPending: false
+      };
+    }
+    if (a.Status === 'Pending' || a['Payment Verified'] === 'Pending') {
+      adGroups[ad].hasPending = true;
+    }
+    adGroups[ad].totalPOVal += (Number(a['PO Value']) || 0);
+  });
+  
+  let count = 0;
+  Object.keys(adGroups).forEach(ad => {
+    const group = adGroups[ad];
+    if (group.hasPending) {
+      count++;
+      const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === ad.toLowerCase()) || { 'Contact Number': '' };
+      const contact = dist['Contact Number'] || '';
+      const out = getDynamicADBalance(ad);
+      const rtgs = out > 0 ? Math.ceil(out / 1000) * 1000 : 0;
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="padding:10px 12px; color:#1e293b !important; font-weight: 600;"><strong>${ad}</strong></td>
+        <td style="padding:10px 12px; color:#1e293b !important;"><code>${contact || '—'}</code></td>
+        <td style="padding:10px 12px; color:#1e293b !important;">₹${Math.round(group.totalPOVal).toLocaleString('en-IN')}</td>
+        <td style="padding:10px 12px; font-weight:700; color:var(--color-warning);">₹${Math.round(rtgs).toLocaleString('en-IN')}</td>
+        <td style="padding:10px 12px;">
+          <button class="btn-action primary" onclick="triggerWhatsAppPing('${escapeQuote(ad)}', '${contact}', ${group.totalPOVal}, ${out}, ${rtgs})" ${!contact ? 'disabled title="No contact number"' : ''}>
+            <i data-lucide="message-square"></i> Send Ping
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  });
+  
+  if (count === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:20px;">No pending or unpaid ADs found!</td></tr>`;
+  }
+  
+  openModal('modalWhatsAppPing');
+  lucide.createIcons({node: tbody});
+}
+
+function triggerWhatsAppPing(adName, contact, poVal, balance, rtgs) {
+  const deadline = localDB.settings.paymentDeadlineTime ? localDB.settings.paymentDeadlineTime : '18:00';
+  const portalUrl = window.location.href;
+  const balStr = balance > 0 ? `₹${Math.round(balance).toLocaleString('en-IN')}` : (balance < 0 ? `-₹${Math.round(Math.abs(balance)).toLocaleString('en-IN')}` : '₹0');
+  
+  const message = `*ADIRA TELECOM SCHEME UPDATE*\n\nDear *${adName}*,\n\nYour PO is pending confirmation/payment.\n\n• *Pending PO Value*: ₹${Math.round(poVal).toLocaleString('en-IN')}\n• *Credit/Debit Balance*: ${balStr}\n• *Final RTGS Target*: *₹${Math.round(rtgs).toLocaleString('en-IN')}*\n• *Payment Deadline*: ${deadline}\n\nPlease confirm on the portal: ${portalUrl}\n\nThank you!`;
+  
+  const encodedText = encodeURIComponent(message);
+  const cleanContact = contact.replace(/[^0-9]/g, '');
+  const formattedContact = cleanContact.length === 10 ? '91' + cleanContact : cleanContact;
+  
+  const url = `https://api.whatsapp.com/send?phone=${formattedContact}&text=${encodedText}`;
+  window.open(url, '_blank');
+}
+
+function escapeQuote(str) {
+  return str.replace(/'/g, "\\'");
+}
+
+// ============================================================
+// 📊 REAL-TIME SALES ANALYTICS AND CHARTS
+// ============================================================
+let chartsInstance = {};
+function buildAdminDashboardCharts() {
+  // 1. Collection Efficiency Doughnut Chart
+  let verifiedSum = 0;
+  let pendingSum = 0;
+  localDB.allocations.forEach(a => {
+    const val = Number(a['PO Value']) || 0;
+    if (a['Payment Verified'] === 'Approved') {
+      verifiedSum += val;
+    } else if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      pendingSum += val;
+    }
+  });
+  
+  const ctx1 = document.getElementById('chartCollectionEfficiency');
+  if (ctx1) {
+    if (chartsInstance.collection) chartsInstance.collection.destroy();
+    chartsInstance.collection = new Chart(ctx1, {
+      type: 'doughnut',
+      data: {
+        labels: ['Verified Payments', 'Awaiting Audit'],
+        datasets: [{
+          data: [verifiedSum, pendingSum],
+          backgroundColor: ['#10b981', '#f59e0b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+  
+  // 2. Top Selling Models (Volume Horizontal Bar Chart)
+  const modelVolume = {};
+  localDB.allocations.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const model = a['Model Name'];
+      const qty = Number(a['Confirmed Qty']) || 0;
+      modelVolume[model] = (modelVolume[model] || 0) + qty;
+    }
+  });
+  const sortedModels = Object.keys(modelVolume).map(m => ({ name: m, qty: modelVolume[m] })).sort((a,b) => b.qty - a.qty).slice(0, 5);
+  
+  const ctx2 = document.getElementById('chartTopModels');
+  if (ctx2) {
+    if (chartsInstance.models) chartsInstance.models.destroy();
+    chartsInstance.models = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: sortedModels.map(m => m.name),
+        datasets: [{
+          label: 'Confirmed Qty',
+          data: sortedModels.map(m => m.qty),
+          backgroundColor: '#3b82f6',
+          borderRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#64748b' } },
+          y: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+  
+  // 3. Territory Sales Performance Chart
+  const territorySales = {};
+  localDB.allocations.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const area = a.Area || 'Other';
+      const val = Number(a['PO Value']) || 0;
+      territorySales[area] = (territorySales[area] || 0) + val;
+    }
+  });
+  
+  const ctx3 = document.getElementById('chartTerritorySales');
+  if (ctx3) {
+    if (chartsInstance.territory) chartsInstance.territory.destroy();
+    chartsInstance.territory = new Chart(ctx3, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(territorySales),
+        datasets: [{
+          data: Object.values(territorySales),
+          backgroundColor: ['#ec4899', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+}
+
+</script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
+// ============================================================
+// 📦 MULTI-UTR PAYMENT FIELDS
+// ============================================================
+function addUTRFieldRow() {
+  const container = document.getElementById('utrFieldsContainer');
+  const div = document.createElement('div');
+  div.className = 'utr-row';
+  div.style.cssText = 'display:grid; grid-template-columns: 2fr 1fr auto; gap:6px; align-items:center; margin-top:6px;';
+  div.innerHTML = `
+    <input type="text" class="form-control utr-input-code" placeholder="UTR Number" style="padding-left:12px; height:34px; font-size:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); color:var(--color-text-main);">
+    <input type="number" class="form-control utr-input-amount" placeholder="Amount" style="padding-left:8px; height:34px; font-size:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); color:var(--color-text-main);" oninput="updateUTRTotalAmount()">
+    <button type="button" class="btn-action danger" style="padding:6px; font-size:0.7rem; height:34px; display:flex; align-items:center; justify-content:center;" onclick="this.closest('.utr-row').remove(); updateUTRTotalAmount();"><i data-lucide="trash-2" style="width:12px; height:12px;"></i></button>
+  `;
+  container.appendChild(div);
+  lucide.createIcons({node: div});
+}
+function updateUTRTotalAmount() {
+  let sum = 0;
+  document.querySelectorAll('.utr-input-amount').forEach(inp => {
+    sum += Number(inp.value) || 0;
+  });
+  document.getElementById('utrSumDisplay').innerText = '₹' + Math.round(sum).toLocaleString('en-IN');
+}
+
+// ============================================================
+// 📜 VIRTUAL ACCOUNT LEDGER STATEMENT GENERATOR
+// ============================================================
+function getAccountStatementData(adName) {
+  const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === adName.toLowerCase());
+  if (!dist) return [];
+  
+  const baseOutstanding = Number(dist['Outstanding Balance']) || 0;
+  
+  // Gather all allocations for this AD
+  const allocs = localDB.allocations.filter(a => a['AD Name'].toLowerCase() === adName.toLowerCase());
+  
+  const events = [];
+  // Add Opening Balance
+  events.push({
+    date: '—',
+    type: 'Opening Balance',
+    details: 'Uploaded base outstanding',
+    debit: 0,
+    credit: 0,
+    balance: baseOutstanding,
+    timestamp: 0
+  });
+  
+  // Group allocations by confirmation timestamp or group
+  const groups = {};
+  allocs.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const key = a['Confirmed At'] || 'PO';
+      if (!groups[key]) {
+        groups[key] = {
+          date: a['Confirmed At'] ? new Date(a['Confirmed At']).toLocaleDateString('en-IN') : 'Today',
+          timestamp: a['Confirmed At'] ? new Date(a['Confirmed At']).getTime() : Date.now(),
+          totalVal: 0,
+          models: [],
+          utr: a['UTR Number'] || '',
+          paymentStatus: a['Payment Verified'] || 'Pending'
+        };
+      }
+      groups[key].totalVal += (Number(a['PO Value']) || 0);
+      groups[key].models.push(`${a['Model Name']} (${a['Confirmed Qty']}x)`);
+    }
+  });
+  
+  Object.keys(groups).forEach(key => {
+    const g = groups[key];
+    // Add PO Confirmation (Debit)
+    events.push({
+      date: g.date,
+      type: 'PO Confirmed',
+      details: `Models: ${g.models.join(', ')}`,
+      debit: g.totalVal,
+      credit: 0,
+      timestamp: g.timestamp
+    });
+    
+    // If Payment is verified/approved, add Payment Credit
+    if (g.paymentStatus === 'Approved') {
+      events.push({
+        date: g.date,
+        type: 'Payment Credit',
+        details: `UTR: ${g.utr || 'N/A'} (Verified)`,
+        debit: 0,
+        credit: g.totalVal,
+        timestamp: g.timestamp + 1 // Ensure payment sorted after PO confirmation
+      });
+    }
+  });
+  
+  // Sort events chronologically
+  events.sort((a, b) => a.timestamp - b.timestamp);
+  
+  // Calculate running balance
+  let running = baseOutstanding;
+  events.forEach((ev, idx) => {
+    if (idx > 0) {
+      running = running + ev.debit - ev.credit;
+      ev.balance = running;
+    }
+  });
+  
+  return events;
+}
+
+function buildADStatementTab() {
+  const events = getAccountStatementData(currentUser.fullName);
+  const tbody = document.querySelector('#adStatementTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  events.forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ev.date}</td>
+      <td><strong>${ev.type}</strong></td>
+      <td style="font-size:0.75rem; color:var(--color-text-muted);">${ev.details}</td>
+      <td style="color:${ev.debit > 0 ? 'var(--color-danger)' : 'inherit'};">${ev.debit > 0 ? '₹'+Math.round(ev.debit).toLocaleString('en-IN') : '—'}</td>
+      <td style="color:${ev.credit > 0 ? 'var(--color-success)' : 'inherit'};">${ev.credit > 0 ? '₹'+Math.round(ev.credit).toLocaleString('en-IN') : '—'}</td>
+      <td style="font-weight:700; color:${ev.balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">${ev.balance < 0 ? '-' : ''}₹${Math.round(Math.abs(ev.balance)).toLocaleString('en-IN')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildAdminStatementsTab() {
+  const select = document.getElementById('adminStatementADSelect');
+  if (!select) return;
+  // Populate select options if empty
+  if (select.children.length <= 1) {
+    select.innerHTML = '<option value="">-- Choose Distributor --</option>';
+    localDB.distributors.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d['AD Name'];
+      opt.innerText = d['AD Name'];
+      select.appendChild(opt);
+    });
+  }
+  
+  const adName = select.value;
+  const tbody = document.querySelector('#adminStatementTable tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  
+  if (!adName) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--color-text-muted); padding:20px;">Please select a distributor to view statement.</td></tr>`;
+    return;
+  }
+  
+  const events = getAccountStatementData(adName);
+  events.forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ev.date}</td>
+      <td><strong>${ev.type}</strong></td>
+      <td style="font-size:0.75rem; color:var(--color-text-muted);">${ev.details}</td>
+      <td style="color:${ev.debit > 0 ? 'var(--color-danger)' : 'inherit'};">${ev.debit > 0 ? '₹'+Math.round(ev.debit).toLocaleString('en-IN') : '—'}</td>
+      <td style="color:${ev.credit > 0 ? 'var(--color-success)' : 'inherit'};">${ev.credit > 0 ? '₹'+Math.round(ev.credit).toLocaleString('en-IN') : '—'}</td>
+      <td style="font-weight:700; color:${ev.balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">${ev.balance < 0 ? '-' : ''}₹${Math.round(Math.abs(ev.balance)).toLocaleString('en-IN')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ============================================================
+// ⏰ ONE-CLICK WHATSAPP DEADLINE ALERT PING
+// ============================================================
+function openWhatsAppPingModal() {
+  const tbody = document.querySelector('#modalWhatsAppPingTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  
+  const adGroups = {};
+  localDB.allocations.forEach(a => {
+    const ad = a['AD Name'];
+    if (!adGroups[ad]) {
+      adGroups[ad] = {
+        name: ad,
+        totalPOVal: 0,
+        hasPending: false
+      };
+    }
+    if (a.Status === 'Pending' || a['Payment Verified'] === 'Pending') {
+      adGroups[ad].hasPending = true;
+    }
+    adGroups[ad].totalPOVal += (Number(a['PO Value']) || 0);
+  });
+  
+  let count = 0;
+  Object.keys(adGroups).forEach(ad => {
+    const group = adGroups[ad];
+    if (group.hasPending) {
+      count++;
+      const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === ad.toLowerCase()) || { 'Contact Number': '' };
+      const contact = dist['Contact Number'] || '';
+      const out = getDynamicADBalance(ad);
+      const rtgs = out > 0 ? Math.ceil(out / 1000) * 1000 : 0;
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="padding:10px 12px; color:#1e293b !important; font-weight: 600;"><strong>${ad}</strong></td>
+        <td style="padding:10px 12px; color:#1e293b !important;"><code>${contact || '—'}</code></td>
+        <td style="padding:10px 12px; color:#1e293b !important;">₹${Math.round(group.totalPOVal).toLocaleString('en-IN')}</td>
+        <td style="padding:10px 12px; font-weight:700; color:var(--color-warning);">₹${Math.round(rtgs).toLocaleString('en-IN')}</td>
+        <td style="padding:10px 12px;">
+          <button class="btn-action primary" onclick="triggerWhatsAppPing('${escapeQuote(ad)}', '${contact}', ${group.totalPOVal}, ${out}, ${rtgs})" ${!contact ? 'disabled title="No contact number"' : ''}>
+            <i data-lucide="message-square"></i> Send Ping
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  });
+  
+  if (count === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:20px;">No pending or unpaid ADs found!</td></tr>`;
+  }
+  
+  openModal('modalWhatsAppPing');
+  lucide.createIcons({node: tbody});
+}
+
+function triggerWhatsAppPing(adName, contact, poVal, balance, rtgs) {
+  const deadline = localDB.settings.paymentDeadlineTime ? localDB.settings.paymentDeadlineTime : '18:00';
+  const portalUrl = window.location.href;
+  const balStr = balance > 0 ? `₹${Math.round(balance).toLocaleString('en-IN')}` : (balance < 0 ? `-₹${Math.round(Math.abs(balance)).toLocaleString('en-IN')}` : '₹0');
+  
+  const message = `*ADIRA TELECOM SCHEME UPDATE*\n\nDear *${adName}*,\n\nYour PO is pending confirmation/payment.\n\n• *Pending PO Value*: ₹${Math.round(poVal).toLocaleString('en-IN')}\n• *Credit/Debit Balance*: ${balStr}\n• *Final RTGS Target*: *₹${Math.round(rtgs).toLocaleString('en-IN')}*\n• *Payment Deadline*: ${deadline}\n\nPlease confirm on the portal: ${portalUrl}\n\nThank you!`;
+  
+  const encodedText = encodeURIComponent(message);
+  const cleanContact = contact.replace(/[^0-9]/g, '');
+  const formattedContact = cleanContact.length === 10 ? '91' + cleanContact : cleanContact;
+  
+  const url = `https://api.whatsapp.com/send?phone=${formattedContact}&text=${encodedText}`;
+  window.open(url, '_blank');
+}
+
+function escapeQuote(str) {
+  return str.replace(/'/g, "\\'");
+}
+
+// ============================================================
+// 📊 REAL-TIME SALES ANALYTICS AND CHARTS
+// ============================================================
+let chartsInstance = {};
+function buildAdminDashboardCharts() {
+  // 1. Collection Efficiency Doughnut Chart
+  let verifiedSum = 0;
+  let pendingSum = 0;
+  localDB.allocations.forEach(a => {
+    const val = Number(a['PO Value']) || 0;
+    if (a['Payment Verified'] === 'Approved') {
+      verifiedSum += val;
+    } else if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      pendingSum += val;
+    }
+  });
+  
+  const ctx1 = document.getElementById('chartCollectionEfficiency');
+  if (ctx1) {
+    if (chartsInstance.collection) chartsInstance.collection.destroy();
+    chartsInstance.collection = new Chart(ctx1, {
+      type: 'doughnut',
+      data: {
+        labels: ['Verified Payments', 'Awaiting Audit'],
+        datasets: [{
+          data: [verifiedSum, pendingSum],
+          backgroundColor: ['#10b981', '#f59e0b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+  
+  // 2. Top Selling Models (Volume Horizontal Bar Chart)
+  const modelVolume = {};
+  localDB.allocations.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const model = a['Model Name'];
+      const qty = Number(a['Confirmed Qty']) || 0;
+      modelVolume[model] = (modelVolume[model] || 0) + qty;
+    }
+  });
+  const sortedModels = Object.keys(modelVolume).map(m => ({ name: m, qty: modelVolume[m] })).sort((a,b) => b.qty - a.qty).slice(0, 5);
+  
+  const ctx2 = document.getElementById('chartTopModels');
+  if (ctx2) {
+    if (chartsInstance.models) chartsInstance.models.destroy();
+    chartsInstance.models = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: sortedModels.map(m => m.name),
+        datasets: [{
+          label: 'Confirmed Qty',
+          data: sortedModels.map(m => m.qty),
+          backgroundColor: '#3b82f6',
+          borderRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#64748b' } },
+          y: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+  
+  // 3. Territory Sales Performance Chart
+  const territorySales = {};
+  localDB.allocations.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const area = a.Area || 'Other';
+      const val = Number(a['PO Value']) || 0;
+      territorySales[area] = (territorySales[area] || 0) + val;
+    }
+  });
+  
+  const ctx3 = document.getElementById('chartTerritorySales');
+  if (ctx3) {
+    if (chartsInstance.territory) chartsInstance.territory.destroy();
+    chartsInstance.territory = new Chart(ctx3, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(territorySales),
+        datasets: [{
+          data: Object.values(territorySales),
+          backgroundColor: ['#ec4899', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+}
+
+</script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js">
+// ============================================================
+// 📦 MULTI-UTR PAYMENT FIELDS
+// ============================================================
+function addUTRFieldRow() {
+  const container = document.getElementById('utrFieldsContainer');
+  const div = document.createElement('div');
+  div.className = 'utr-row';
+  div.style.cssText = 'display:grid; grid-template-columns: 2fr 1fr auto; gap:6px; align-items:center; margin-top:6px;';
+  div.innerHTML = `
+    <input type="text" class="form-control utr-input-code" placeholder="UTR Number" style="padding-left:12px; height:34px; font-size:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); color:var(--color-text-main);">
+    <input type="number" class="form-control utr-input-amount" placeholder="Amount" style="padding-left:8px; height:34px; font-size:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); color:var(--color-text-main);" oninput="updateUTRTotalAmount()">
+    <button type="button" class="btn-action danger" style="padding:6px; font-size:0.7rem; height:34px; display:flex; align-items:center; justify-content:center;" onclick="this.closest('.utr-row').remove(); updateUTRTotalAmount();"><i data-lucide="trash-2" style="width:12px; height:12px;"></i></button>
+  `;
+  container.appendChild(div);
+  lucide.createIcons({node: div});
+}
+function updateUTRTotalAmount() {
+  let sum = 0;
+  document.querySelectorAll('.utr-input-amount').forEach(inp => {
+    sum += Number(inp.value) || 0;
+  });
+  document.getElementById('utrSumDisplay').innerText = '₹' + Math.round(sum).toLocaleString('en-IN');
+}
+
+// ============================================================
+// 📜 VIRTUAL ACCOUNT LEDGER STATEMENT GENERATOR
+// ============================================================
+function getAccountStatementData(adName) {
+  const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === adName.toLowerCase());
+  if (!dist) return [];
+  
+  const baseOutstanding = Number(dist['Outstanding Balance']) || 0;
+  
+  // Gather all allocations for this AD
+  const allocs = localDB.allocations.filter(a => a['AD Name'].toLowerCase() === adName.toLowerCase());
+  
+  const events = [];
+  // Add Opening Balance
+  events.push({
+    date: '—',
+    type: 'Opening Balance',
+    details: 'Uploaded base outstanding',
+    debit: 0,
+    credit: 0,
+    balance: baseOutstanding,
+    timestamp: 0
+  });
+  
+  // Group allocations by confirmation timestamp or group
+  const groups = {};
+  allocs.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const key = a['Confirmed At'] || 'PO';
+      if (!groups[key]) {
+        groups[key] = {
+          date: a['Confirmed At'] ? new Date(a['Confirmed At']).toLocaleDateString('en-IN') : 'Today',
+          timestamp: a['Confirmed At'] ? new Date(a['Confirmed At']).getTime() : Date.now(),
+          totalVal: 0,
+          models: [],
+          utr: a['UTR Number'] || '',
+          paymentStatus: a['Payment Verified'] || 'Pending'
+        };
+      }
+      groups[key].totalVal += (Number(a['PO Value']) || 0);
+      groups[key].models.push(`${a['Model Name']} (${a['Confirmed Qty']}x)`);
+    }
+  });
+  
+  Object.keys(groups).forEach(key => {
+    const g = groups[key];
+    // Add PO Confirmation (Debit)
+    events.push({
+      date: g.date,
+      type: 'PO Confirmed',
+      details: `Models: ${g.models.join(', ')}`,
+      debit: g.totalVal,
+      credit: 0,
+      timestamp: g.timestamp
+    });
+    
+    // If Payment is verified/approved, add Payment Credit
+    if (g.paymentStatus === 'Approved') {
+      events.push({
+        date: g.date,
+        type: 'Payment Credit',
+        details: `UTR: ${g.utr || 'N/A'} (Verified)`,
+        debit: 0,
+        credit: g.totalVal,
+        timestamp: g.timestamp + 1 // Ensure payment sorted after PO confirmation
+      });
+    }
+  });
+  
+  // Sort events chronologically
+  events.sort((a, b) => a.timestamp - b.timestamp);
+  
+  // Calculate running balance
+  let running = baseOutstanding;
+  events.forEach((ev, idx) => {
+    if (idx > 0) {
+      running = running + ev.debit - ev.credit;
+      ev.balance = running;
+    }
+  });
+  
+  return events;
+}
+
+function buildADStatementTab() {
+  const events = getAccountStatementData(currentUser.fullName);
+  const tbody = document.querySelector('#adStatementTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  events.forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ev.date}</td>
+      <td><strong>${ev.type}</strong></td>
+      <td style="font-size:0.75rem; color:var(--color-text-muted);">${ev.details}</td>
+      <td style="color:${ev.debit > 0 ? 'var(--color-danger)' : 'inherit'};">${ev.debit > 0 ? '₹'+Math.round(ev.debit).toLocaleString('en-IN') : '—'}</td>
+      <td style="color:${ev.credit > 0 ? 'var(--color-success)' : 'inherit'};">${ev.credit > 0 ? '₹'+Math.round(ev.credit).toLocaleString('en-IN') : '—'}</td>
+      <td style="font-weight:700; color:${ev.balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">${ev.balance < 0 ? '-' : ''}₹${Math.round(Math.abs(ev.balance)).toLocaleString('en-IN')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildAdminStatementsTab() {
+  const select = document.getElementById('adminStatementADSelect');
+  if (!select) return;
+  // Populate select options if empty
+  if (select.children.length <= 1) {
+    select.innerHTML = '<option value="">-- Choose Distributor --</option>';
+    localDB.distributors.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d['AD Name'];
+      opt.innerText = d['AD Name'];
+      select.appendChild(opt);
+    });
+  }
+  
+  const adName = select.value;
+  const tbody = document.querySelector('#adminStatementTable tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  
+  if (!adName) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--color-text-muted); padding:20px;">Please select a distributor to view statement.</td></tr>`;
+    return;
+  }
+  
+  const events = getAccountStatementData(adName);
+  events.forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ev.date}</td>
+      <td><strong>${ev.type}</strong></td>
+      <td style="font-size:0.75rem; color:var(--color-text-muted);">${ev.details}</td>
+      <td style="color:${ev.debit > 0 ? 'var(--color-danger)' : 'inherit'};">${ev.debit > 0 ? '₹'+Math.round(ev.debit).toLocaleString('en-IN') : '—'}</td>
+      <td style="color:${ev.credit > 0 ? 'var(--color-success)' : 'inherit'};">${ev.credit > 0 ? '₹'+Math.round(ev.credit).toLocaleString('en-IN') : '—'}</td>
+      <td style="font-weight:700; color:${ev.balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">${ev.balance < 0 ? '-' : ''}₹${Math.round(Math.abs(ev.balance)).toLocaleString('en-IN')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ============================================================
+// ⏰ ONE-CLICK WHATSAPP DEADLINE ALERT PING
+// ============================================================
+function openWhatsAppPingModal() {
+  const tbody = document.querySelector('#modalWhatsAppPingTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  
+  const adGroups = {};
+  localDB.allocations.forEach(a => {
+    const ad = a['AD Name'];
+    if (!adGroups[ad]) {
+      adGroups[ad] = {
+        name: ad,
+        totalPOVal: 0,
+        hasPending: false
+      };
+    }
+    if (a.Status === 'Pending' || a['Payment Verified'] === 'Pending') {
+      adGroups[ad].hasPending = true;
+    }
+    adGroups[ad].totalPOVal += (Number(a['PO Value']) || 0);
+  });
+  
+  let count = 0;
+  Object.keys(adGroups).forEach(ad => {
+    const group = adGroups[ad];
+    if (group.hasPending) {
+      count++;
+      const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === ad.toLowerCase()) || { 'Contact Number': '' };
+      const contact = dist['Contact Number'] || '';
+      const out = getDynamicADBalance(ad);
+      const rtgs = out > 0 ? Math.ceil(out / 1000) * 1000 : 0;
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="padding:10px 12px; color:#1e293b !important; font-weight: 600;"><strong>${ad}</strong></td>
+        <td style="padding:10px 12px; color:#1e293b !important;"><code>${contact || '—'}</code></td>
+        <td style="padding:10px 12px; color:#1e293b !important;">₹${Math.round(group.totalPOVal).toLocaleString('en-IN')}</td>
+        <td style="padding:10px 12px; font-weight:700; color:var(--color-warning);">₹${Math.round(rtgs).toLocaleString('en-IN')}</td>
+        <td style="padding:10px 12px;">
+          <button class="btn-action primary" onclick="triggerWhatsAppPing('${escapeQuote(ad)}', '${contact}', ${group.totalPOVal}, ${out}, ${rtgs})" ${!contact ? 'disabled title="No contact number"' : ''}>
+            <i data-lucide="message-square"></i> Send Ping
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  });
+  
+  if (count === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:20px;">No pending or unpaid ADs found!</td></tr>`;
+  }
+  
+  openModal('modalWhatsAppPing');
+  lucide.createIcons({node: tbody});
+}
+
+function triggerWhatsAppPing(adName, contact, poVal, balance, rtgs) {
+  const deadline = localDB.settings.paymentDeadlineTime ? localDB.settings.paymentDeadlineTime : '18:00';
+  const portalUrl = window.location.href;
+  const balStr = balance > 0 ? `₹${Math.round(balance).toLocaleString('en-IN')}` : (balance < 0 ? `-₹${Math.round(Math.abs(balance)).toLocaleString('en-IN')}` : '₹0');
+  
+  const message = `*ADIRA TELECOM SCHEME UPDATE*\n\nDear *${adName}*,\n\nYour PO is pending confirmation/payment.\n\n• *Pending PO Value*: ₹${Math.round(poVal).toLocaleString('en-IN')}\n• *Credit/Debit Balance*: ${balStr}\n• *Final RTGS Target*: *₹${Math.round(rtgs).toLocaleString('en-IN')}*\n• *Payment Deadline*: ${deadline}\n\nPlease confirm on the portal: ${portalUrl}\n\nThank you!`;
+  
+  const encodedText = encodeURIComponent(message);
+  const cleanContact = contact.replace(/[^0-9]/g, '');
+  const formattedContact = cleanContact.length === 10 ? '91' + cleanContact : cleanContact;
+  
+  const url = `https://api.whatsapp.com/send?phone=${formattedContact}&text=${encodedText}`;
+  window.open(url, '_blank');
+}
+
+function escapeQuote(str) {
+  return str.replace(/'/g, "\\'");
+}
+
+// ============================================================
+// 📊 REAL-TIME SALES ANALYTICS AND CHARTS
+// ============================================================
+let chartsInstance = {};
+function buildAdminDashboardCharts() {
+  // 1. Collection Efficiency Doughnut Chart
+  let verifiedSum = 0;
+  let pendingSum = 0;
+  localDB.allocations.forEach(a => {
+    const val = Number(a['PO Value']) || 0;
+    if (a['Payment Verified'] === 'Approved') {
+      verifiedSum += val;
+    } else if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      pendingSum += val;
+    }
+  });
+  
+  const ctx1 = document.getElementById('chartCollectionEfficiency');
+  if (ctx1) {
+    if (chartsInstance.collection) chartsInstance.collection.destroy();
+    chartsInstance.collection = new Chart(ctx1, {
+      type: 'doughnut',
+      data: {
+        labels: ['Verified Payments', 'Awaiting Audit'],
+        datasets: [{
+          data: [verifiedSum, pendingSum],
+          backgroundColor: ['#10b981', '#f59e0b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+  
+  // 2. Top Selling Models (Volume Horizontal Bar Chart)
+  const modelVolume = {};
+  localDB.allocations.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const model = a['Model Name'];
+      const qty = Number(a['Confirmed Qty']) || 0;
+      modelVolume[model] = (modelVolume[model] || 0) + qty;
+    }
+  });
+  const sortedModels = Object.keys(modelVolume).map(m => ({ name: m, qty: modelVolume[m] })).sort((a,b) => b.qty - a.qty).slice(0, 5);
+  
+  const ctx2 = document.getElementById('chartTopModels');
+  if (ctx2) {
+    if (chartsInstance.models) chartsInstance.models.destroy();
+    chartsInstance.models = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: sortedModels.map(m => m.name),
+        datasets: [{
+          label: 'Confirmed Qty',
+          data: sortedModels.map(m => m.qty),
+          backgroundColor: '#3b82f6',
+          borderRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#64748b' } },
+          y: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+  
+  // 3. Territory Sales Performance Chart
+  const territorySales = {};
+  localDB.allocations.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const area = a.Area || 'Other';
+      const val = Number(a['PO Value']) || 0;
+      territorySales[area] = (territorySales[area] || 0) + val;
+    }
+  });
+  
+  const ctx3 = document.getElementById('chartTerritorySales');
+  if (ctx3) {
+    if (chartsInstance.territory) chartsInstance.territory.destroy();
+    chartsInstance.territory = new Chart(ctx3, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(territorySales),
+        datasets: [{
+          data: Object.values(territorySales),
+          backgroundColor: ['#ec4899', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+}
+
+</script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.3.0/dist/exceljs.min.js">
+// ============================================================
+// 📦 MULTI-UTR PAYMENT FIELDS
+// ============================================================
+function addUTRFieldRow() {
+  const container = document.getElementById('utrFieldsContainer');
+  const div = document.createElement('div');
+  div.className = 'utr-row';
+  div.style.cssText = 'display:grid; grid-template-columns: 2fr 1fr auto; gap:6px; align-items:center; margin-top:6px;';
+  div.innerHTML = `
+    <input type="text" class="form-control utr-input-code" placeholder="UTR Number" style="padding-left:12px; height:34px; font-size:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); color:var(--color-text-main);">
+    <input type="number" class="form-control utr-input-amount" placeholder="Amount" style="padding-left:8px; height:34px; font-size:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); color:var(--color-text-main);" oninput="updateUTRTotalAmount()">
+    <button type="button" class="btn-action danger" style="padding:6px; font-size:0.7rem; height:34px; display:flex; align-items:center; justify-content:center;" onclick="this.closest('.utr-row').remove(); updateUTRTotalAmount();"><i data-lucide="trash-2" style="width:12px; height:12px;"></i></button>
+  `;
+  container.appendChild(div);
+  lucide.createIcons({node: div});
+}
+function updateUTRTotalAmount() {
+  let sum = 0;
+  document.querySelectorAll('.utr-input-amount').forEach(inp => {
+    sum += Number(inp.value) || 0;
+  });
+  document.getElementById('utrSumDisplay').innerText = '₹' + Math.round(sum).toLocaleString('en-IN');
+}
+
+// ============================================================
+// 📜 VIRTUAL ACCOUNT LEDGER STATEMENT GENERATOR
+// ============================================================
+function getAccountStatementData(adName) {
+  const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === adName.toLowerCase());
+  if (!dist) return [];
+  
+  const baseOutstanding = Number(dist['Outstanding Balance']) || 0;
+  
+  // Gather all allocations for this AD
+  const allocs = localDB.allocations.filter(a => a['AD Name'].toLowerCase() === adName.toLowerCase());
+  
+  const events = [];
+  // Add Opening Balance
+  events.push({
+    date: '—',
+    type: 'Opening Balance',
+    details: 'Uploaded base outstanding',
+    debit: 0,
+    credit: 0,
+    balance: baseOutstanding,
+    timestamp: 0
+  });
+  
+  // Group allocations by confirmation timestamp or group
+  const groups = {};
+  allocs.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const key = a['Confirmed At'] || 'PO';
+      if (!groups[key]) {
+        groups[key] = {
+          date: a['Confirmed At'] ? new Date(a['Confirmed At']).toLocaleDateString('en-IN') : 'Today',
+          timestamp: a['Confirmed At'] ? new Date(a['Confirmed At']).getTime() : Date.now(),
+          totalVal: 0,
+          models: [],
+          utr: a['UTR Number'] || '',
+          paymentStatus: a['Payment Verified'] || 'Pending'
+        };
+      }
+      groups[key].totalVal += (Number(a['PO Value']) || 0);
+      groups[key].models.push(`${a['Model Name']} (${a['Confirmed Qty']}x)`);
+    }
+  });
+  
+  Object.keys(groups).forEach(key => {
+    const g = groups[key];
+    // Add PO Confirmation (Debit)
+    events.push({
+      date: g.date,
+      type: 'PO Confirmed',
+      details: `Models: ${g.models.join(', ')}`,
+      debit: g.totalVal,
+      credit: 0,
+      timestamp: g.timestamp
+    });
+    
+    // If Payment is verified/approved, add Payment Credit
+    if (g.paymentStatus === 'Approved') {
+      events.push({
+        date: g.date,
+        type: 'Payment Credit',
+        details: `UTR: ${g.utr || 'N/A'} (Verified)`,
+        debit: 0,
+        credit: g.totalVal,
+        timestamp: g.timestamp + 1 // Ensure payment sorted after PO confirmation
+      });
+    }
+  });
+  
+  // Sort events chronologically
+  events.sort((a, b) => a.timestamp - b.timestamp);
+  
+  // Calculate running balance
+  let running = baseOutstanding;
+  events.forEach((ev, idx) => {
+    if (idx > 0) {
+      running = running + ev.debit - ev.credit;
+      ev.balance = running;
+    }
+  });
+  
+  return events;
+}
+
+function buildADStatementTab() {
+  const events = getAccountStatementData(currentUser.fullName);
+  const tbody = document.querySelector('#adStatementTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  events.forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ev.date}</td>
+      <td><strong>${ev.type}</strong></td>
+      <td style="font-size:0.75rem; color:var(--color-text-muted);">${ev.details}</td>
+      <td style="color:${ev.debit > 0 ? 'var(--color-danger)' : 'inherit'};">${ev.debit > 0 ? '₹'+Math.round(ev.debit).toLocaleString('en-IN') : '—'}</td>
+      <td style="color:${ev.credit > 0 ? 'var(--color-success)' : 'inherit'};">${ev.credit > 0 ? '₹'+Math.round(ev.credit).toLocaleString('en-IN') : '—'}</td>
+      <td style="font-weight:700; color:${ev.balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">${ev.balance < 0 ? '-' : ''}₹${Math.round(Math.abs(ev.balance)).toLocaleString('en-IN')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildAdminStatementsTab() {
+  const select = document.getElementById('adminStatementADSelect');
+  if (!select) return;
+  // Populate select options if empty
+  if (select.children.length <= 1) {
+    select.innerHTML = '<option value="">-- Choose Distributor --</option>';
+    localDB.distributors.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d['AD Name'];
+      opt.innerText = d['AD Name'];
+      select.appendChild(opt);
+    });
+  }
+  
+  const adName = select.value;
+  const tbody = document.querySelector('#adminStatementTable tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  
+  if (!adName) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--color-text-muted); padding:20px;">Please select a distributor to view statement.</td></tr>`;
+    return;
+  }
+  
+  const events = getAccountStatementData(adName);
+  events.forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ev.date}</td>
+      <td><strong>${ev.type}</strong></td>
+      <td style="font-size:0.75rem; color:var(--color-text-muted);">${ev.details}</td>
+      <td style="color:${ev.debit > 0 ? 'var(--color-danger)' : 'inherit'};">${ev.debit > 0 ? '₹'+Math.round(ev.debit).toLocaleString('en-IN') : '—'}</td>
+      <td style="color:${ev.credit > 0 ? 'var(--color-success)' : 'inherit'};">${ev.credit > 0 ? '₹'+Math.round(ev.credit).toLocaleString('en-IN') : '—'}</td>
+      <td style="font-weight:700; color:${ev.balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">${ev.balance < 0 ? '-' : ''}₹${Math.round(Math.abs(ev.balance)).toLocaleString('en-IN')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ============================================================
+// ⏰ ONE-CLICK WHATSAPP DEADLINE ALERT PING
+// ============================================================
+function openWhatsAppPingModal() {
+  const tbody = document.querySelector('#modalWhatsAppPingTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  
+  const adGroups = {};
+  localDB.allocations.forEach(a => {
+    const ad = a['AD Name'];
+    if (!adGroups[ad]) {
+      adGroups[ad] = {
+        name: ad,
+        totalPOVal: 0,
+        hasPending: false
+      };
+    }
+    if (a.Status === 'Pending' || a['Payment Verified'] === 'Pending') {
+      adGroups[ad].hasPending = true;
+    }
+    adGroups[ad].totalPOVal += (Number(a['PO Value']) || 0);
+  });
+  
+  let count = 0;
+  Object.keys(adGroups).forEach(ad => {
+    const group = adGroups[ad];
+    if (group.hasPending) {
+      count++;
+      const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === ad.toLowerCase()) || { 'Contact Number': '' };
+      const contact = dist['Contact Number'] || '';
+      const out = getDynamicADBalance(ad);
+      const rtgs = out > 0 ? Math.ceil(out / 1000) * 1000 : 0;
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="padding:10px 12px; color:#1e293b !important; font-weight: 600;"><strong>${ad}</strong></td>
+        <td style="padding:10px 12px; color:#1e293b !important;"><code>${contact || '—'}</code></td>
+        <td style="padding:10px 12px; color:#1e293b !important;">₹${Math.round(group.totalPOVal).toLocaleString('en-IN')}</td>
+        <td style="padding:10px 12px; font-weight:700; color:var(--color-warning);">₹${Math.round(rtgs).toLocaleString('en-IN')}</td>
+        <td style="padding:10px 12px;">
+          <button class="btn-action primary" onclick="triggerWhatsAppPing('${escapeQuote(ad)}', '${contact}', ${group.totalPOVal}, ${out}, ${rtgs})" ${!contact ? 'disabled title="No contact number"' : ''}>
+            <i data-lucide="message-square"></i> Send Ping
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  });
+  
+  if (count === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:20px;">No pending or unpaid ADs found!</td></tr>`;
+  }
+  
+  openModal('modalWhatsAppPing');
+  lucide.createIcons({node: tbody});
+}
+
+function triggerWhatsAppPing(adName, contact, poVal, balance, rtgs) {
+  const deadline = localDB.settings.paymentDeadlineTime ? localDB.settings.paymentDeadlineTime : '18:00';
+  const portalUrl = window.location.href;
+  const balStr = balance > 0 ? `₹${Math.round(balance).toLocaleString('en-IN')}` : (balance < 0 ? `-₹${Math.round(Math.abs(balance)).toLocaleString('en-IN')}` : '₹0');
+  
+  const message = `*ADIRA TELECOM SCHEME UPDATE*\n\nDear *${adName}*,\n\nYour PO is pending confirmation/payment.\n\n• *Pending PO Value*: ₹${Math.round(poVal).toLocaleString('en-IN')}\n• *Credit/Debit Balance*: ${balStr}\n• *Final RTGS Target*: *₹${Math.round(rtgs).toLocaleString('en-IN')}*\n• *Payment Deadline*: ${deadline}\n\nPlease confirm on the portal: ${portalUrl}\n\nThank you!`;
+  
+  const encodedText = encodeURIComponent(message);
+  const cleanContact = contact.replace(/[^0-9]/g, '');
+  const formattedContact = cleanContact.length === 10 ? '91' + cleanContact : cleanContact;
+  
+  const url = `https://api.whatsapp.com/send?phone=${formattedContact}&text=${encodedText}`;
+  window.open(url, '_blank');
+}
+
+function escapeQuote(str) {
+  return str.replace(/'/g, "\\'");
+}
+
+// ============================================================
+// 📊 REAL-TIME SALES ANALYTICS AND CHARTS
+// ============================================================
+let chartsInstance = {};
+function buildAdminDashboardCharts() {
+  // 1. Collection Efficiency Doughnut Chart
+  let verifiedSum = 0;
+  let pendingSum = 0;
+  localDB.allocations.forEach(a => {
+    const val = Number(a['PO Value']) || 0;
+    if (a['Payment Verified'] === 'Approved') {
+      verifiedSum += val;
+    } else if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      pendingSum += val;
+    }
+  });
+  
+  const ctx1 = document.getElementById('chartCollectionEfficiency');
+  if (ctx1) {
+    if (chartsInstance.collection) chartsInstance.collection.destroy();
+    chartsInstance.collection = new Chart(ctx1, {
+      type: 'doughnut',
+      data: {
+        labels: ['Verified Payments', 'Awaiting Audit'],
+        datasets: [{
+          data: [verifiedSum, pendingSum],
+          backgroundColor: ['#10b981', '#f59e0b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+  
+  // 2. Top Selling Models (Volume Horizontal Bar Chart)
+  const modelVolume = {};
+  localDB.allocations.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const model = a['Model Name'];
+      const qty = Number(a['Confirmed Qty']) || 0;
+      modelVolume[model] = (modelVolume[model] || 0) + qty;
+    }
+  });
+  const sortedModels = Object.keys(modelVolume).map(m => ({ name: m, qty: modelVolume[m] })).sort((a,b) => b.qty - a.qty).slice(0, 5);
+  
+  const ctx2 = document.getElementById('chartTopModels');
+  if (ctx2) {
+    if (chartsInstance.models) chartsInstance.models.destroy();
+    chartsInstance.models = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: sortedModels.map(m => m.name),
+        datasets: [{
+          label: 'Confirmed Qty',
+          data: sortedModels.map(m => m.qty),
+          backgroundColor: '#3b82f6',
+          borderRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#64748b' } },
+          y: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+  
+  // 3. Territory Sales Performance Chart
+  const territorySales = {};
+  localDB.allocations.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const area = a.Area || 'Other';
+      const val = Number(a['PO Value']) || 0;
+      territorySales[area] = (territorySales[area] || 0) + val;
+    }
+  });
+  
+  const ctx3 = document.getElementById('chartTerritorySales');
+  if (ctx3) {
+    if (chartsInstance.territory) chartsInstance.territory.destroy();
+    chartsInstance.territory = new Chart(ctx3, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(territorySales),
+        datasets: [{
+          data: Object.values(territorySales),
+          backgroundColor: ['#ec4899', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+}
+
+</script>
 
   <style>
     :root {
@@ -749,6 +2181,11 @@
         <i data-lucide="book-open"></i><span class="nav-label">Allocation Ledger</span>
       </a>
       
+      <!-- AD only (Account Statement) -->
+      <a href="#" class="nav-item" id="navItem_statement" onclick="showSubTab('statement')" style="display:none;">
+        <i data-lucide="receipt"></i><span class="nav-label">Account Statement</span>
+      </a>
+      
       <!-- 5. Master Updation (Admin) -->
       <a href="#" class="nav-item" id="navItem_master" onclick="showSubTab('master')">
         <i data-lucide="database"></i><span class="nav-label">Master Updation</span>
@@ -936,6 +2373,33 @@
               </div>
             </div>
 
+          </div>            </div>
+
+          </div>
+
+          <!-- Visual Analytics Charts Row -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 20px;">
+            <!-- Chart 1: Collection Efficiency -->
+            <div class="glass-panel" style="padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height:300px;">
+              <h4 style="font-size:0.8rem; font-weight:700; color:var(--color-primary); text-transform:uppercase; margin-bottom:16px; display:flex; align-items:center; gap:6px;"><i data-lucide="pie-chart"></i> Collection Efficiency</h4>
+              <div style="position:relative; width:220px; height:220px;">
+                <canvas id="chartCollectionEfficiency"></canvas>
+              </div>
+            </div>
+            <!-- Chart 2: Top Selling Models -->
+            <div class="glass-panel" style="padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height:300px;">
+              <h4 style="font-size:0.8rem; font-weight:700; color:var(--color-primary); text-transform:uppercase; margin-bottom:16px; display:flex; align-items:center; gap:6px;"><i data-lucide="bar-chart-3"></i> Top Selling Models</h4>
+              <div style="position:relative; width:220px; height:220px;">
+                <canvas id="chartTopModels"></canvas>
+              </div>
+            </div>
+            <!-- Chart 3: Territory Performance -->
+            <div class="glass-panel" style="padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height:300px;">
+              <h4 style="font-size:0.8rem; font-weight:700; color:var(--color-primary); text-transform:uppercase; margin-bottom:16px; display:flex; align-items:center; gap:6px;"><i data-lucide="globe"></i> Territory Performance</h4>
+              <div style="position:relative; width:220px; height:220px;">
+                <canvas id="chartTerritorySales"></canvas>
+              </div>
+            </div>
           </div>
 
         </div><!-- /adminPanel_dashboard -->
@@ -947,6 +2411,7 @@
             <button class="master-tab-btn" id="mtab_balances" onclick="showMasterTab('balances',this)"><i data-lucide="landmark" style="width:14px;height:14px;"></i> Balances</button>
             <button class="master-tab-btn" id="mtab_scheme" onclick="showMasterTab('scheme',this)"><i data-lucide="settings" style="width:14px;height:14px;"></i> Scheme &amp; Deadlines</button>
             <button class="master-tab-btn" id="mtab_controls" onclick="showMasterTab('controls',this)"><i data-lucide="shield-check" style="width:14px;height:14px;"></i> Controls &amp; Approvals</button>
+            <button class="master-tab-btn" id="mtab_statements" onclick="showMasterTab('statements',this); buildAdminStatementsTab();"><i data-lucide="receipt" style="width:14px;height:14px;"></i> Account Statements</button>
           </div>
 
           <!-- Allocations Tab -->
@@ -1090,6 +2555,34 @@
               <button class="btn-submit" style="margin-top:0;" onclick="saveAdminSettings()">Save Control Parameters</button>
             </div>
           </div>
+          
+          <!-- ADMIN: Account Statements Tab -->
+          <div class="master-tab-content" id="masterTab_statements">
+            <div class="glass-panel">
+              <div class="section-header">
+                <h3><i data-lucide="receipt" style="color:var(--color-primary); margin-right:8px;"></i> Distributor Account Statements</h3>
+                <div style="display:flex; gap:8px; align-items:center;">
+                  <span style="font-size:0.78rem; color:var(--color-text-muted);">Select Distributor:</span>
+                  <select id="adminStatementADSelect" class="form-control" style="width:240px; padding-left:10px; background:rgba(10,16,32,0.95);" onchange="buildAdminStatementsTab()">
+                    <!-- Populated dynamically with AD list -->
+                  </select>
+                </div>
+              </div>
+              <div class="table-container">
+                <table id="adminStatementTable">
+                  <thead>
+                    <tr>
+                      <th>Date</th><th>Type</th><th>Details</th><th>Debit (PO)</th><th>Credit (Payment)</th><th>Running Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <!-- ADMIN: Sales Orders History -->
@@ -1116,8 +2609,8 @@
                   <option value="Pending">Pending</option>
                   <option value="Confirmed">Confirmed</option>
                   <option value="Completed">Completed</option>
-                  <option value="Dispatched">Dispatched</option>
                 </select>
+                <button class="btn-action" onclick="openWhatsAppPingModal()" style="background:rgba(37,99,235,0.1); border-color:#2563eb; color:#3b82f6;"><i data-lucide="bell"></i> Ping Pending ADs</button>
                 <button class="btn-action primary" onclick="exportFinalizedPO()"><i data-lucide="download"></i> Export Finalized PO</button>
               </div>
             </div>
@@ -1897,9 +3390,24 @@
             </div>
             <div style="margin:20px 0 14px;">
               <h4 style="font-size:0.78rem;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:12px;">Payment Settlement</h4>
-              <div class="form-group" style="margin-bottom:10px;">
-                <label for="adUtrNumber">UTR / Reference ID <span style="font-size:0.68rem;color:var(--color-text-muted);text-transform:none;font-weight:normal;">(Optional)</span></label>
-                <input type="text" id="adUtrNumber" class="form-control" placeholder="Enter bank reference number" style="padding-left:12px;">
+              <div id="utrFieldsContainer" style="display:flex; flex-direction:column; gap:8px;">
+                <div class="utr-row" style="display:grid; grid-template-columns: 2fr 1fr; gap:6px; align-items:center;">
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label style="font-size:0.68rem; margin-bottom:2px; display:block;">UTR / Reference ID</label>
+                    <input type="text" class="form-control utr-input-code" placeholder="UTR Number" style="padding-left:12px; height:34px; font-size:0.75rem;">
+                  </div>
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label style="font-size:0.68rem; margin-bottom:2px; display:block;">Amount (₹)</label>
+                    <input type="number" class="form-control utr-input-amount" placeholder="Amount" style="padding-left:8px; height:34px; font-size:0.75rem;" oninput="updateUTRTotalAmount()">
+                  </div>
+                </div>
+              </div>
+              <button type="button" class="btn-action" style="margin-top:8px; padding:4px 8px; font-size:0.75rem; width:100%; border:1px dashed var(--border-color); display:flex; justify-content:center; align-items:center; gap:4px;" onclick="addUTRFieldRow()">
+                <i data-lucide="plus" style="width:12px; height:12px;"></i> Add Another UTR
+              </button>
+              <div style="font-size:0.72rem; color:var(--color-text-muted); margin-top:6px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px dashed rgba(255,255,255,0.08); padding-bottom:6px;">
+                <span>Total UTR Amount:</span>
+                <strong id="utrSumDisplay" style="color:var(--color-primary); font-size:0.8rem;">₹0</strong>
               </div>
               <div class="form-group" style="margin-bottom:0;">
                 <label for="adPaymentProof">Bank Receipt / Screenshot <span style="font-size:0.68rem;color:var(--color-text-muted);text-transform:none;font-weight:normal;">(Optional)</span></label>
@@ -1969,6 +3477,27 @@
           </div>
         </div>
         </div><!-- /adPanel_ledger -->
+
+        <!-- AD Panel Statement -->
+        <div class="tab-panel" id="adPanel_statement">
+          <div class="glass-panel" style="margin-top:20px;">
+            <div class="section-header">
+              <h3><i data-lucide="receipt" style="color:var(--color-primary); margin-right:8px;"></i> My Account Statement Ledger</h3>
+            </div>
+            <div class="table-container">
+              <table id="adStatementTable">
+                <thead>
+                  <tr>
+                    <th>Date</th><th>Type</th><th>Details</th><th>Debit (PO)</th><th>Credit (Payment)</th><th>Running Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- Populated dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div><!-- /adPanel_statement -->
 
       </div><!-- /viewAD -->
 
@@ -2277,10 +3806,1442 @@
 <style>@keyframes spin{to{transform:rotate(360deg);}}</style>
 
 <!-- Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-<script src="firebase-config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+// ============================================================
+// 📦 MULTI-UTR PAYMENT FIELDS
+// ============================================================
+function addUTRFieldRow() {
+  const container = document.getElementById('utrFieldsContainer');
+  const div = document.createElement('div');
+  div.className = 'utr-row';
+  div.style.cssText = 'display:grid; grid-template-columns: 2fr 1fr auto; gap:6px; align-items:center; margin-top:6px;';
+  div.innerHTML = `
+    <input type="text" class="form-control utr-input-code" placeholder="UTR Number" style="padding-left:12px; height:34px; font-size:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); color:var(--color-text-main);">
+    <input type="number" class="form-control utr-input-amount" placeholder="Amount" style="padding-left:8px; height:34px; font-size:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); color:var(--color-text-main);" oninput="updateUTRTotalAmount()">
+    <button type="button" class="btn-action danger" style="padding:6px; font-size:0.7rem; height:34px; display:flex; align-items:center; justify-content:center;" onclick="this.closest('.utr-row').remove(); updateUTRTotalAmount();"><i data-lucide="trash-2" style="width:12px; height:12px;"></i></button>
+  `;
+  container.appendChild(div);
+  lucide.createIcons({node: div});
+}
+function updateUTRTotalAmount() {
+  let sum = 0;
+  document.querySelectorAll('.utr-input-amount').forEach(inp => {
+    sum += Number(inp.value) || 0;
+  });
+  document.getElementById('utrSumDisplay').innerText = '₹' + Math.round(sum).toLocaleString('en-IN');
+}
+
+// ============================================================
+// 📜 VIRTUAL ACCOUNT LEDGER STATEMENT GENERATOR
+// ============================================================
+function getAccountStatementData(adName) {
+  const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === adName.toLowerCase());
+  if (!dist) return [];
+  
+  const baseOutstanding = Number(dist['Outstanding Balance']) || 0;
+  
+  // Gather all allocations for this AD
+  const allocs = localDB.allocations.filter(a => a['AD Name'].toLowerCase() === adName.toLowerCase());
+  
+  const events = [];
+  // Add Opening Balance
+  events.push({
+    date: '—',
+    type: 'Opening Balance',
+    details: 'Uploaded base outstanding',
+    debit: 0,
+    credit: 0,
+    balance: baseOutstanding,
+    timestamp: 0
+  });
+  
+  // Group allocations by confirmation timestamp or group
+  const groups = {};
+  allocs.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const key = a['Confirmed At'] || 'PO';
+      if (!groups[key]) {
+        groups[key] = {
+          date: a['Confirmed At'] ? new Date(a['Confirmed At']).toLocaleDateString('en-IN') : 'Today',
+          timestamp: a['Confirmed At'] ? new Date(a['Confirmed At']).getTime() : Date.now(),
+          totalVal: 0,
+          models: [],
+          utr: a['UTR Number'] || '',
+          paymentStatus: a['Payment Verified'] || 'Pending'
+        };
+      }
+      groups[key].totalVal += (Number(a['PO Value']) || 0);
+      groups[key].models.push(`${a['Model Name']} (${a['Confirmed Qty']}x)`);
+    }
+  });
+  
+  Object.keys(groups).forEach(key => {
+    const g = groups[key];
+    // Add PO Confirmation (Debit)
+    events.push({
+      date: g.date,
+      type: 'PO Confirmed',
+      details: `Models: ${g.models.join(', ')}`,
+      debit: g.totalVal,
+      credit: 0,
+      timestamp: g.timestamp
+    });
+    
+    // If Payment is verified/approved, add Payment Credit
+    if (g.paymentStatus === 'Approved') {
+      events.push({
+        date: g.date,
+        type: 'Payment Credit',
+        details: `UTR: ${g.utr || 'N/A'} (Verified)`,
+        debit: 0,
+        credit: g.totalVal,
+        timestamp: g.timestamp + 1 // Ensure payment sorted after PO confirmation
+      });
+    }
+  });
+  
+  // Sort events chronologically
+  events.sort((a, b) => a.timestamp - b.timestamp);
+  
+  // Calculate running balance
+  let running = baseOutstanding;
+  events.forEach((ev, idx) => {
+    if (idx > 0) {
+      running = running + ev.debit - ev.credit;
+      ev.balance = running;
+    }
+  });
+  
+  return events;
+}
+
+function buildADStatementTab() {
+  const events = getAccountStatementData(currentUser.fullName);
+  const tbody = document.querySelector('#adStatementTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  events.forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ev.date}</td>
+      <td><strong>${ev.type}</strong></td>
+      <td style="font-size:0.75rem; color:var(--color-text-muted);">${ev.details}</td>
+      <td style="color:${ev.debit > 0 ? 'var(--color-danger)' : 'inherit'};">${ev.debit > 0 ? '₹'+Math.round(ev.debit).toLocaleString('en-IN') : '—'}</td>
+      <td style="color:${ev.credit > 0 ? 'var(--color-success)' : 'inherit'};">${ev.credit > 0 ? '₹'+Math.round(ev.credit).toLocaleString('en-IN') : '—'}</td>
+      <td style="font-weight:700; color:${ev.balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">${ev.balance < 0 ? '-' : ''}₹${Math.round(Math.abs(ev.balance)).toLocaleString('en-IN')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildAdminStatementsTab() {
+  const select = document.getElementById('adminStatementADSelect');
+  if (!select) return;
+  // Populate select options if empty
+  if (select.children.length <= 1) {
+    select.innerHTML = '<option value="">-- Choose Distributor --</option>';
+    localDB.distributors.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d['AD Name'];
+      opt.innerText = d['AD Name'];
+      select.appendChild(opt);
+    });
+  }
+  
+  const adName = select.value;
+  const tbody = document.querySelector('#adminStatementTable tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  
+  if (!adName) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--color-text-muted); padding:20px;">Please select a distributor to view statement.</td></tr>`;
+    return;
+  }
+  
+  const events = getAccountStatementData(adName);
+  events.forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ev.date}</td>
+      <td><strong>${ev.type}</strong></td>
+      <td style="font-size:0.75rem; color:var(--color-text-muted);">${ev.details}</td>
+      <td style="color:${ev.debit > 0 ? 'var(--color-danger)' : 'inherit'};">${ev.debit > 0 ? '₹'+Math.round(ev.debit).toLocaleString('en-IN') : '—'}</td>
+      <td style="color:${ev.credit > 0 ? 'var(--color-success)' : 'inherit'};">${ev.credit > 0 ? '₹'+Math.round(ev.credit).toLocaleString('en-IN') : '—'}</td>
+      <td style="font-weight:700; color:${ev.balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">${ev.balance < 0 ? '-' : ''}₹${Math.round(Math.abs(ev.balance)).toLocaleString('en-IN')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ============================================================
+// ⏰ ONE-CLICK WHATSAPP DEADLINE ALERT PING
+// ============================================================
+function openWhatsAppPingModal() {
+  const tbody = document.querySelector('#modalWhatsAppPingTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  
+  const adGroups = {};
+  localDB.allocations.forEach(a => {
+    const ad = a['AD Name'];
+    if (!adGroups[ad]) {
+      adGroups[ad] = {
+        name: ad,
+        totalPOVal: 0,
+        hasPending: false
+      };
+    }
+    if (a.Status === 'Pending' || a['Payment Verified'] === 'Pending') {
+      adGroups[ad].hasPending = true;
+    }
+    adGroups[ad].totalPOVal += (Number(a['PO Value']) || 0);
+  });
+  
+  let count = 0;
+  Object.keys(adGroups).forEach(ad => {
+    const group = adGroups[ad];
+    if (group.hasPending) {
+      count++;
+      const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === ad.toLowerCase()) || { 'Contact Number': '' };
+      const contact = dist['Contact Number'] || '';
+      const out = getDynamicADBalance(ad);
+      const rtgs = out > 0 ? Math.ceil(out / 1000) * 1000 : 0;
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="padding:10px 12px; color:#1e293b !important; font-weight: 600;"><strong>${ad}</strong></td>
+        <td style="padding:10px 12px; color:#1e293b !important;"><code>${contact || '—'}</code></td>
+        <td style="padding:10px 12px; color:#1e293b !important;">₹${Math.round(group.totalPOVal).toLocaleString('en-IN')}</td>
+        <td style="padding:10px 12px; font-weight:700; color:var(--color-warning);">₹${Math.round(rtgs).toLocaleString('en-IN')}</td>
+        <td style="padding:10px 12px;">
+          <button class="btn-action primary" onclick="triggerWhatsAppPing('${escapeQuote(ad)}', '${contact}', ${group.totalPOVal}, ${out}, ${rtgs})" ${!contact ? 'disabled title="No contact number"' : ''}>
+            <i data-lucide="message-square"></i> Send Ping
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  });
+  
+  if (count === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:20px;">No pending or unpaid ADs found!</td></tr>`;
+  }
+  
+  openModal('modalWhatsAppPing');
+  lucide.createIcons({node: tbody});
+}
+
+function triggerWhatsAppPing(adName, contact, poVal, balance, rtgs) {
+  const deadline = localDB.settings.paymentDeadlineTime ? localDB.settings.paymentDeadlineTime : '18:00';
+  const portalUrl = window.location.href;
+  const balStr = balance > 0 ? `₹${Math.round(balance).toLocaleString('en-IN')}` : (balance < 0 ? `-₹${Math.round(Math.abs(balance)).toLocaleString('en-IN')}` : '₹0');
+  
+  const message = `*ADIRA TELECOM SCHEME UPDATE*\n\nDear *${adName}*,\n\nYour PO is pending confirmation/payment.\n\n• *Pending PO Value*: ₹${Math.round(poVal).toLocaleString('en-IN')}\n• *Credit/Debit Balance*: ${balStr}\n• *Final RTGS Target*: *₹${Math.round(rtgs).toLocaleString('en-IN')}*\n• *Payment Deadline*: ${deadline}\n\nPlease confirm on the portal: ${portalUrl}\n\nThank you!`;
+  
+  const encodedText = encodeURIComponent(message);
+  const cleanContact = contact.replace(/[^0-9]/g, '');
+  const formattedContact = cleanContact.length === 10 ? '91' + cleanContact : cleanContact;
+  
+  const url = `https://api.whatsapp.com/send?phone=${formattedContact}&text=${encodedText}`;
+  window.open(url, '_blank');
+}
+
+function escapeQuote(str) {
+  return str.replace(/'/g, "\\'");
+}
+
+// ============================================================
+// 📊 REAL-TIME SALES ANALYTICS AND CHARTS
+// ============================================================
+let chartsInstance = {};
+function buildAdminDashboardCharts() {
+  // 1. Collection Efficiency Doughnut Chart
+  let verifiedSum = 0;
+  let pendingSum = 0;
+  localDB.allocations.forEach(a => {
+    const val = Number(a['PO Value']) || 0;
+    if (a['Payment Verified'] === 'Approved') {
+      verifiedSum += val;
+    } else if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      pendingSum += val;
+    }
+  });
+  
+  const ctx1 = document.getElementById('chartCollectionEfficiency');
+  if (ctx1) {
+    if (chartsInstance.collection) chartsInstance.collection.destroy();
+    chartsInstance.collection = new Chart(ctx1, {
+      type: 'doughnut',
+      data: {
+        labels: ['Verified Payments', 'Awaiting Audit'],
+        datasets: [{
+          data: [verifiedSum, pendingSum],
+          backgroundColor: ['#10b981', '#f59e0b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+  
+  // 2. Top Selling Models (Volume Horizontal Bar Chart)
+  const modelVolume = {};
+  localDB.allocations.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const model = a['Model Name'];
+      const qty = Number(a['Confirmed Qty']) || 0;
+      modelVolume[model] = (modelVolume[model] || 0) + qty;
+    }
+  });
+  const sortedModels = Object.keys(modelVolume).map(m => ({ name: m, qty: modelVolume[m] })).sort((a,b) => b.qty - a.qty).slice(0, 5);
+  
+  const ctx2 = document.getElementById('chartTopModels');
+  if (ctx2) {
+    if (chartsInstance.models) chartsInstance.models.destroy();
+    chartsInstance.models = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: sortedModels.map(m => m.name),
+        datasets: [{
+          label: 'Confirmed Qty',
+          data: sortedModels.map(m => m.qty),
+          backgroundColor: '#3b82f6',
+          borderRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#64748b' } },
+          y: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+  
+  // 3. Territory Sales Performance Chart
+  const territorySales = {};
+  localDB.allocations.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const area = a.Area || 'Other';
+      const val = Number(a['PO Value']) || 0;
+      territorySales[area] = (territorySales[area] || 0) + val;
+    }
+  });
+  
+  const ctx3 = document.getElementById('chartTerritorySales');
+  if (ctx3) {
+    if (chartsInstance.territory) chartsInstance.territory.destroy();
+    chartsInstance.territory = new Chart(ctx3, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(territorySales),
+        datasets: [{
+          data: Object.values(territorySales),
+          backgroundColor: ['#ec4899', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+}
+
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js">
+// ============================================================
+// 📦 MULTI-UTR PAYMENT FIELDS
+// ============================================================
+function addUTRFieldRow() {
+  const container = document.getElementById('utrFieldsContainer');
+  const div = document.createElement('div');
+  div.className = 'utr-row';
+  div.style.cssText = 'display:grid; grid-template-columns: 2fr 1fr auto; gap:6px; align-items:center; margin-top:6px;';
+  div.innerHTML = `
+    <input type="text" class="form-control utr-input-code" placeholder="UTR Number" style="padding-left:12px; height:34px; font-size:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); color:var(--color-text-main);">
+    <input type="number" class="form-control utr-input-amount" placeholder="Amount" style="padding-left:8px; height:34px; font-size:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); color:var(--color-text-main);" oninput="updateUTRTotalAmount()">
+    <button type="button" class="btn-action danger" style="padding:6px; font-size:0.7rem; height:34px; display:flex; align-items:center; justify-content:center;" onclick="this.closest('.utr-row').remove(); updateUTRTotalAmount();"><i data-lucide="trash-2" style="width:12px; height:12px;"></i></button>
+  `;
+  container.appendChild(div);
+  lucide.createIcons({node: div});
+}
+function updateUTRTotalAmount() {
+  let sum = 0;
+  document.querySelectorAll('.utr-input-amount').forEach(inp => {
+    sum += Number(inp.value) || 0;
+  });
+  document.getElementById('utrSumDisplay').innerText = '₹' + Math.round(sum).toLocaleString('en-IN');
+}
+
+// ============================================================
+// 📜 VIRTUAL ACCOUNT LEDGER STATEMENT GENERATOR
+// ============================================================
+function getAccountStatementData(adName) {
+  const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === adName.toLowerCase());
+  if (!dist) return [];
+  
+  const baseOutstanding = Number(dist['Outstanding Balance']) || 0;
+  
+  // Gather all allocations for this AD
+  const allocs = localDB.allocations.filter(a => a['AD Name'].toLowerCase() === adName.toLowerCase());
+  
+  const events = [];
+  // Add Opening Balance
+  events.push({
+    date: '—',
+    type: 'Opening Balance',
+    details: 'Uploaded base outstanding',
+    debit: 0,
+    credit: 0,
+    balance: baseOutstanding,
+    timestamp: 0
+  });
+  
+  // Group allocations by confirmation timestamp or group
+  const groups = {};
+  allocs.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const key = a['Confirmed At'] || 'PO';
+      if (!groups[key]) {
+        groups[key] = {
+          date: a['Confirmed At'] ? new Date(a['Confirmed At']).toLocaleDateString('en-IN') : 'Today',
+          timestamp: a['Confirmed At'] ? new Date(a['Confirmed At']).getTime() : Date.now(),
+          totalVal: 0,
+          models: [],
+          utr: a['UTR Number'] || '',
+          paymentStatus: a['Payment Verified'] || 'Pending'
+        };
+      }
+      groups[key].totalVal += (Number(a['PO Value']) || 0);
+      groups[key].models.push(`${a['Model Name']} (${a['Confirmed Qty']}x)`);
+    }
+  });
+  
+  Object.keys(groups).forEach(key => {
+    const g = groups[key];
+    // Add PO Confirmation (Debit)
+    events.push({
+      date: g.date,
+      type: 'PO Confirmed',
+      details: `Models: ${g.models.join(', ')}`,
+      debit: g.totalVal,
+      credit: 0,
+      timestamp: g.timestamp
+    });
+    
+    // If Payment is verified/approved, add Payment Credit
+    if (g.paymentStatus === 'Approved') {
+      events.push({
+        date: g.date,
+        type: 'Payment Credit',
+        details: `UTR: ${g.utr || 'N/A'} (Verified)`,
+        debit: 0,
+        credit: g.totalVal,
+        timestamp: g.timestamp + 1 // Ensure payment sorted after PO confirmation
+      });
+    }
+  });
+  
+  // Sort events chronologically
+  events.sort((a, b) => a.timestamp - b.timestamp);
+  
+  // Calculate running balance
+  let running = baseOutstanding;
+  events.forEach((ev, idx) => {
+    if (idx > 0) {
+      running = running + ev.debit - ev.credit;
+      ev.balance = running;
+    }
+  });
+  
+  return events;
+}
+
+function buildADStatementTab() {
+  const events = getAccountStatementData(currentUser.fullName);
+  const tbody = document.querySelector('#adStatementTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  events.forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ev.date}</td>
+      <td><strong>${ev.type}</strong></td>
+      <td style="font-size:0.75rem; color:var(--color-text-muted);">${ev.details}</td>
+      <td style="color:${ev.debit > 0 ? 'var(--color-danger)' : 'inherit'};">${ev.debit > 0 ? '₹'+Math.round(ev.debit).toLocaleString('en-IN') : '—'}</td>
+      <td style="color:${ev.credit > 0 ? 'var(--color-success)' : 'inherit'};">${ev.credit > 0 ? '₹'+Math.round(ev.credit).toLocaleString('en-IN') : '—'}</td>
+      <td style="font-weight:700; color:${ev.balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">${ev.balance < 0 ? '-' : ''}₹${Math.round(Math.abs(ev.balance)).toLocaleString('en-IN')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildAdminStatementsTab() {
+  const select = document.getElementById('adminStatementADSelect');
+  if (!select) return;
+  // Populate select options if empty
+  if (select.children.length <= 1) {
+    select.innerHTML = '<option value="">-- Choose Distributor --</option>';
+    localDB.distributors.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d['AD Name'];
+      opt.innerText = d['AD Name'];
+      select.appendChild(opt);
+    });
+  }
+  
+  const adName = select.value;
+  const tbody = document.querySelector('#adminStatementTable tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  
+  if (!adName) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--color-text-muted); padding:20px;">Please select a distributor to view statement.</td></tr>`;
+    return;
+  }
+  
+  const events = getAccountStatementData(adName);
+  events.forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ev.date}</td>
+      <td><strong>${ev.type}</strong></td>
+      <td style="font-size:0.75rem; color:var(--color-text-muted);">${ev.details}</td>
+      <td style="color:${ev.debit > 0 ? 'var(--color-danger)' : 'inherit'};">${ev.debit > 0 ? '₹'+Math.round(ev.debit).toLocaleString('en-IN') : '—'}</td>
+      <td style="color:${ev.credit > 0 ? 'var(--color-success)' : 'inherit'};">${ev.credit > 0 ? '₹'+Math.round(ev.credit).toLocaleString('en-IN') : '—'}</td>
+      <td style="font-weight:700; color:${ev.balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">${ev.balance < 0 ? '-' : ''}₹${Math.round(Math.abs(ev.balance)).toLocaleString('en-IN')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ============================================================
+// ⏰ ONE-CLICK WHATSAPP DEADLINE ALERT PING
+// ============================================================
+function openWhatsAppPingModal() {
+  const tbody = document.querySelector('#modalWhatsAppPingTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  
+  const adGroups = {};
+  localDB.allocations.forEach(a => {
+    const ad = a['AD Name'];
+    if (!adGroups[ad]) {
+      adGroups[ad] = {
+        name: ad,
+        totalPOVal: 0,
+        hasPending: false
+      };
+    }
+    if (a.Status === 'Pending' || a['Payment Verified'] === 'Pending') {
+      adGroups[ad].hasPending = true;
+    }
+    adGroups[ad].totalPOVal += (Number(a['PO Value']) || 0);
+  });
+  
+  let count = 0;
+  Object.keys(adGroups).forEach(ad => {
+    const group = adGroups[ad];
+    if (group.hasPending) {
+      count++;
+      const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === ad.toLowerCase()) || { 'Contact Number': '' };
+      const contact = dist['Contact Number'] || '';
+      const out = getDynamicADBalance(ad);
+      const rtgs = out > 0 ? Math.ceil(out / 1000) * 1000 : 0;
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="padding:10px 12px; color:#1e293b !important; font-weight: 600;"><strong>${ad}</strong></td>
+        <td style="padding:10px 12px; color:#1e293b !important;"><code>${contact || '—'}</code></td>
+        <td style="padding:10px 12px; color:#1e293b !important;">₹${Math.round(group.totalPOVal).toLocaleString('en-IN')}</td>
+        <td style="padding:10px 12px; font-weight:700; color:var(--color-warning);">₹${Math.round(rtgs).toLocaleString('en-IN')}</td>
+        <td style="padding:10px 12px;">
+          <button class="btn-action primary" onclick="triggerWhatsAppPing('${escapeQuote(ad)}', '${contact}', ${group.totalPOVal}, ${out}, ${rtgs})" ${!contact ? 'disabled title="No contact number"' : ''}>
+            <i data-lucide="message-square"></i> Send Ping
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  });
+  
+  if (count === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:20px;">No pending or unpaid ADs found!</td></tr>`;
+  }
+  
+  openModal('modalWhatsAppPing');
+  lucide.createIcons({node: tbody});
+}
+
+function triggerWhatsAppPing(adName, contact, poVal, balance, rtgs) {
+  const deadline = localDB.settings.paymentDeadlineTime ? localDB.settings.paymentDeadlineTime : '18:00';
+  const portalUrl = window.location.href;
+  const balStr = balance > 0 ? `₹${Math.round(balance).toLocaleString('en-IN')}` : (balance < 0 ? `-₹${Math.round(Math.abs(balance)).toLocaleString('en-IN')}` : '₹0');
+  
+  const message = `*ADIRA TELECOM SCHEME UPDATE*\n\nDear *${adName}*,\n\nYour PO is pending confirmation/payment.\n\n• *Pending PO Value*: ₹${Math.round(poVal).toLocaleString('en-IN')}\n• *Credit/Debit Balance*: ${balStr}\n• *Final RTGS Target*: *₹${Math.round(rtgs).toLocaleString('en-IN')}*\n• *Payment Deadline*: ${deadline}\n\nPlease confirm on the portal: ${portalUrl}\n\nThank you!`;
+  
+  const encodedText = encodeURIComponent(message);
+  const cleanContact = contact.replace(/[^0-9]/g, '');
+  const formattedContact = cleanContact.length === 10 ? '91' + cleanContact : cleanContact;
+  
+  const url = `https://api.whatsapp.com/send?phone=${formattedContact}&text=${encodedText}`;
+  window.open(url, '_blank');
+}
+
+function escapeQuote(str) {
+  return str.replace(/'/g, "\\'");
+}
+
+// ============================================================
+// 📊 REAL-TIME SALES ANALYTICS AND CHARTS
+// ============================================================
+let chartsInstance = {};
+function buildAdminDashboardCharts() {
+  // 1. Collection Efficiency Doughnut Chart
+  let verifiedSum = 0;
+  let pendingSum = 0;
+  localDB.allocations.forEach(a => {
+    const val = Number(a['PO Value']) || 0;
+    if (a['Payment Verified'] === 'Approved') {
+      verifiedSum += val;
+    } else if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      pendingSum += val;
+    }
+  });
+  
+  const ctx1 = document.getElementById('chartCollectionEfficiency');
+  if (ctx1) {
+    if (chartsInstance.collection) chartsInstance.collection.destroy();
+    chartsInstance.collection = new Chart(ctx1, {
+      type: 'doughnut',
+      data: {
+        labels: ['Verified Payments', 'Awaiting Audit'],
+        datasets: [{
+          data: [verifiedSum, pendingSum],
+          backgroundColor: ['#10b981', '#f59e0b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+  
+  // 2. Top Selling Models (Volume Horizontal Bar Chart)
+  const modelVolume = {};
+  localDB.allocations.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const model = a['Model Name'];
+      const qty = Number(a['Confirmed Qty']) || 0;
+      modelVolume[model] = (modelVolume[model] || 0) + qty;
+    }
+  });
+  const sortedModels = Object.keys(modelVolume).map(m => ({ name: m, qty: modelVolume[m] })).sort((a,b) => b.qty - a.qty).slice(0, 5);
+  
+  const ctx2 = document.getElementById('chartTopModels');
+  if (ctx2) {
+    if (chartsInstance.models) chartsInstance.models.destroy();
+    chartsInstance.models = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: sortedModels.map(m => m.name),
+        datasets: [{
+          label: 'Confirmed Qty',
+          data: sortedModels.map(m => m.qty),
+          backgroundColor: '#3b82f6',
+          borderRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#64748b' } },
+          y: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+  
+  // 3. Territory Sales Performance Chart
+  const territorySales = {};
+  localDB.allocations.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const area = a.Area || 'Other';
+      const val = Number(a['PO Value']) || 0;
+      territorySales[area] = (territorySales[area] || 0) + val;
+    }
+  });
+  
+  const ctx3 = document.getElementById('chartTerritorySales');
+  if (ctx3) {
+    if (chartsInstance.territory) chartsInstance.territory.destroy();
+    chartsInstance.territory = new Chart(ctx3, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(territorySales),
+        datasets: [{
+          data: Object.values(territorySales),
+          backgroundColor: ['#ec4899', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+}
+
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js">
+// ============================================================
+// 📦 MULTI-UTR PAYMENT FIELDS
+// ============================================================
+function addUTRFieldRow() {
+  const container = document.getElementById('utrFieldsContainer');
+  const div = document.createElement('div');
+  div.className = 'utr-row';
+  div.style.cssText = 'display:grid; grid-template-columns: 2fr 1fr auto; gap:6px; align-items:center; margin-top:6px;';
+  div.innerHTML = `
+    <input type="text" class="form-control utr-input-code" placeholder="UTR Number" style="padding-left:12px; height:34px; font-size:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); color:var(--color-text-main);">
+    <input type="number" class="form-control utr-input-amount" placeholder="Amount" style="padding-left:8px; height:34px; font-size:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); color:var(--color-text-main);" oninput="updateUTRTotalAmount()">
+    <button type="button" class="btn-action danger" style="padding:6px; font-size:0.7rem; height:34px; display:flex; align-items:center; justify-content:center;" onclick="this.closest('.utr-row').remove(); updateUTRTotalAmount();"><i data-lucide="trash-2" style="width:12px; height:12px;"></i></button>
+  `;
+  container.appendChild(div);
+  lucide.createIcons({node: div});
+}
+function updateUTRTotalAmount() {
+  let sum = 0;
+  document.querySelectorAll('.utr-input-amount').forEach(inp => {
+    sum += Number(inp.value) || 0;
+  });
+  document.getElementById('utrSumDisplay').innerText = '₹' + Math.round(sum).toLocaleString('en-IN');
+}
+
+// ============================================================
+// 📜 VIRTUAL ACCOUNT LEDGER STATEMENT GENERATOR
+// ============================================================
+function getAccountStatementData(adName) {
+  const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === adName.toLowerCase());
+  if (!dist) return [];
+  
+  const baseOutstanding = Number(dist['Outstanding Balance']) || 0;
+  
+  // Gather all allocations for this AD
+  const allocs = localDB.allocations.filter(a => a['AD Name'].toLowerCase() === adName.toLowerCase());
+  
+  const events = [];
+  // Add Opening Balance
+  events.push({
+    date: '—',
+    type: 'Opening Balance',
+    details: 'Uploaded base outstanding',
+    debit: 0,
+    credit: 0,
+    balance: baseOutstanding,
+    timestamp: 0
+  });
+  
+  // Group allocations by confirmation timestamp or group
+  const groups = {};
+  allocs.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const key = a['Confirmed At'] || 'PO';
+      if (!groups[key]) {
+        groups[key] = {
+          date: a['Confirmed At'] ? new Date(a['Confirmed At']).toLocaleDateString('en-IN') : 'Today',
+          timestamp: a['Confirmed At'] ? new Date(a['Confirmed At']).getTime() : Date.now(),
+          totalVal: 0,
+          models: [],
+          utr: a['UTR Number'] || '',
+          paymentStatus: a['Payment Verified'] || 'Pending'
+        };
+      }
+      groups[key].totalVal += (Number(a['PO Value']) || 0);
+      groups[key].models.push(`${a['Model Name']} (${a['Confirmed Qty']}x)`);
+    }
+  });
+  
+  Object.keys(groups).forEach(key => {
+    const g = groups[key];
+    // Add PO Confirmation (Debit)
+    events.push({
+      date: g.date,
+      type: 'PO Confirmed',
+      details: `Models: ${g.models.join(', ')}`,
+      debit: g.totalVal,
+      credit: 0,
+      timestamp: g.timestamp
+    });
+    
+    // If Payment is verified/approved, add Payment Credit
+    if (g.paymentStatus === 'Approved') {
+      events.push({
+        date: g.date,
+        type: 'Payment Credit',
+        details: `UTR: ${g.utr || 'N/A'} (Verified)`,
+        debit: 0,
+        credit: g.totalVal,
+        timestamp: g.timestamp + 1 // Ensure payment sorted after PO confirmation
+      });
+    }
+  });
+  
+  // Sort events chronologically
+  events.sort((a, b) => a.timestamp - b.timestamp);
+  
+  // Calculate running balance
+  let running = baseOutstanding;
+  events.forEach((ev, idx) => {
+    if (idx > 0) {
+      running = running + ev.debit - ev.credit;
+      ev.balance = running;
+    }
+  });
+  
+  return events;
+}
+
+function buildADStatementTab() {
+  const events = getAccountStatementData(currentUser.fullName);
+  const tbody = document.querySelector('#adStatementTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  events.forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ev.date}</td>
+      <td><strong>${ev.type}</strong></td>
+      <td style="font-size:0.75rem; color:var(--color-text-muted);">${ev.details}</td>
+      <td style="color:${ev.debit > 0 ? 'var(--color-danger)' : 'inherit'};">${ev.debit > 0 ? '₹'+Math.round(ev.debit).toLocaleString('en-IN') : '—'}</td>
+      <td style="color:${ev.credit > 0 ? 'var(--color-success)' : 'inherit'};">${ev.credit > 0 ? '₹'+Math.round(ev.credit).toLocaleString('en-IN') : '—'}</td>
+      <td style="font-weight:700; color:${ev.balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">${ev.balance < 0 ? '-' : ''}₹${Math.round(Math.abs(ev.balance)).toLocaleString('en-IN')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildAdminStatementsTab() {
+  const select = document.getElementById('adminStatementADSelect');
+  if (!select) return;
+  // Populate select options if empty
+  if (select.children.length <= 1) {
+    select.innerHTML = '<option value="">-- Choose Distributor --</option>';
+    localDB.distributors.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d['AD Name'];
+      opt.innerText = d['AD Name'];
+      select.appendChild(opt);
+    });
+  }
+  
+  const adName = select.value;
+  const tbody = document.querySelector('#adminStatementTable tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  
+  if (!adName) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--color-text-muted); padding:20px;">Please select a distributor to view statement.</td></tr>`;
+    return;
+  }
+  
+  const events = getAccountStatementData(adName);
+  events.forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ev.date}</td>
+      <td><strong>${ev.type}</strong></td>
+      <td style="font-size:0.75rem; color:var(--color-text-muted);">${ev.details}</td>
+      <td style="color:${ev.debit > 0 ? 'var(--color-danger)' : 'inherit'};">${ev.debit > 0 ? '₹'+Math.round(ev.debit).toLocaleString('en-IN') : '—'}</td>
+      <td style="color:${ev.credit > 0 ? 'var(--color-success)' : 'inherit'};">${ev.credit > 0 ? '₹'+Math.round(ev.credit).toLocaleString('en-IN') : '—'}</td>
+      <td style="font-weight:700; color:${ev.balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">${ev.balance < 0 ? '-' : ''}₹${Math.round(Math.abs(ev.balance)).toLocaleString('en-IN')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ============================================================
+// ⏰ ONE-CLICK WHATSAPP DEADLINE ALERT PING
+// ============================================================
+function openWhatsAppPingModal() {
+  const tbody = document.querySelector('#modalWhatsAppPingTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  
+  const adGroups = {};
+  localDB.allocations.forEach(a => {
+    const ad = a['AD Name'];
+    if (!adGroups[ad]) {
+      adGroups[ad] = {
+        name: ad,
+        totalPOVal: 0,
+        hasPending: false
+      };
+    }
+    if (a.Status === 'Pending' || a['Payment Verified'] === 'Pending') {
+      adGroups[ad].hasPending = true;
+    }
+    adGroups[ad].totalPOVal += (Number(a['PO Value']) || 0);
+  });
+  
+  let count = 0;
+  Object.keys(adGroups).forEach(ad => {
+    const group = adGroups[ad];
+    if (group.hasPending) {
+      count++;
+      const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === ad.toLowerCase()) || { 'Contact Number': '' };
+      const contact = dist['Contact Number'] || '';
+      const out = getDynamicADBalance(ad);
+      const rtgs = out > 0 ? Math.ceil(out / 1000) * 1000 : 0;
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="padding:10px 12px; color:#1e293b !important; font-weight: 600;"><strong>${ad}</strong></td>
+        <td style="padding:10px 12px; color:#1e293b !important;"><code>${contact || '—'}</code></td>
+        <td style="padding:10px 12px; color:#1e293b !important;">₹${Math.round(group.totalPOVal).toLocaleString('en-IN')}</td>
+        <td style="padding:10px 12px; font-weight:700; color:var(--color-warning);">₹${Math.round(rtgs).toLocaleString('en-IN')}</td>
+        <td style="padding:10px 12px;">
+          <button class="btn-action primary" onclick="triggerWhatsAppPing('${escapeQuote(ad)}', '${contact}', ${group.totalPOVal}, ${out}, ${rtgs})" ${!contact ? 'disabled title="No contact number"' : ''}>
+            <i data-lucide="message-square"></i> Send Ping
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  });
+  
+  if (count === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:20px;">No pending or unpaid ADs found!</td></tr>`;
+  }
+  
+  openModal('modalWhatsAppPing');
+  lucide.createIcons({node: tbody});
+}
+
+function triggerWhatsAppPing(adName, contact, poVal, balance, rtgs) {
+  const deadline = localDB.settings.paymentDeadlineTime ? localDB.settings.paymentDeadlineTime : '18:00';
+  const portalUrl = window.location.href;
+  const balStr = balance > 0 ? `₹${Math.round(balance).toLocaleString('en-IN')}` : (balance < 0 ? `-₹${Math.round(Math.abs(balance)).toLocaleString('en-IN')}` : '₹0');
+  
+  const message = `*ADIRA TELECOM SCHEME UPDATE*\n\nDear *${adName}*,\n\nYour PO is pending confirmation/payment.\n\n• *Pending PO Value*: ₹${Math.round(poVal).toLocaleString('en-IN')}\n• *Credit/Debit Balance*: ${balStr}\n• *Final RTGS Target*: *₹${Math.round(rtgs).toLocaleString('en-IN')}*\n• *Payment Deadline*: ${deadline}\n\nPlease confirm on the portal: ${portalUrl}\n\nThank you!`;
+  
+  const encodedText = encodeURIComponent(message);
+  const cleanContact = contact.replace(/[^0-9]/g, '');
+  const formattedContact = cleanContact.length === 10 ? '91' + cleanContact : cleanContact;
+  
+  const url = `https://api.whatsapp.com/send?phone=${formattedContact}&text=${encodedText}`;
+  window.open(url, '_blank');
+}
+
+function escapeQuote(str) {
+  return str.replace(/'/g, "\\'");
+}
+
+// ============================================================
+// 📊 REAL-TIME SALES ANALYTICS AND CHARTS
+// ============================================================
+let chartsInstance = {};
+function buildAdminDashboardCharts() {
+  // 1. Collection Efficiency Doughnut Chart
+  let verifiedSum = 0;
+  let pendingSum = 0;
+  localDB.allocations.forEach(a => {
+    const val = Number(a['PO Value']) || 0;
+    if (a['Payment Verified'] === 'Approved') {
+      verifiedSum += val;
+    } else if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      pendingSum += val;
+    }
+  });
+  
+  const ctx1 = document.getElementById('chartCollectionEfficiency');
+  if (ctx1) {
+    if (chartsInstance.collection) chartsInstance.collection.destroy();
+    chartsInstance.collection = new Chart(ctx1, {
+      type: 'doughnut',
+      data: {
+        labels: ['Verified Payments', 'Awaiting Audit'],
+        datasets: [{
+          data: [verifiedSum, pendingSum],
+          backgroundColor: ['#10b981', '#f59e0b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+  
+  // 2. Top Selling Models (Volume Horizontal Bar Chart)
+  const modelVolume = {};
+  localDB.allocations.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const model = a['Model Name'];
+      const qty = Number(a['Confirmed Qty']) || 0;
+      modelVolume[model] = (modelVolume[model] || 0) + qty;
+    }
+  });
+  const sortedModels = Object.keys(modelVolume).map(m => ({ name: m, qty: modelVolume[m] })).sort((a,b) => b.qty - a.qty).slice(0, 5);
+  
+  const ctx2 = document.getElementById('chartTopModels');
+  if (ctx2) {
+    if (chartsInstance.models) chartsInstance.models.destroy();
+    chartsInstance.models = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: sortedModels.map(m => m.name),
+        datasets: [{
+          label: 'Confirmed Qty',
+          data: sortedModels.map(m => m.qty),
+          backgroundColor: '#3b82f6',
+          borderRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#64748b' } },
+          y: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+  
+  // 3. Territory Sales Performance Chart
+  const territorySales = {};
+  localDB.allocations.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const area = a.Area || 'Other';
+      const val = Number(a['PO Value']) || 0;
+      territorySales[area] = (territorySales[area] || 0) + val;
+    }
+  });
+  
+  const ctx3 = document.getElementById('chartTerritorySales');
+  if (ctx3) {
+    if (chartsInstance.territory) chartsInstance.territory.destroy();
+    chartsInstance.territory = new Chart(ctx3, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(territorySales),
+        datasets: [{
+          data: Object.values(territorySales),
+          backgroundColor: ['#ec4899', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+}
+
+</script>
+<script src="firebase-config.js">
+// ============================================================
+// 📦 MULTI-UTR PAYMENT FIELDS
+// ============================================================
+function addUTRFieldRow() {
+  const container = document.getElementById('utrFieldsContainer');
+  const div = document.createElement('div');
+  div.className = 'utr-row';
+  div.style.cssText = 'display:grid; grid-template-columns: 2fr 1fr auto; gap:6px; align-items:center; margin-top:6px;';
+  div.innerHTML = `
+    <input type="text" class="form-control utr-input-code" placeholder="UTR Number" style="padding-left:12px; height:34px; font-size:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); color:var(--color-text-main);">
+    <input type="number" class="form-control utr-input-amount" placeholder="Amount" style="padding-left:8px; height:34px; font-size:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); color:var(--color-text-main);" oninput="updateUTRTotalAmount()">
+    <button type="button" class="btn-action danger" style="padding:6px; font-size:0.7rem; height:34px; display:flex; align-items:center; justify-content:center;" onclick="this.closest('.utr-row').remove(); updateUTRTotalAmount();"><i data-lucide="trash-2" style="width:12px; height:12px;"></i></button>
+  `;
+  container.appendChild(div);
+  lucide.createIcons({node: div});
+}
+function updateUTRTotalAmount() {
+  let sum = 0;
+  document.querySelectorAll('.utr-input-amount').forEach(inp => {
+    sum += Number(inp.value) || 0;
+  });
+  document.getElementById('utrSumDisplay').innerText = '₹' + Math.round(sum).toLocaleString('en-IN');
+}
+
+// ============================================================
+// 📜 VIRTUAL ACCOUNT LEDGER STATEMENT GENERATOR
+// ============================================================
+function getAccountStatementData(adName) {
+  const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === adName.toLowerCase());
+  if (!dist) return [];
+  
+  const baseOutstanding = Number(dist['Outstanding Balance']) || 0;
+  
+  // Gather all allocations for this AD
+  const allocs = localDB.allocations.filter(a => a['AD Name'].toLowerCase() === adName.toLowerCase());
+  
+  const events = [];
+  // Add Opening Balance
+  events.push({
+    date: '—',
+    type: 'Opening Balance',
+    details: 'Uploaded base outstanding',
+    debit: 0,
+    credit: 0,
+    balance: baseOutstanding,
+    timestamp: 0
+  });
+  
+  // Group allocations by confirmation timestamp or group
+  const groups = {};
+  allocs.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const key = a['Confirmed At'] || 'PO';
+      if (!groups[key]) {
+        groups[key] = {
+          date: a['Confirmed At'] ? new Date(a['Confirmed At']).toLocaleDateString('en-IN') : 'Today',
+          timestamp: a['Confirmed At'] ? new Date(a['Confirmed At']).getTime() : Date.now(),
+          totalVal: 0,
+          models: [],
+          utr: a['UTR Number'] || '',
+          paymentStatus: a['Payment Verified'] || 'Pending'
+        };
+      }
+      groups[key].totalVal += (Number(a['PO Value']) || 0);
+      groups[key].models.push(`${a['Model Name']} (${a['Confirmed Qty']}x)`);
+    }
+  });
+  
+  Object.keys(groups).forEach(key => {
+    const g = groups[key];
+    // Add PO Confirmation (Debit)
+    events.push({
+      date: g.date,
+      type: 'PO Confirmed',
+      details: `Models: ${g.models.join(', ')}`,
+      debit: g.totalVal,
+      credit: 0,
+      timestamp: g.timestamp
+    });
+    
+    // If Payment is verified/approved, add Payment Credit
+    if (g.paymentStatus === 'Approved') {
+      events.push({
+        date: g.date,
+        type: 'Payment Credit',
+        details: `UTR: ${g.utr || 'N/A'} (Verified)`,
+        debit: 0,
+        credit: g.totalVal,
+        timestamp: g.timestamp + 1 // Ensure payment sorted after PO confirmation
+      });
+    }
+  });
+  
+  // Sort events chronologically
+  events.sort((a, b) => a.timestamp - b.timestamp);
+  
+  // Calculate running balance
+  let running = baseOutstanding;
+  events.forEach((ev, idx) => {
+    if (idx > 0) {
+      running = running + ev.debit - ev.credit;
+      ev.balance = running;
+    }
+  });
+  
+  return events;
+}
+
+function buildADStatementTab() {
+  const events = getAccountStatementData(currentUser.fullName);
+  const tbody = document.querySelector('#adStatementTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  events.forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ev.date}</td>
+      <td><strong>${ev.type}</strong></td>
+      <td style="font-size:0.75rem; color:var(--color-text-muted);">${ev.details}</td>
+      <td style="color:${ev.debit > 0 ? 'var(--color-danger)' : 'inherit'};">${ev.debit > 0 ? '₹'+Math.round(ev.debit).toLocaleString('en-IN') : '—'}</td>
+      <td style="color:${ev.credit > 0 ? 'var(--color-success)' : 'inherit'};">${ev.credit > 0 ? '₹'+Math.round(ev.credit).toLocaleString('en-IN') : '—'}</td>
+      <td style="font-weight:700; color:${ev.balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">${ev.balance < 0 ? '-' : ''}₹${Math.round(Math.abs(ev.balance)).toLocaleString('en-IN')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildAdminStatementsTab() {
+  const select = document.getElementById('adminStatementADSelect');
+  if (!select) return;
+  // Populate select options if empty
+  if (select.children.length <= 1) {
+    select.innerHTML = '<option value="">-- Choose Distributor --</option>';
+    localDB.distributors.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d['AD Name'];
+      opt.innerText = d['AD Name'];
+      select.appendChild(opt);
+    });
+  }
+  
+  const adName = select.value;
+  const tbody = document.querySelector('#adminStatementTable tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  
+  if (!adName) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--color-text-muted); padding:20px;">Please select a distributor to view statement.</td></tr>`;
+    return;
+  }
+  
+  const events = getAccountStatementData(adName);
+  events.forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ev.date}</td>
+      <td><strong>${ev.type}</strong></td>
+      <td style="font-size:0.75rem; color:var(--color-text-muted);">${ev.details}</td>
+      <td style="color:${ev.debit > 0 ? 'var(--color-danger)' : 'inherit'};">${ev.debit > 0 ? '₹'+Math.round(ev.debit).toLocaleString('en-IN') : '—'}</td>
+      <td style="color:${ev.credit > 0 ? 'var(--color-success)' : 'inherit'};">${ev.credit > 0 ? '₹'+Math.round(ev.credit).toLocaleString('en-IN') : '—'}</td>
+      <td style="font-weight:700; color:${ev.balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">${ev.balance < 0 ? '-' : ''}₹${Math.round(Math.abs(ev.balance)).toLocaleString('en-IN')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ============================================================
+// ⏰ ONE-CLICK WHATSAPP DEADLINE ALERT PING
+// ============================================================
+function openWhatsAppPingModal() {
+  const tbody = document.querySelector('#modalWhatsAppPingTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  
+  const adGroups = {};
+  localDB.allocations.forEach(a => {
+    const ad = a['AD Name'];
+    if (!adGroups[ad]) {
+      adGroups[ad] = {
+        name: ad,
+        totalPOVal: 0,
+        hasPending: false
+      };
+    }
+    if (a.Status === 'Pending' || a['Payment Verified'] === 'Pending') {
+      adGroups[ad].hasPending = true;
+    }
+    adGroups[ad].totalPOVal += (Number(a['PO Value']) || 0);
+  });
+  
+  let count = 0;
+  Object.keys(adGroups).forEach(ad => {
+    const group = adGroups[ad];
+    if (group.hasPending) {
+      count++;
+      const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === ad.toLowerCase()) || { 'Contact Number': '' };
+      const contact = dist['Contact Number'] || '';
+      const out = getDynamicADBalance(ad);
+      const rtgs = out > 0 ? Math.ceil(out / 1000) * 1000 : 0;
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="padding:10px 12px; color:#1e293b !important; font-weight: 600;"><strong>${ad}</strong></td>
+        <td style="padding:10px 12px; color:#1e293b !important;"><code>${contact || '—'}</code></td>
+        <td style="padding:10px 12px; color:#1e293b !important;">₹${Math.round(group.totalPOVal).toLocaleString('en-IN')}</td>
+        <td style="padding:10px 12px; font-weight:700; color:var(--color-warning);">₹${Math.round(rtgs).toLocaleString('en-IN')}</td>
+        <td style="padding:10px 12px;">
+          <button class="btn-action primary" onclick="triggerWhatsAppPing('${escapeQuote(ad)}', '${contact}', ${group.totalPOVal}, ${out}, ${rtgs})" ${!contact ? 'disabled title="No contact number"' : ''}>
+            <i data-lucide="message-square"></i> Send Ping
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  });
+  
+  if (count === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:20px;">No pending or unpaid ADs found!</td></tr>`;
+  }
+  
+  openModal('modalWhatsAppPing');
+  lucide.createIcons({node: tbody});
+}
+
+function triggerWhatsAppPing(adName, contact, poVal, balance, rtgs) {
+  const deadline = localDB.settings.paymentDeadlineTime ? localDB.settings.paymentDeadlineTime : '18:00';
+  const portalUrl = window.location.href;
+  const balStr = balance > 0 ? `₹${Math.round(balance).toLocaleString('en-IN')}` : (balance < 0 ? `-₹${Math.round(Math.abs(balance)).toLocaleString('en-IN')}` : '₹0');
+  
+  const message = `*ADIRA TELECOM SCHEME UPDATE*\n\nDear *${adName}*,\n\nYour PO is pending confirmation/payment.\n\n• *Pending PO Value*: ₹${Math.round(poVal).toLocaleString('en-IN')}\n• *Credit/Debit Balance*: ${balStr}\n• *Final RTGS Target*: *₹${Math.round(rtgs).toLocaleString('en-IN')}*\n• *Payment Deadline*: ${deadline}\n\nPlease confirm on the portal: ${portalUrl}\n\nThank you!`;
+  
+  const encodedText = encodeURIComponent(message);
+  const cleanContact = contact.replace(/[^0-9]/g, '');
+  const formattedContact = cleanContact.length === 10 ? '91' + cleanContact : cleanContact;
+  
+  const url = `https://api.whatsapp.com/send?phone=${formattedContact}&text=${encodedText}`;
+  window.open(url, '_blank');
+}
+
+function escapeQuote(str) {
+  return str.replace(/'/g, "\\'");
+}
+
+// ============================================================
+// 📊 REAL-TIME SALES ANALYTICS AND CHARTS
+// ============================================================
+let chartsInstance = {};
+function buildAdminDashboardCharts() {
+  // 1. Collection Efficiency Doughnut Chart
+  let verifiedSum = 0;
+  let pendingSum = 0;
+  localDB.allocations.forEach(a => {
+    const val = Number(a['PO Value']) || 0;
+    if (a['Payment Verified'] === 'Approved') {
+      verifiedSum += val;
+    } else if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      pendingSum += val;
+    }
+  });
+  
+  const ctx1 = document.getElementById('chartCollectionEfficiency');
+  if (ctx1) {
+    if (chartsInstance.collection) chartsInstance.collection.destroy();
+    chartsInstance.collection = new Chart(ctx1, {
+      type: 'doughnut',
+      data: {
+        labels: ['Verified Payments', 'Awaiting Audit'],
+        datasets: [{
+          data: [verifiedSum, pendingSum],
+          backgroundColor: ['#10b981', '#f59e0b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+  
+  // 2. Top Selling Models (Volume Horizontal Bar Chart)
+  const modelVolume = {};
+  localDB.allocations.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const model = a['Model Name'];
+      const qty = Number(a['Confirmed Qty']) || 0;
+      modelVolume[model] = (modelVolume[model] || 0) + qty;
+    }
+  });
+  const sortedModels = Object.keys(modelVolume).map(m => ({ name: m, qty: modelVolume[m] })).sort((a,b) => b.qty - a.qty).slice(0, 5);
+  
+  const ctx2 = document.getElementById('chartTopModels');
+  if (ctx2) {
+    if (chartsInstance.models) chartsInstance.models.destroy();
+    chartsInstance.models = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: sortedModels.map(m => m.name),
+        datasets: [{
+          label: 'Confirmed Qty',
+          data: sortedModels.map(m => m.qty),
+          backgroundColor: '#3b82f6',
+          borderRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#64748b' } },
+          y: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+  
+  // 3. Territory Sales Performance Chart
+  const territorySales = {};
+  localDB.allocations.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const area = a.Area || 'Other';
+      const val = Number(a['PO Value']) || 0;
+      territorySales[area] = (territorySales[area] || 0) + val;
+    }
+  });
+  
+  const ctx3 = document.getElementById('chartTerritorySales');
+  if (ctx3) {
+    if (chartsInstance.territory) chartsInstance.territory.destroy();
+    chartsInstance.territory = new Chart(ctx3, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(territorySales),
+        datasets: [{
+          data: Object.values(territorySales),
+          backgroundColor: ['#ec4899', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+}
+
+</script>
 
 <script>
 // ============================================================
@@ -2910,7 +5871,7 @@ function loadRoleSpecificView(){
     document.getElementById('viewSales').classList.add('active');
     loadDataAndRender(()=>showSubTab('dashboard'));
   }else if(role==='ad'){
-    ['navItem_dashboard','navItem_confirm','navItem_ledger'].forEach(id=>showNavItem(id));
+    ['navItem_dashboard','navItem_confirm','navItem_ledger','navItem_statement'].forEach(id=>showNavItem(id));
     document.getElementById('viewAD').classList.add('active');
     loadDataAndRender(()=>showSubTab('dashboard'));
   }
@@ -2981,7 +5942,7 @@ function showSubTab(tab){
     ledger:'Allocation Ledger',distributors:'Distributors & Ledger',users:'User Credentials',
     territory:'Territory Overview',broadcast:'Broadcast Message',about:'About This Application',
     approvals:'Pending Approvals',report:'Territorial Allocation Report',
-    confirm:'Confirm Allocation'
+    confirm:'Confirm Allocation',statement:'Account Statement'
   };
   document.getElementById('currentNavTitle').innerText=titleMap[tab]||'Dashboard';
 
@@ -3029,11 +5990,12 @@ function showSubTab(tab){
     else if(tab==='distributors')buildDistributors('sales');
   }else if(role==='ad'){
     document.querySelectorAll('#viewAD .tab-panel').forEach(p=>p.classList.remove('active'));
-    const pmap={dashboard:'adPanel_dashboard',confirm:'adPanel_confirm',ledger:'adPanel_ledger'};
+    const pmap={dashboard:'adPanel_dashboard',confirm:'adPanel_confirm',ledger:'adPanel_ledger',statement:'adPanel_statement'};
     if(pmap[tab]){document.getElementById(pmap[tab]).classList.add('active');}
     if(tab==='dashboard')buildADDashboard(false);
     else if(tab==='confirm')buildADDashboard(true);
     else if(tab==='ledger')buildLedger('ad');
+    else if(tab==='statement')buildADStatementTab();
   }
 }
 
@@ -4610,8 +7572,7 @@ function recalculateADSummary(){
   document.getElementById('adSummaryOutstanding').innerText = cardBalanceStr;
   document.getElementById('adSummaryAvailableCredit').innerText='₹'+av.toLocaleString('en-IN');
   
-  const netPayable = out + poTotal;
-  const transferAmt = netPayable > 0 ? Math.ceil(netPayable / 1000) * 1000 : 0;
+  const transferAmt = out > 0 ? Math.ceil(out / 1000) * 1000 : 0;
   const trAmtEl = document.getElementById('adSummaryTransfer');
   if (trAmtEl) {
     trAmtEl.innerText = '₹' + transferAmt.toLocaleString('en-IN');
@@ -4633,15 +7594,38 @@ function recalculateADSummary(){
       dbBalEl.style.color = 'var(--color-text)';
     }
   }
+  
+  // Credit Limit Lockout enforcement
   const warn=document.getElementById('adCreditWarning');
-  warn.style.display='none';
+  const btn=document.getElementById('btnConfirmAD');
+  if (out > lim) {
+    warn.style.setProperty('display', 'block', 'important');
+    document.getElementById('adCreditWarningAmount').innerText = '₹' + Math.round(out - lim).toLocaleString('en-IN');
+    if (btn) btn.disabled = true;
+  } else {
+    warn.style.setProperty('display', 'none', 'important');
+    if (btn) btn.disabled = false;
+  }
 }
 
 function submitADSelections(){
   const inputs=document.querySelectorAll('#adAllocationRows .input-qty');
   const confirmations=[];
   inputs.forEach(inp=>confirmations.push({modelName:inp.dataset.model,confirmedQty:Number(inp.value)||0}));
-  const utr=document.getElementById('adUtrNumber').value.trim();
+  
+  // Dynamic multi-UTR parsing
+  const utrRows = document.querySelectorAll('#utrFieldsContainer .utr-row');
+  const utrList = [];
+  let utrSum = 0;
+  utrRows.forEach(row => {
+    const code = row.querySelector('.utr-input-code').value.trim();
+    const amt = Number(row.querySelector('.utr-input-amount').value) || 0;
+    if (code) {
+      utrList.push(`${code} (₹${Math.round(amt).toLocaleString('en-IN')})`);
+      utrSum += amt;
+    }
+  });
+  const utr = utrList.join(', ');
   
   // Validation for Minimum Order Quantity
   const minOrderQty = Number(localDB.settings.minOrderQty) || 0;
@@ -6412,6 +9396,364 @@ function getApprovalBadge(s, status){if(status==='Pending' || !s) return '—';i
 // CLOSE MODALS ON BACKDROP CLICK
 // ============================================================
 document.querySelectorAll('.modal').forEach(m=>{m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');});});
+
+
+// ============================================================
+// 📦 MULTI-UTR PAYMENT FIELDS
+// ============================================================
+function addUTRFieldRow() {
+  const container = document.getElementById('utrFieldsContainer');
+  const div = document.createElement('div');
+  div.className = 'utr-row';
+  div.style.cssText = 'display:grid; grid-template-columns: 2fr 1fr auto; gap:6px; align-items:center; margin-top:6px;';
+  div.innerHTML = `
+    <input type="text" class="form-control utr-input-code" placeholder="UTR Number" style="padding-left:12px; height:34px; font-size:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); color:var(--color-text-main);">
+    <input type="number" class="form-control utr-input-amount" placeholder="Amount" style="padding-left:8px; height:34px; font-size:0.75rem; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); color:var(--color-text-main);" oninput="updateUTRTotalAmount()">
+    <button type="button" class="btn-action danger" style="padding:6px; font-size:0.7rem; height:34px; display:flex; align-items:center; justify-content:center;" onclick="this.closest('.utr-row').remove(); updateUTRTotalAmount();"><i data-lucide="trash-2" style="width:12px; height:12px;"></i></button>
+  `;
+  container.appendChild(div);
+  lucide.createIcons({node: div});
+}
+function updateUTRTotalAmount() {
+  let sum = 0;
+  document.querySelectorAll('.utr-input-amount').forEach(inp => {
+    sum += Number(inp.value) || 0;
+  });
+  document.getElementById('utrSumDisplay').innerText = '₹' + Math.round(sum).toLocaleString('en-IN');
+}
+
+// ============================================================
+// 📜 VIRTUAL ACCOUNT LEDGER STATEMENT GENERATOR
+// ============================================================
+function getAccountStatementData(adName) {
+  const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === adName.toLowerCase());
+  if (!dist) return [];
+  
+  const baseOutstanding = Number(dist['Outstanding Balance']) || 0;
+  
+  // Gather all allocations for this AD
+  const allocs = localDB.allocations.filter(a => a['AD Name'].toLowerCase() === adName.toLowerCase());
+  
+  const events = [];
+  // Add Opening Balance
+  events.push({
+    date: '—',
+    type: 'Opening Balance',
+    details: 'Uploaded base outstanding',
+    debit: 0,
+    credit: 0,
+    balance: baseOutstanding,
+    timestamp: 0
+  });
+  
+  // Group allocations by confirmation timestamp or group
+  const groups = {};
+  allocs.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const key = a['Confirmed At'] || 'PO';
+      if (!groups[key]) {
+        groups[key] = {
+          date: a['Confirmed At'] ? new Date(a['Confirmed At']).toLocaleDateString('en-IN') : 'Today',
+          timestamp: a['Confirmed At'] ? new Date(a['Confirmed At']).getTime() : Date.now(),
+          totalVal: 0,
+          models: [],
+          utr: a['UTR Number'] || '',
+          paymentStatus: a['Payment Verified'] || 'Pending'
+        };
+      }
+      groups[key].totalVal += (Number(a['PO Value']) || 0);
+      groups[key].models.push(`${a['Model Name']} (${a['Confirmed Qty']}x)`);
+    }
+  });
+  
+  Object.keys(groups).forEach(key => {
+    const g = groups[key];
+    // Add PO Confirmation (Debit)
+    events.push({
+      date: g.date,
+      type: 'PO Confirmed',
+      details: `Models: ${g.models.join(', ')}`,
+      debit: g.totalVal,
+      credit: 0,
+      timestamp: g.timestamp
+    });
+    
+    // If Payment is verified/approved, add Payment Credit
+    if (g.paymentStatus === 'Approved') {
+      events.push({
+        date: g.date,
+        type: 'Payment Credit',
+        details: `UTR: ${g.utr || 'N/A'} (Verified)`,
+        debit: 0,
+        credit: g.totalVal,
+        timestamp: g.timestamp + 1 // Ensure payment sorted after PO confirmation
+      });
+    }
+  });
+  
+  // Sort events chronologically
+  events.sort((a, b) => a.timestamp - b.timestamp);
+  
+  // Calculate running balance
+  let running = baseOutstanding;
+  events.forEach((ev, idx) => {
+    if (idx > 0) {
+      running = running + ev.debit - ev.credit;
+      ev.balance = running;
+    }
+  });
+  
+  return events;
+}
+
+function buildADStatementTab() {
+  const events = getAccountStatementData(currentUser.fullName);
+  const tbody = document.querySelector('#adStatementTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  events.forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ev.date}</td>
+      <td><strong>${ev.type}</strong></td>
+      <td style="font-size:0.75rem; color:var(--color-text-muted);">${ev.details}</td>
+      <td style="color:${ev.debit > 0 ? 'var(--color-danger)' : 'inherit'};">${ev.debit > 0 ? '₹'+Math.round(ev.debit).toLocaleString('en-IN') : '—'}</td>
+      <td style="color:${ev.credit > 0 ? 'var(--color-success)' : 'inherit'};">${ev.credit > 0 ? '₹'+Math.round(ev.credit).toLocaleString('en-IN') : '—'}</td>
+      <td style="font-weight:700; color:${ev.balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">${ev.balance < 0 ? '-' : ''}₹${Math.round(Math.abs(ev.balance)).toLocaleString('en-IN')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function buildAdminStatementsTab() {
+  const select = document.getElementById('adminStatementADSelect');
+  if (!select) return;
+  // Populate select options if empty
+  if (select.children.length <= 1) {
+    select.innerHTML = '<option value="">-- Choose Distributor --</option>';
+    localDB.distributors.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d['AD Name'];
+      opt.innerText = d['AD Name'];
+      select.appendChild(opt);
+    });
+  }
+  
+  const adName = select.value;
+  const tbody = document.querySelector('#adminStatementTable tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  
+  if (!adName) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--color-text-muted); padding:20px;">Please select a distributor to view statement.</td></tr>`;
+    return;
+  }
+  
+  const events = getAccountStatementData(adName);
+  events.forEach(ev => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ev.date}</td>
+      <td><strong>${ev.type}</strong></td>
+      <td style="font-size:0.75rem; color:var(--color-text-muted);">${ev.details}</td>
+      <td style="color:${ev.debit > 0 ? 'var(--color-danger)' : 'inherit'};">${ev.debit > 0 ? '₹'+Math.round(ev.debit).toLocaleString('en-IN') : '—'}</td>
+      <td style="color:${ev.credit > 0 ? 'var(--color-success)' : 'inherit'};">${ev.credit > 0 ? '₹'+Math.round(ev.credit).toLocaleString('en-IN') : '—'}</td>
+      <td style="font-weight:700; color:${ev.balance >= 0 ? 'var(--color-success)' : 'var(--color-danger)'};">${ev.balance < 0 ? '-' : ''}₹${Math.round(Math.abs(ev.balance)).toLocaleString('en-IN')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ============================================================
+// ⏰ ONE-CLICK WHATSAPP DEADLINE ALERT PING
+// ============================================================
+function openWhatsAppPingModal() {
+  const tbody = document.querySelector('#modalWhatsAppPingTable tbody');
+  if(!tbody) return;
+  tbody.innerHTML = '';
+  
+  const adGroups = {};
+  localDB.allocations.forEach(a => {
+    const ad = a['AD Name'];
+    if (!adGroups[ad]) {
+      adGroups[ad] = {
+        name: ad,
+        totalPOVal: 0,
+        hasPending: false
+      };
+    }
+    if (a.Status === 'Pending' || a['Payment Verified'] === 'Pending') {
+      adGroups[ad].hasPending = true;
+    }
+    adGroups[ad].totalPOVal += (Number(a['PO Value']) || 0);
+  });
+  
+  let count = 0;
+  Object.keys(adGroups).forEach(ad => {
+    const group = adGroups[ad];
+    if (group.hasPending) {
+      count++;
+      const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === ad.toLowerCase()) || { 'Contact Number': '' };
+      const contact = dist['Contact Number'] || '';
+      const out = getDynamicADBalance(ad);
+      const rtgs = out > 0 ? Math.ceil(out / 1000) * 1000 : 0;
+      
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="padding:10px 12px; color:#1e293b !important; font-weight: 600;"><strong>${ad}</strong></td>
+        <td style="padding:10px 12px; color:#1e293b !important;"><code>${contact || '—'}</code></td>
+        <td style="padding:10px 12px; color:#1e293b !important;">₹${Math.round(group.totalPOVal).toLocaleString('en-IN')}</td>
+        <td style="padding:10px 12px; font-weight:700; color:var(--color-warning);">₹${Math.round(rtgs).toLocaleString('en-IN')}</td>
+        <td style="padding:10px 12px;">
+          <button class="btn-action primary" onclick="triggerWhatsAppPing('${escapeQuote(ad)}', '${contact}', ${group.totalPOVal}, ${out}, ${rtgs})" ${!contact ? 'disabled title="No contact number"' : ''}>
+            <i data-lucide="message-square"></i> Send Ping
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+  });
+  
+  if (count === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--color-text-muted);padding:20px;">No pending or unpaid ADs found!</td></tr>`;
+  }
+  
+  openModal('modalWhatsAppPing');
+  lucide.createIcons({node: tbody});
+}
+
+function triggerWhatsAppPing(adName, contact, poVal, balance, rtgs) {
+  const deadline = localDB.settings.paymentDeadlineTime ? localDB.settings.paymentDeadlineTime : '18:00';
+  const portalUrl = window.location.href;
+  const balStr = balance > 0 ? `₹${Math.round(balance).toLocaleString('en-IN')}` : (balance < 0 ? `-₹${Math.round(Math.abs(balance)).toLocaleString('en-IN')}` : '₹0');
+  
+  const message = `*ADIRA TELECOM SCHEME UPDATE*\n\nDear *${adName}*,\n\nYour PO is pending confirmation/payment.\n\n• *Pending PO Value*: ₹${Math.round(poVal).toLocaleString('en-IN')}\n• *Credit/Debit Balance*: ${balStr}\n• *Final RTGS Target*: *₹${Math.round(rtgs).toLocaleString('en-IN')}*\n• *Payment Deadline*: ${deadline}\n\nPlease confirm on the portal: ${portalUrl}\n\nThank you!`;
+  
+  const encodedText = encodeURIComponent(message);
+  const cleanContact = contact.replace(/[^0-9]/g, '');
+  const formattedContact = cleanContact.length === 10 ? '91' + cleanContact : cleanContact;
+  
+  const url = `https://api.whatsapp.com/send?phone=${formattedContact}&text=${encodedText}`;
+  window.open(url, '_blank');
+}
+
+function escapeQuote(str) {
+  return str.replace(/'/g, "\\'");
+}
+
+// ============================================================
+// 📊 REAL-TIME SALES ANALYTICS AND CHARTS
+// ============================================================
+let chartsInstance = {};
+function buildAdminDashboardCharts() {
+  // 1. Collection Efficiency Doughnut Chart
+  let verifiedSum = 0;
+  let pendingSum = 0;
+  localDB.allocations.forEach(a => {
+    const val = Number(a['PO Value']) || 0;
+    if (a['Payment Verified'] === 'Approved') {
+      verifiedSum += val;
+    } else if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      pendingSum += val;
+    }
+  });
+  
+  const ctx1 = document.getElementById('chartCollectionEfficiency');
+  if (ctx1) {
+    if (chartsInstance.collection) chartsInstance.collection.destroy();
+    chartsInstance.collection = new Chart(ctx1, {
+      type: 'doughnut',
+      data: {
+        labels: ['Verified Payments', 'Awaiting Audit'],
+        datasets: [{
+          data: [verifiedSum, pendingSum],
+          backgroundColor: ['#10b981', '#f59e0b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+  
+  // 2. Top Selling Models (Volume Horizontal Bar Chart)
+  const modelVolume = {};
+  localDB.allocations.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const model = a['Model Name'];
+      const qty = Number(a['Confirmed Qty']) || 0;
+      modelVolume[model] = (modelVolume[model] || 0) + qty;
+    }
+  });
+  const sortedModels = Object.keys(modelVolume).map(m => ({ name: m, qty: modelVolume[m] })).sort((a,b) => b.qty - a.qty).slice(0, 5);
+  
+  const ctx2 = document.getElementById('chartTopModels');
+  if (ctx2) {
+    if (chartsInstance.models) chartsInstance.models.destroy();
+    chartsInstance.models = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: sortedModels.map(m => m.name),
+        datasets: [{
+          label: 'Confirmed Qty',
+          data: sortedModels.map(m => m.qty),
+          backgroundColor: '#3b82f6',
+          borderRadius: 5
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#64748b' } },
+          y: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+  
+  // 3. Territory Sales Performance Chart
+  const territorySales = {};
+  localDB.allocations.forEach(a => {
+    if (a.Status === 'Confirmed' || a.Status === 'Completed') {
+      const area = a.Area || 'Other';
+      const val = Number(a['PO Value']) || 0;
+      territorySales[area] = (territorySales[area] || 0) + val;
+    }
+  });
+  
+  const ctx3 = document.getElementById('chartTerritorySales');
+  if (ctx3) {
+    if (chartsInstance.territory) chartsInstance.territory.destroy();
+    chartsInstance.territory = new Chart(ctx3, {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(territorySales),
+        datasets: [{
+          data: Object.values(territorySales),
+          backgroundColor: ['#ec4899', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 10 } } }
+        }
+      }
+    });
+  }
+}
 
 </script>
 </body>
