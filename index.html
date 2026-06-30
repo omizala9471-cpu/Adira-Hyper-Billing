@@ -3981,14 +3981,27 @@ function exportFinalizedPO(role){
   const wb=XLSX.utils.book_new();
   const wsData=[];
 
-  // Row 1: blank | AD Name > | AD1 | AD2 | ...
-  wsData.push(['','AD Name >'].concat(ads));
-  // Row 2: Code | Model | (blank per AD col)
-  wsData.push(['Code','Model'].concat(ads.map(()=>'')));
+  // Helper to convert column index to Excel letter
+  function getExcelColLetter(colIdx) {
+    let letter = '';
+    colIdx = colIdx + 1;
+    while (colIdx > 0) {
+      let temp = (colIdx - 1) % 26;
+      letter = String.fromCharCode(65 + temp) + letter;
+      colIdx = Math.floor((colIdx - temp - 1) / 26);
+    }
+    return letter;
+  }
 
-  // Model rows
+  // Row 1: blank | blank | AD Name > | AD1 | AD2 | ...
+  wsData.push(['','','AD Name >'].concat(ads));
+  // Row 2: Code | Model | Price (DP) | (blank per AD col)
+  wsData.push(['Code','Model','Price (DP)'].concat(ads.map(()=>'')));
+
+  // Model rows (Row 3 to 2 + models.length)
   models.forEach(model=>{
-    const row=[getCode(model),getModelNameOnly(model)];
+    const price = Number(localDB.prices[model]) || 0;
+    const row=[getCode(model),getModelNameOnly(model),price];
     ads.forEach(ad=>{
       const entry=data.find(a=>a['AD Name']===ad&&a['Model Name']===model);
       row.push(entry?Number(entry['Confirmed Qty']||entry['Allocated Qty'])||0:'');
@@ -3996,24 +4009,27 @@ function exportFinalizedPO(role){
     wsData.push(row);
   });
 
-  // Total Qty row
-  const qtyRow=['Total Qty',''];
+  const qtyRowIdx = 3 + models.length;       // Excel row index (1-based)
+  const valRowIdx = 4 + models.length;       // Excel row index (1-based)
+  const credDebRowIdx = 5 + models.length;   // Excel row index (1-based)
+  const rtgsRowIdx = 6 + models.length;      // Excel row index (1-based)
+
+  // Total Qty row placeholder (we will fill formula object next)
+  const qtyRow=['Total Qty','',''];
   ads.forEach(ad=>{
-    const total=data.filter(a=>a['AD Name']===ad).reduce((s,a)=>s+(Number(a['Confirmed Qty']||a['Allocated Qty'])||0),0);
-    qtyRow.push(total);
+    qtyRow.push('');
   });
   wsData.push(qtyRow);
 
-  // Value row
-  const valRow=['Value',''];
+  // Value row placeholder
+  const valRow=['Value','',''];
   ads.forEach(ad=>{
-    const total=data.filter(a=>a['AD Name']===ad).reduce((s,a)=>s+(Number(a['PO Amount']||a['Allocated Value'])||0),0);
-    valRow.push(total);
+    valRow.push('');
   });
   wsData.push(valRow);
 
   // Credit / Debit row
-  const credDebRow=['Credit / Debit',''];
+  const credDebRow=['Credit / Debit','',''];
   ads.forEach(ad=>{
     const dist=localDB.distributors.find(d=>d['AD Name'].toLowerCase()===ad.toLowerCase())||{'Outstanding Balance':0};
     const out=Number(dist['Outstanding Balance'])||0;
@@ -4021,21 +4037,46 @@ function exportFinalizedPO(role){
   });
   wsData.push(credDebRow);
 
-  // Final RTGS amount (Round-up) row
-  const rtgsRow=['Final RTGS amount (Round-up)',''];
+  // Final RTGS amount (Round-up) row placeholder
+  const rtgsRow=['Final RTGS amount (Round-up)','',''];
   ads.forEach(ad=>{
-    const dist=localDB.distributors.find(d=>d['AD Name'].toLowerCase()===ad.toLowerCase())||{'Outstanding Balance':0};
-    const out=Number(dist['Outstanding Balance'])||0;
-    const poVal=data.filter(a=>a['AD Name']===ad).reduce((s,a)=>s+(Number(a['PO Amount']||a['Allocated Value'])||0),0);
-    const net = out + poVal;
-    const rtgs = net > 0 ? Math.ceil(net / 1000) * 1000 : 0;
-    rtgsRow.push(rtgs);
+    rtgsRow.push('');
   });
   wsData.push(rtgsRow);
 
   const ws=XLSX.utils.aoa_to_sheet(wsData);
+
+  // Apply Excel Formula Objects to columns for each AD
+  ads.forEach((ad, adIdx) => {
+    const colIdx = 3 + adIdx; // Start from column 'D'
+    const colLetter = getExcelColLetter(colIdx);
+    
+    // 1. Total Qty Formula: =SUM(D3:D22)
+    const qtyCellRef = `${colLetter}${qtyRowIdx}`;
+    ws[qtyCellRef] = {
+      t: 'n',
+      f: `SUM(${colLetter}3:${colLetter}${2 + models.length})`
+    };
+    
+    // 2. Value Formula: =SUMPRODUCT($C$3:$C$22, D3:D22)
+    const valCellRef = `${colLetter}${valRowIdx}`;
+    ws[valCellRef] = {
+      t: 'n',
+      f: `SUMPRODUCT($C$3:$C$${2 + models.length}, ${colLetter}3:${colLetter}${2 + models.length})`
+    };
+    
+    // 3. Final RTGS amount (Round-up) Formula: =IF((D24+D25)>0, CEILING(D24+D25, 1000), 0)
+    const rtgsCellRef = `${colLetter}${rtgsRowIdx}`;
+    const valRef = `${colLetter}${valRowIdx}`;
+    const credDebRef = `${colLetter}${credDebRowIdx}`;
+    ws[rtgsCellRef] = {
+      t: 'n',
+      f: `IF((${valRef}+${credDebRef})>0, CEILING(${valRef}+${credDebRef}, 1000), 0)`
+    };
+  });
+
   // Set column widths
-  ws['!cols']=[{wch:10},{wch:28}].concat(ads.map(()=>({wch:18})));
+  ws['!cols']=[{wch:10},{wch:28},{wch:12}].concat(ads.map(()=>({wch:18})));
   XLSX.utils.book_append_sheet(wb,ws,'Finalized PO');
   const date=new Date().toLocaleDateString('en-IN').replace(/\//g,'-');
   XLSX.writeFile(wb,`Finalized_PO_${date}.xlsx`);
@@ -5661,7 +5702,7 @@ function processBalances(rows) {
       processed.forEach(p => {
         let match = localDB.distributors.find(d => d["AD Name"].toLowerCase() === p.adName.toLowerCase());
         if (match) {
-          match["Outstanding Balance"] = p.outstandingBalance;
+          match["Outstanding Balance"] = (Number(match["Outstanding Balance"]) || 0) + p.outstandingBalance;
         } else {
           localDB.distributors.push({
             "AD Name": p.adName,

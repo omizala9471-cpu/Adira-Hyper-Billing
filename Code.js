@@ -290,11 +290,13 @@ function updateADBalances(balancesList) {
       const contactIdx = data[0].indexOf('Contact Number');
       const areaIdx = data[0].indexOf('Area');
       
+      const outIdx = data[0].indexOf('Outstanding Balance');
       for (let i = 1; i < data.length; i++) {
         const name = data[i][adNameIdx].toString().trim();
         existing[name.toLowerCase()] = {
           contact: data[i][contactIdx] || '',
-          area: data[i][areaIdx] || 'Gujarat'
+          area: data[i][areaIdx] || 'Gujarat',
+          outstanding: Number(data[i][outIdx]) || 0
         };
       }
     }
@@ -306,12 +308,14 @@ function updateADBalances(balancesList) {
       const key = item.adName.toLowerCase();
       const contact = existing[key] ? existing[key].contact : '';
       const area = existing[key] ? existing[key].area : 'Gujarat';
+      const existingOut = existing[key] ? (Number(existing[key].outstanding) || 0) : 0;
+      const finalOut = existingOut + Number(item.outstandingBalance);
       
       sheet.appendRow([
         item.adName,
         contact,
         area,
-        Number(item.outstandingBalance),
+        finalOut,
         Number(item.creditLimit || 300000)
       ]);
     });
