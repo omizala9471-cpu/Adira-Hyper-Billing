@@ -1005,7 +1005,10 @@
                       <tr>
                         <th>AD Name</th>
                         <th>MD Code</th>
-                        <th>Outstanding Balance</th>
+                        <th>Total Qty</th>
+                        <th>Value</th>
+                        <th>Credit / Debit</th>
+                        <th>Final RTGS amount (Round-up)</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -4041,6 +4044,20 @@ function exportFinalizedPO(role){
 // ============================================================
 // DISTRIBUTORS TABLE
 // ============================================================
+// Helper to compute dynamic AD balance including confirmed POs
+function getDynamicADBalance(adName) {
+  const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === adName.toLowerCase());
+  const staticBal = dist ? (Number(dist['Outstanding Balance']) || 0) : 0;
+  const adAllocs = localDB.allocations.filter(a => a['AD Name'].toLowerCase() === adName.toLowerCase());
+  const confirmedPOVal = adAllocs.reduce((s, a) => {
+    if (['Confirmed', 'Completed', 'Dispatched'].includes(a.Status)) {
+      return s + (Number(a['PO Amount']) || Number(a['Allocated Value']) || 0);
+    }
+    return s;
+  }, 0);
+  return staticBal + confirmedPOVal;
+}
+
 function buildDistributors(role){
   const tableId=role==='admin'?'adminDistTable':'salesDistributorsTable';
   const tbody=document.querySelector('#'+tableId+' tbody');
@@ -4049,8 +4066,8 @@ function buildDistributors(role){
   if(localDB.distributors.length===0){const cols=role==='admin'?4:3;tbody.innerHTML=`<tr><td colspan="${cols}" style="text-align:center;color:var(--color-text-muted);">No distributor data.</td></tr>`;return;}
   localDB.distributors.forEach(item=>{
     const tr=document.createElement('tr');
-    const out=Number(item['Outstanding Balance'])||0;
-    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
+    const out=getDynamicADBalance(item['AD Name']);
+    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') : (out < 0 ? '-₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
     const colorStyle = out > 0 ? 'var(--color-warning)' : (out < 0 ? 'var(--color-success)' : 'inherit');
     if(role==='admin'){
       tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td style="color:${colorStyle}">${displayOut}</td><td style="color:var(--color-text-muted);font-size:0.78rem;">${item['Contact Number']||'-'}</td>`;
@@ -4093,15 +4110,33 @@ function filterMasterBalancesTable() {
     const u = localDB.users.find(x => x.FullName.toLowerCase() === item['AD Name'].toLowerCase());
     const mdCode = u ? u.ADCode || '-' : '-';
     
-    const out = Number(item['Outstanding Balance']) || 0;
-    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
-    const colorStyle = out > 0 ? 'var(--color-warning)' : (out < 0 ? 'var(--color-success)' : 'inherit');
+    // Calculate PO summary details dynamically
+    const adAllocs = localDB.allocations.filter(a => a['AD Name'].toLowerCase() === item['AD Name'].toLowerCase());
+    const totalQty = adAllocs.reduce((s, a) => s + (['Confirmed', 'Completed', 'Dispatched'].includes(a.Status) ? (Number(a['Confirmed Qty']) || 0) : 0), 0);
+    const poVal = adAllocs.reduce((s, a) => s + (['Confirmed', 'Completed', 'Dispatched'].includes(a.Status) ? (Number(a['PO Amount']) || Number(a['Allocated Value']) || 0) : 0), 0);
+    
+    // Dynamic outstanding balance
+    const staticOut = Number(item['Outstanding Balance']) || 0;
+    const dynamicOut = staticOut + poVal;
+    
+    // Format Credit / Debit balance (Credit is negative, Debit is positive)
+    const displayOut = dynamicOut > 0 
+      ? '₹' + dynamicOut.toLocaleString('en-IN') 
+      : (dynamicOut < 0 ? '-₹' + Math.abs(dynamicOut).toLocaleString('en-IN') : '₹0');
+    const colorStyle = dynamicOut > 0 ? 'var(--color-warning)' : (dynamicOut < 0 ? 'var(--color-success)' : 'inherit');
+    
+    // Final RTGS amount (Round-up) calculation
+    const net = staticOut + poVal;
+    const rtgs = net > 0 ? Math.ceil(net / 1000) * 1000 : 0;
       
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${item['AD Name']}</strong></td>
       <td><code>${mdCode}</code></td>
-      <td style="color:${colorStyle}">${displayOut}</td>
+      <td><strong>${totalQty}</strong></td>
+      <td>₹${poVal.toLocaleString('en-IN')}</td>
+      <td style="color:${colorStyle}; font-weight:700;">${displayOut}</td>
+      <td style="color:#2563eb; font-weight:800;">₹${rtgs.toLocaleString('en-IN')}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -4116,8 +4151,8 @@ function filterDistributors(role){
   const tbody=document.querySelector('#'+tableId+' tbody');tbody.innerHTML='';
   filtered.forEach(item=>{
     const tr=document.createElement('tr');
-    const out=Number(item['Outstanding Balance'])||0;
-    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
+    const out=getDynamicADBalance(item['AD Name']);
+    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') : (out < 0 ? '-₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
     const colorStyle = out > 0 ? 'var(--color-warning)' : (out < 0 ? 'var(--color-success)' : 'inherit');
     if(role==='admin'){tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td style="color:${colorStyle}">${displayOut}</td><td style="color:var(--color-text-muted);font-size:0.78rem;">${item['Contact Number']||'-'}</td>`;}
     else{tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td style="color:${colorStyle}">${displayOut}</td>`;}
@@ -4290,8 +4325,8 @@ function buildRSDTerritory(){
     const status=allocs.length>0?allocs[0].Status:'No Allocations';
     const poVal=allocs.reduce((s,a)=>s+(Number(a['PO Amount'])||0),0);
     const tr=document.createElement('tr');
-    const out=Number(dist['Outstanding Balance'])||0;
-    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
+    const out=getDynamicADBalance(adUser.FullName);
+    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') : (out < 0 ? '-₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
     const colorStyle = out > 0 ? 'var(--color-warning)' : (out < 0 ? 'var(--color-success)' : 'inherit');
     tr.innerHTML=`<td><strong>${adUser.FullName}</strong></td><td>${adUser.Area||''}</td><td><code>${adUser.ADCode||'-'}</code></td><td style="color:${colorStyle}">${displayOut}</td><td>${getStatusBadge(status)}</td><td>₹${poVal.toLocaleString('en-IN')}</td>`;
     tbody.appendChild(tr);
@@ -4311,8 +4346,8 @@ function filterRSDTerritory(){
     const status=allocs.length>0?allocs[0].Status:'No Allocations';
     const poVal=allocs.reduce((s,a)=>s+(Number(a['PO Amount'])||0),0);
     const tr=document.createElement('tr');
-    const out=Number(dist['Outstanding Balance'])||0;
-    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
+    const out=getDynamicADBalance(adUser.FullName);
+    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') : (out < 0 ? '-₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
     const colorStyle = out > 0 ? 'var(--color-warning)' : (out < 0 ? 'var(--color-success)' : 'inherit');
     tr.innerHTML=`<td><strong>${adUser.FullName}</strong></td><td>${adUser.Area||''}</td><td><code>${adUser.ADCode||'-'}</code></td><td style="color:${colorStyle}">${displayOut}</td><td>${getStatusBadge(status)}</td><td>₹${poVal.toLocaleString('en-IN')}</td>`;
     tbody.appendChild(tr);
@@ -4513,12 +4548,15 @@ function recalculateADSummary(){
   document.getElementById('adSummaryTotal').innerText='₹'+poTotal.toLocaleString('en-IN');
   document.getElementById('adHeroPOVal').innerText='₹'+poTotal.toLocaleString('en-IN');
   const ledger=localDB.distributors.find(d=>d['AD Name'].toLowerCase()===currentUser.fullName.toLowerCase())||{'Credit Limit':300000,'Outstanding Balance':0};
-  const lim=Number(ledger['Credit Limit'])||300000;const out=Number(ledger['Outstanding Balance'])||0;const av=lim-out;
+  const lim=Number(ledger['Credit Limit'])||300000;
+  const staticOut=Number(ledger['Outstanding Balance'])||0;
+  const out = staticOut + poTotal; // Dynamic balance adjusts based on live inputs total
+  const av=lim-out;
   document.getElementById('adSummaryCreditLimit').innerText='₹'+lim.toLocaleString('en-IN');
   
   const cardBalanceStr = out > 0 
-    ? '₹' + out.toLocaleString('en-IN') + ' Dr' 
-    : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
+    ? '₹' + out.toLocaleString('en-IN') 
+    : (out < 0 ? '-₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
     
   document.getElementById('adSummaryOutstanding').innerText = cardBalanceStr;
   document.getElementById('adSummaryAvailableCredit').innerText='₹'+av.toLocaleString('en-IN');
