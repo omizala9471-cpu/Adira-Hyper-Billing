@@ -5766,64 +5766,96 @@ function autoFillNewAllocDetails() {
 }
 
 function saveAllocation() {
-  const qty = Number(document.getElementById('newAlloc_qty').value) || 0;
-  const price = Number(document.getElementById('newAlloc_price').value) || 0;
-  
-  if (qty <= 0) {
-    alert("Please enter a valid quantity.");
-    return;
-  }
-  
-  showLoader();
-  
-  if (editingAllocationId) {
-    const area = document.getElementById('newAlloc_area').value || 'Gujarat';
-    const item = localDB.allocations.find(a => a.ID === editingAllocationId);
-    if (item) {
-      item['Allocated Qty'] = qty;
-      item.Price = price;
-      item['Allocated Value'] = qty * price;
-      item.Area = area;
-      if (item.Status !== 'Pending') {
-        item['Confirmed Qty'] = qty;
-        item['PO Amount'] = qty * price;
-      }
-      item['Last Updated'] = new Date().toISOString();
-    }
-  } else {
-    if (selectedADs.length === 0 || selectedModels.length === 0) {
-      alert("Please select at least one AD and one Model.");
-      hideLoader();
+  try {
+    const qty = Number(document.getElementById('newAlloc_qty').value) || 0;
+    const price = Number(document.getElementById('newAlloc_price').value) || 0;
+    
+    if (qty <= 0) {
+      alert("Please enter a valid quantity.");
       return;
     }
     
-    selectedADs.forEach(adName => {
-      const adUser = localDB.users.find(u => u.FullName === adName);
-      const area = (adUser ? adUser.Area : '') || document.getElementById('newAlloc_area').value || 'Gujarat';
+    showLoader();
+    
+    if (editingAllocationId) {
+      const area = document.getElementById('newAlloc_area').value || 'Gujarat';
+      const item = localDB.allocations.find(a => a.ID === editingAllocationId);
+      if (item) {
+        item['Allocated Qty'] = qty;
+        item.Price = price;
+        item['Allocated Value'] = qty * price;
+        item.Area = area;
+        if (item.Status !== 'Pending') {
+          item['Confirmed Qty'] = qty;
+          item['PO Amount'] = qty * price;
+        }
+        item['Last Updated'] = new Date().toISOString();
+      }
+    } else {
+      // Process remaining text inside inputs before validating arrays
+      const adInput = document.getElementById('newAlloc_adName');
+      const typedAD = adInput ? adInput.value.trim() : '';
+      if (typedAD) {
+        const datalist = document.getElementById('list_adNames');
+        const opt = Array.from(datalist.options).find(o => o.value.toLowerCase() === typedAD.toLowerCase());
+        if (opt) {
+          if (!selectedADs.includes(opt.value)) selectedADs.push(opt.value);
+          adInput.value = '';
+        } else {
+          alert(`Distributor "${typedAD}" not found in catalogue.`);
+          hideLoader();
+          return;
+        }
+      }
       
-      selectedModels.forEach(modelName => {
-        const newId = 'M_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        const newAlloc = {
-          ID: newId,
-          'AD Name': adName,
-          'Model Name': modelName,
-          'Allocated Qty': qty,
-          'Confirmed Qty': '',
-          'PO Amount': '',
-          'Allocated Value': qty * price,
-          Price: price,
-          Status: 'Pending',
-          'Sales Approval': '',
-          'UTR Number': '',
-          'Payment Verified': '',
-          Area: area,
-          'Last Updated': new Date().toISOString()
-        };
-        localDB.allocations.push(newAlloc);
-        logSystemAction('Create Allocation', `Allocated ${qty} units of ${modelName} to ${adName}`);
+      const modelInput = document.getElementById('newAlloc_modelName');
+      const typedModel = modelInput ? modelInput.value.trim() : '';
+      if (typedModel) {
+        const datalist = document.getElementById('list_models');
+        const opt = Array.from(datalist.options).find(o => o.value.toLowerCase() === typedModel.toLowerCase());
+        if (opt) {
+          if (!selectedModels.includes(opt.value)) selectedModels.push(opt.value);
+          modelInput.value = '';
+        } else {
+          alert(`Model "${typedModel}" not found in catalogue.`);
+          hideLoader();
+          return;
+        }
+      }
+      
+      if (selectedADs.length === 0 || selectedModels.length === 0) {
+        alert("Please select at least one Distributor and one Model.");
+        hideLoader();
+        return;
+      }
+      
+      selectedADs.forEach(adName => {
+        const adUser = localDB.users.find(u => u.FullName === adName);
+        const area = (adUser ? adUser.Area : '') || document.getElementById('newAlloc_area').value || 'Gujarat';
+        
+        selectedModels.forEach(modelName => {
+          const newId = 'M_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          const newAlloc = {
+            ID: newId,
+            'AD Name': adName,
+            'Model Name': modelName,
+            'Allocated Qty': qty,
+            'Confirmed Qty': '',
+            'PO Amount': '',
+            'Allocated Value': qty * price,
+            Price: price,
+            Status: 'Pending',
+            'Sales Approval': '',
+            'UTR Number': '',
+            'Payment Verified': '',
+            Area: area,
+            'Last Updated': new Date().toISOString()
+          };
+          localDB.allocations.push(newAlloc);
+          logSystemAction('Create Allocation', `Allocated ${qty} units of ${modelName} to ${adName}`);
+        });
       });
-    });
-  }
+    }
   
   saveDataToServer(() => {
     hideLoader();
@@ -5832,6 +5864,11 @@ function saveAllocation() {
     filterAdminTable();
     buildAdminDashboard();
   });
+  } catch (err) {
+    hideLoader();
+    alert("Error saving allocation: " + err.toString());
+    console.error(err);
+  }
 }
 
 function deleteAllAllocations() {
