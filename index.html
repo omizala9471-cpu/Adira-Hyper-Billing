@@ -157,6 +157,7 @@
     .badge.approved{background:rgba(16,185,129,0.12);color:var(--color-success);border:1px solid rgba(16,185,129,0.25);}
     .badge.rejected{background:rgba(239,68,68,0.12);color:#fca5a5;border:1px solid rgba(239,68,68,0.25);}
     .badge.paid{background:rgba(16,185,129,0.12);color:var(--color-success);border:1px solid rgba(16,185,129,0.25);}
+.badge.neutral{background:rgba(255,255,255,0.06);color:var(--color-text-muted);border:1px solid rgba(255,255,255,0.12);}
 
     /* TABLES */
     .table-container{overflow-x:auto;border-radius:12px;}
@@ -3877,17 +3878,16 @@ function buildDistributors(role){
   const tbody=document.querySelector('#'+tableId+' tbody');
   if(!tbody)return;
   tbody.innerHTML='';
-  if(localDB.distributors.length===0){const cols=role==='admin'?6:5;tbody.innerHTML=`<tr><td colspan="${cols}" style="text-align:center;color:var(--color-text-muted);">No distributor data.</td></tr>`;return;}
+  if(localDB.distributors.length===0){const cols=role==='admin'?4:3;tbody.innerHTML=`<tr><td colspan="${cols}" style="text-align:center;color:var(--color-text-muted);">No distributor data.</td></tr>`;return;}
   localDB.distributors.forEach(item=>{
     const tr=document.createElement('tr');
-    const lim=Number(item['Credit Limit'])||0;const out=Number(item['Outstanding Balance'])||0;const av=lim-out;
-    const displayOut = out > 0 
-      ? '₹' + out.toLocaleString('en-IN') 
-      : (out < 0 ? '₹0 (Credit: ₹' + Math.abs(out).toLocaleString('en-IN') + ')' : '₹0');
+    const out=Number(item['Outstanding Balance'])||0;
+    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') + ' Cr' : '₹0');
+    const colorStyle = out > 0 ? 'var(--color-warning)' : (out < 0 ? 'var(--color-success)' : 'inherit');
     if(role==='admin'){
-      tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">${displayOut}</td><td style="color:var(--color-text-muted);font-size:0.78rem;">${item['Contact Number']||'-'}</td>`;
+      tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td style="color:${colorStyle}">${displayOut}</td><td style="color:var(--color-text-muted);font-size:0.78rem;">${item['Contact Number']||'-'}</td>`;
     }else{
-      tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">${displayOut}</td>`;
+      tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td style="color:${colorStyle}">${displayOut}</td>`;
     }
     tbody.appendChild(tr);
   });
@@ -3926,15 +3926,14 @@ function filterMasterBalancesTable() {
     const mdCode = u ? u.ADCode || '-' : '-';
     
     const out = Number(item['Outstanding Balance']) || 0;
-    const displayOut = out > 0 
-      ? '₹' + out.toLocaleString('en-IN') 
-      : (out < 0 ? '₹0 (Credit: ₹' + Math.abs(out).toLocaleString('en-IN') + ')' : '₹0');
+    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') + ' Cr' : '₹0');
+    const colorStyle = out > 0 ? 'var(--color-warning)' : (out < 0 ? 'var(--color-success)' : 'inherit');
       
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><strong>${item['AD Name']}</strong></td>
       <td><code>${mdCode}</code></td>
-      <td style="color:${out > 0 ? 'var(--color-warning)' : 'inherit'}">${displayOut}</td>
+      <td style="color:${colorStyle}">${displayOut}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -3948,12 +3947,12 @@ function filterDistributors(role){
   const tableId=role==='admin'?'adminDistTable':'salesDistributorsTable';
   const tbody=document.querySelector('#'+tableId+' tbody');tbody.innerHTML='';
   filtered.forEach(item=>{
-    const tr=document.createElement('tr');const lim=Number(item['Credit Limit'])||0;const out=Number(item['Outstanding Balance'])||0;const av=lim-out;
-    const displayOut = out > 0 
-      ? '₹' + out.toLocaleString('en-IN') 
-      : (out < 0 ? '₹0 (Credit: ₹' + Math.abs(out).toLocaleString('en-IN') + ')' : '₹0');
-    if(role==='admin'){tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">${displayOut}</td><td style="color:var(--color-text-muted);font-size:0.78rem;">${item['Contact Number']||'-'}</td>`;}
-    else{tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td style="color:${out>0?'var(--color-warning)':'inherit'}">${displayOut}</td>`;}
+    const tr=document.createElement('tr');
+    const out=Number(item['Outstanding Balance'])||0;
+    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') + ' Cr' : '₹0');
+    const colorStyle = out > 0 ? 'var(--color-warning)' : (out < 0 ? 'var(--color-success)' : 'inherit');
+    if(role==='admin'){tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td style="color:${colorStyle}">${displayOut}</td><td style="color:var(--color-text-muted);font-size:0.78rem;">${item['Contact Number']||'-'}</td>`;}
+    else{tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td style="color:${colorStyle}">${displayOut}</td>`;}
     tbody.appendChild(tr);
   });
 }
@@ -4118,15 +4117,18 @@ function buildRSDTerritory(){
   const tbody=document.querySelector('#rsdTerritoryTable tbody');
   tbody.innerHTML='';
   myADUsers.forEach(adUser=>{
-    const dist=localDB.distributors.find(d=>d['AD Name'].toLowerCase()===adUser.FullName.toLowerCase())||{'Credit Limit':0,'Outstanding Balance':0};
+    const dist=localDB.distributors.find(d=>d['AD Name'].toLowerCase()===adUser.FullName.toLowerCase())||{'Outstanding Balance':0};
     const allocs=localDB.allocations.filter(a=>a['AD Name'].toLowerCase()===adUser.FullName.toLowerCase());
     const status=allocs.length>0?allocs[0].Status:'No Allocations';
     const poVal=allocs.reduce((s,a)=>s+(Number(a['PO Amount'])||0),0);
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td><strong>${adUser.FullName}</strong></td><td>${adUser.Area||''}</td><td><code>${adUser.ADCode||'-'}</code></td><td>₹${(Number(dist['Credit Limit'])||0).toLocaleString('en-IN')}</td><td style="color:var(--color-warning)">₹${(Number(dist['Outstanding Balance'])||0).toLocaleString('en-IN')}</td><td>${getStatusBadge(status)}</td><td>₹${poVal.toLocaleString('en-IN')}</td>`;
+    const out=Number(dist['Outstanding Balance'])||0;
+    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') + ' Cr' : '₹0');
+    const colorStyle = out > 0 ? 'var(--color-warning)' : (out < 0 ? 'var(--color-success)' : 'inherit');
+    tr.innerHTML=`<td><strong>${adUser.FullName}</strong></td><td>${adUser.Area||''}</td><td><code>${adUser.ADCode||'-'}</code></td><td style="color:${colorStyle}">${displayOut}</td><td>${getStatusBadge(status)}</td><td>₹${poVal.toLocaleString('en-IN')}</td>`;
     tbody.appendChild(tr);
   });
-  if(myADUsers.length===0)tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--color-text-muted);">No ADs mapped to your territory.</td></tr>';
+  if(myADUsers.length===0)tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--color-text-muted);">No ADs mapped to your territory.</td></tr>';
   lucide.createIcons({node:tbody});
 }
 
@@ -4136,14 +4138,15 @@ function filterRSDTerritory(){
   const tbody=document.querySelector('#rsdTerritoryTable tbody');
   tbody.innerHTML='';
   myADUsers.forEach(adUser=>{
-    const dist=localDB.distributors.find(d=>d['AD Name'].toLowerCase()===adUser.FullName.toLowerCase())||{'Credit Limit':0,'Outstanding Balance':0};
+    const dist=localDB.distributors.find(d=>d['AD Name'].toLowerCase()===adUser.FullName.toLowerCase())||{'Outstanding Balance':0};
     const allocs=localDB.allocations.filter(a=>a['AD Name'].toLowerCase()===adUser.FullName.toLowerCase());
     const status=allocs.length>0?allocs[0].Status:'No Allocations';
     const poVal=allocs.reduce((s,a)=>s+(Number(a['PO Amount'])||0),0);
     const tr=document.createElement('tr');
     const out=Number(dist['Outstanding Balance'])||0;
-    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') : (out < 0 ? '₹0 (Credit: ₹' + Math.abs(out).toLocaleString('en-IN') + ')' : '₹0');
-    tr.innerHTML=`<td><strong>${adUser.FullName}</strong></td><td>${adUser.Area||''}</td><td><code>${adUser.ADCode||'-'}</code></td><td style="color:${out>0?'var(--color-warning)':'inherit'}">${displayOut}</td><td>${getStatusBadge(status)}</td><td>₹${poVal.toLocaleString('en-IN')}</td>`;
+    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') + ' Cr' : '₹0');
+    const colorStyle = out > 0 ? 'var(--color-warning)' : (out < 0 ? 'var(--color-success)' : 'inherit');
+    tr.innerHTML=`<td><strong>${adUser.FullName}</strong></td><td>${adUser.Area||''}</td><td><code>${adUser.ADCode||'-'}</code></td><td style="color:${colorStyle}">${displayOut}</td><td>${getStatusBadge(status)}</td><td>₹${poVal.toLocaleString('en-IN')}</td>`;
     tbody.appendChild(tr);
   });
   lucide.createIcons({node:tbody});
@@ -6119,7 +6122,7 @@ function hideLoader(){closeModal('modalStatus');}
 // ============================================================
 // STATUS BADGE HELPERS
 // ============================================================
-function getStatusBadge(s){const map={Pending:'pending',Confirmed:'confirmed',Completed:'completed',Dispatched:'dispatched',Paid:'paid'};const c=map[s]||'pending';return`<span class="badge ${c}">${s||'Pending'}</span>`;}
+function getStatusBadge(s){const map={Pending:'pending',Confirmed:'confirmed',Completed:'completed',Dispatched:'dispatched',Paid:'paid','No Allocations':'neutral'};const c=map[s]||'pending';return`<span class="badge ${c}">${s||'Pending'}</span>`;}
 function getApprovalBadge(s, status){if(status==='Pending' || !s) return '—';if(s==='Approved')return`<span class="badge approved">Approved</span>`;if(s==='Rejected')return`<span class="badge rejected">Rejected</span>`;return`<span class="badge pending">Pending</span>`;}
 
 // ============================================================
