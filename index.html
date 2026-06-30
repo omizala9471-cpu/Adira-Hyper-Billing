@@ -2311,7 +2311,7 @@ if(window.firebaseConfig&&window.firebaseConfig.apiKey!=='YOUR_FIREBASE_API_KEY'
 // ============================================================
 // GOOGLE SCRIPT / FIREBASE ADAPTER
 // ============================================================
-if(typeof google==='undefined'){
+if(typeof google==='undefined' || database){
   window.google={script:{run:{
     withSuccessHandler(cb){this._s=cb;return this;},
     withFailureHandler(cb){this._f=cb;return this;},
@@ -2631,6 +2631,65 @@ if(typeof google==='undefined'){
       }else{
         if(!localDB.rsdAnnouncements)localDB.rsdAnnouncements={};
         localDB.rsdAnnouncements[rsdUsername]=payload;saveLocalDB();self._s&&self._s({success:true});
+      }
+    },
+
+    dispatchOrder(id,transporter,lrNumber){
+      const self=this;
+      const payload={Transporter:transporter,'LR Number':lrNumber,'Dispatch Date':new Date().toISOString(),Status:'Dispatched'};
+      if(database){
+        database.ref('allocations/'+id).update(payload).then(()=>self._s&&self._s({success:true})).catch(e=>self._f&&self._f(e));
+      }else{
+        setTimeout(()=>{
+          const m=localDB.allocations.find(a=>a.ID===id);
+          if(m){m.Transporter=transporter;m['LR Number']=lrNumber;m.DispatchDate=new Date().toISOString();m.Status='Dispatched';}
+          saveLocalDB();self._s&&self._s({success:true});
+        },400);
+      }
+    },
+
+    writeLogEntry(log){
+      const self=this;
+      if(database){
+        const newRef=database.ref('logs').push();
+        newRef.set({...log,ID:newRef.key,Timestamp:new Date().toISOString()}).then(()=>self._s&&self._s({success:true})).catch(e=>self._f&&self._f(e));
+      }else{
+        localDB.logs=localDB.logs||[];
+        localDB.logs.unshift({...log,Timestamp:new Date().toISOString()});
+        saveLocalDB();self._s&&self._s({success:true});
+      }
+    },
+
+    clearLogsSheet(){
+      const self=this;
+      if(database){
+        database.ref('logs').remove().then(()=>self._s&&self._s({success:true})).catch(e=>self._f&&self._f(e));
+      }else{
+        localDB.logs=[];
+        saveLocalDB();self._s&&self._s({success:true});
+      }
+    },
+
+    updateAllocationsPartial(partialList){
+      const self=this;
+      if(database){
+        const upd={};
+        partialList.forEach(item=>{
+          if(item.ID){
+            upd['allocations/'+item.ID]=item;
+          }
+        });
+        database.ref().update(upd).then(()=>self._s&&self._s({success:true})).catch(e=>self._f&&self._f(e));
+      }else{
+        setTimeout(()=>{
+          partialList.forEach(item=>{
+            const idx=localDB.allocations.findIndex(a=>a.ID===item.ID);
+            if(idx!==-1){
+              localDB.allocations[idx]=item;
+            }
+          });
+          saveLocalDB();self._s&&self._s({success:true});
+        },400);
       }
     }
   }}};
