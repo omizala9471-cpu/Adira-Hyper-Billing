@@ -37,6 +37,28 @@
       --sidebar-collapsed: 70px;
       --glass-shadow: 0 8px 40px rgba(0,0,0,0.5);
       --transition: all 0.22s cubic-bezier(0.4,0,0.2,1);
+      --bg-sidebar: linear-gradient(180deg, rgba(10,16,32,0.98) 0%, rgba(8,12,22,0.99) 100%);
+      --bg-input: rgba(255,255,255,0.04);
+    }
+    .light-theme {
+      --bg-dark: #f3f4f6;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f9fafb;
+      --border-color: rgba(0, 0, 0, 0.08);
+      --border-hover: rgba(255, 200, 59, 0.5);
+      --color-primary: #d97706;
+      --color-primary-rgb: 217,119,6;
+      --color-secondary: #0284c7;
+      --color-success: #15803d;
+      --color-warning: #b45309;
+      --color-danger: #b91c1c;
+      --color-info: #6d28d9;
+      --color-rsd: #c2410c;
+      --color-text-main: #1f2937;
+      --color-text-muted: #6b7280;
+      --bg-sidebar: linear-gradient(180deg, #f9fafb 0%, #f3f4f6 100%);
+      --bg-input: rgba(0, 0, 0, 0.04);
+      --glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
     }
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Plus Jakarta Sans',sans-serif;}
     body{background-color:var(--bg-dark);color:var(--color-text-main);min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;}
@@ -58,7 +80,7 @@
     .app-layout.pre-login{display:none;}
 
     /* SIDEBAR */
-    .app-sidebar{width:var(--sidebar-width);min-width:var(--sidebar-width);height:100vh;background:linear-gradient(180deg,rgba(10,16,32,0.98) 0%,rgba(8,12,22,0.99) 100%);border-right:1px solid var(--border-color);display:flex;flex-direction:column;flex-shrink:0;transition:width 0.25s ease,min-width 0.25s ease;overflow:hidden;position:relative;z-index:100;}
+    .app-sidebar{width:var(--sidebar-width);min-width:var(--sidebar-width);height:100vh;background:var(--bg-sidebar);border-right:1px solid var(--border-color);display:flex;flex-direction:column;flex-shrink:0;transition:width 0.25s ease,min-width 0.25s ease;overflow:hidden;position:relative;z-index:100;}
     .app-sidebar.collapsed{width:var(--sidebar-collapsed);min-width:var(--sidebar-collapsed);}
     .app-sidebar.collapsed .sidebar-title,.app-sidebar.collapsed .profile-details,.app-sidebar.collapsed .nav-label,.app-sidebar.collapsed .sidebar-footer-text{display:none;}
     .app-sidebar.collapsed .nav-item{justify-content:center;padding:14px 0;}
@@ -88,7 +110,7 @@
 
     /* MAIN CONTENT */
     .main-wrapper{flex:1;display:flex;flex-direction:column;overflow:hidden;}
-    .top-bar{display:none;align-items:center;justify-content:space-between;padding:12px 24px;background:rgba(10,16,32,0.95);border-bottom:1px solid var(--border-color);backdrop-filter:blur(12px);position:sticky;top:0;z-index:90;gap:12px;}
+    .top-bar{display:none;align-items:center;justify-content:space-between;padding:12px 24px;background:var(--bg-card);border-bottom:1px solid var(--border-color);backdrop-filter:blur(12px);position:sticky;top:0;z-index:90;gap:12px;}
     .top-bar-left{display:flex;align-items:center;gap:14px;}
     .btn-menu-toggle{background:none;border:1px solid var(--border-color);border-radius:8px;padding:7px;color:var(--color-text-muted);cursor:pointer;display:flex;align-items:center;transition:var(--transition);}
     .btn-menu-toggle:hover{color:var(--color-primary);border-color:var(--color-primary);}
@@ -117,7 +139,7 @@
     .input-wrapper{position:relative;}
     .input-wrapper i, .input-wrapper svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--color-text-muted);pointer-events:none;}
     .input-wrapper input{padding-left:38px;}
-    .form-control{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border-color);border-radius:10px;padding:11px 14px;color:var(--color-text-main);font-size:0.88rem;transition:var(--transition);outline:none;}
+    .form-control{width:100%;background:var(--bg-input);border:1px solid var(--border-color);border-radius:10px;padding:11px 14px;color:var(--color-text-main);font-size:0.88rem;transition:var(--transition);outline:none;}
     .form-control:focus{border-color:var(--color-primary);background:rgba(255,200,59,0.04);box-shadow:0 0 0 3px rgba(255,200,59,0.1);}
     select.form-control{background-color:rgb(8,14,28);cursor:pointer;color:var(--color-text-main);}
     select.form-control option{background-color:rgb(8,14,28)!important;color:var(--color-text-main)!important;padding:8px 12px;}
@@ -814,11 +836,16 @@
         </div>
       </div>
       <div class="top-bar-actions" style="display:flex; align-items:center; gap:10px;">
-        <div class="sidebar-profile" onclick="openPasswordModal()" style="display:flex; align-items:center; gap:10px; padding:4px 10px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); cursor:pointer; transition:var(--transition); margin:0; border-bottom: none !important;">
+        <!-- Theme Toggle Button -->
+        <button id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Day/Night Mode" style="background:var(--bg-input); border:1px solid var(--border-color); color:var(--color-text-muted); width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; outline:none; padding:0;">
+          <i data-lucide="sun" id="themeToggleIcon" style="width:16px; height:16px;"></i>
+        </button>
+
+        <div class="sidebar-profile" onclick="openPasswordModal()" style="display:flex; align-items:center; gap:10px; padding:4px 10px; border-radius:8px; background:var(--bg-input); border:1px solid var(--border-color); cursor:pointer; transition:var(--transition); margin:0; border-bottom: none !important;">
           <div class="profile-avatar" id="sidebarAvatar" style="width:28px; height:28px; min-width:28px; border-radius:6px; background:linear-gradient(135deg, #b9caff, #4169e1); display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:800; color:#151821; flex-shrink:0;">K</div>
           <div class="profile-details" style="display:flex; flex-direction:column; justify-content:center;">
-            <h4 id="sidebarUserName" style="font-size:0.78rem; font-weight:700; color:#ffffff; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px; line-height:1.2;">Keyur Udani</h4>
-            <span id="sidebarUserRole" class="role-pill admin" style="font-size:0.58rem; padding:1px 4px; border-radius:4px; margin-top:1px; display:inline-block; width:fit-content; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.18); color:#ffffff; line-height:1.1;">ADMIN</span>
+            <h4 id="sidebarUserName" style="font-size:0.78rem; font-weight:700; color:var(--color-text-main); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px; line-height:1.2;">Keyur Udani</h4>
+            <span id="sidebarUserRole" class="role-pill admin" style="font-size:0.58rem; padding:1px 4px; border-radius:4px; margin-top:1px; display:inline-block; width:fit-content; background:var(--bg-input); border:1px solid var(--border-color); color:var(--color-text-main); line-height:1.1;">ADMIN</span>
           </div>
         </div>
         
@@ -2662,7 +2689,30 @@ let _adminTableData=[]; // for table filtering
 // ============================================================
 // INIT
 // ============================================================
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light-theme');
+  localStorage.setItem('adira_theme', isLight ? 'light' : 'dark');
+  updateThemeIcon();
+}
+
+function updateThemeIcon() {
+  const icon = document.getElementById('themeToggleIcon');
+  if (!icon) return;
+  const isLight = document.body.classList.contains('light-theme');
+  if (isLight) {
+    icon.setAttribute('data-lucide', 'moon');
+  } else {
+    icon.setAttribute('data-lucide', 'sun');
+  }
+  lucide.createIcons({ node: document.getElementById('themeToggleBtn') });
+}
+
 window.addEventListener('DOMContentLoaded',()=>{
+  const savedTheme = localStorage.getItem('adira_theme');
+  if (savedTheme === 'light') {
+    document.body.classList.add('light-theme');
+  }
+  updateThemeIcon();
   lucide.createIcons();
   // Load localDB
   try{
