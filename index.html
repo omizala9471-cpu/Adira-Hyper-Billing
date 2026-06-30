@@ -3998,16 +3998,18 @@ function toggleRSDADFilter(adName) {
   buildRSDDashboard(true);
 }
 
-function getRSDADNames() {
-  if (!currentUser) return [];
-  return localDB.users
-    .filter(u => u.Role === 'ad' && u.MappedRSD === currentUser.username)
-    .map(u => u.FullName.toLowerCase());
+function getRSDADUsers() {
+  if (!currentUser || !currentUser.username) return [];
+  const rsdUsername = currentUser.username.trim().toLowerCase();
+  return localDB.users.filter(u => {
+    const role = (u.Role || '').trim().toLowerCase();
+    const mapped = (u.MappedRSD || '').trim().toLowerCase();
+    return role === 'ad' && mapped === rsdUsername;
+  });
 }
 
-function getRSDADUsers() {
-  if (!currentUser) return [];
-  return localDB.users.filter(u => u.Role === 'ad' && u.MappedRSD === currentUser.username);
+function getRSDADNames() {
+  return getRSDADUsers().map(u => u.FullName.toLowerCase());
 }
 
 // ============================================================
