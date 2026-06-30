@@ -17,7 +17,8 @@ const SHEETS = {
   ALLOCATIONS: 'Allocations',
   SETTINGS: 'Settings',
   DISTRIBUTORS: 'Distributors',
-  LOGS: 'Logs'
+  LOGS: 'Logs',
+  ANNOUNCEMENTS: 'Announcements'
 };
 
 /**
@@ -76,7 +77,8 @@ function authenticateUser(username, password) {
               username: data[i][userIdx],
               role: data[i][roleIdx],
               fullName: data[i][nameIdx],
-              area: data[i][areaIdx]
+              area: data[i][areaIdx],
+              mappedRSD: headers.indexOf('MappedRSD') !== -1 ? data[i][headers.indexOf('MappedRSD')] : ''
             }
           };
         }
@@ -196,12 +198,33 @@ function getDashboardData(userRole, username) {
       logSheet.appendRow(['ID', 'Timestamp', 'User', 'Action', 'Details']);
     }
 
+    // Load RSD Announcements
+    const annSheet = getOrCreateSheet(SHEETS.ANNOUNCEMENTS);
+    const annRows = annSheet.getDataRange().getValues();
+    const rsdAnnouncements = {};
+    if (annRows.length > 1) {
+      for (let i = 1; i < annRows.length; i++) {
+        const row = annRows[i];
+        if (row[0]) {
+          rsdAnnouncements[row[0]] = {
+            subject: row[1] || '',
+            message: row[2] || '',
+            timestamp: row[3] || ''
+          };
+        }
+      }
+    } else {
+      // Init headers
+      annSheet.appendRow(['RSD Username', 'Subject', 'Message', 'Timestamp']);
+    }
+
     return {
       success: true,
       settings: settings,
       prices: prices,
       allocations: allocations,
       distributors: distributors,
+      rsdAnnouncements: rsdAnnouncements,
       logs: logs
     };
   } catch (error) {
@@ -620,5 +643,39 @@ function initializeSpreadsheet() {
     return "Spreadsheet Initialized Successfully! You can now deploy the Web App.";
   } catch (e) {
     return "Error during initialization: " + e.toString();
+  }
+}
+
+
+/**
+ * Saves or updates an announcement broadcast by an RSD
+ */
+function saveRSDAnnouncement(rsdUsername, subject, message) {
+  try {
+    const sheet = getOrCreateSheet(SHEETS.ANNOUNCEMENTS);
+    const data = sheet.getDataRange().getValues();
+    const timestamp = new Date().toISOString();
+    
+    let foundRow = -1;
+    if (data.length > 1) {
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0].toString().trim().toLowerCase() === rsdUsername.trim().toLowerCase()) {
+          foundRow = i + 1; // 1-indexed row number
+          break;
+        }
+      }
+    }
+    
+    if (foundRow !== -1) {
+      sheet.getRange(foundRow, 2).setValue(subject);
+      sheet.getRange(foundRow, 3).setValue(message);
+      sheet.getRange(foundRow, 4).setValue(timestamp);
+    } else {
+      sheet.appendRow([rsdUsername, subject, message, timestamp]);
+    }
+    
+    return { success: true };
+  } catch (error) {
+    return { success: false, message: error.toString() };
   }
 }
