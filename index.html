@@ -4032,7 +4032,7 @@ function exportFinalizedPO(role){
   const credDebRow=['Credit / Debit','',''];
   ads.forEach(ad=>{
     const dist=localDB.distributors.find(d=>d['AD Name'].toLowerCase()===ad.toLowerCase())||{'Outstanding Balance':0};
-    const out=Number(dist['Outstanding Balance'])||0;
+    const out=Math.round(Number(dist['Outstanding Balance'])||0);
     credDebRow.push(out);
   });
   wsData.push(credDebRow);
@@ -4058,11 +4058,11 @@ function exportFinalizedPO(role){
       f: `SUM(${colLetter}3:${colLetter}${2 + models.length})`
     };
     
-    // 2. Value Formula: =SUMPRODUCT($C$3:$C$22, D3:D22)
+    // 2. Value Formula: =ROUND(SUMPRODUCT($C$3:$C$22, D3:D22), 0)
     const valCellRef = `${colLetter}${valRowIdx}`;
     ws[valCellRef] = {
       t: 'n',
-      f: `SUMPRODUCT($C$3:$C$${2 + models.length}, ${colLetter}3:${colLetter}${2 + models.length})`
+      f: `ROUND(SUMPRODUCT($C$3:$C$${2 + models.length}, ${colLetter}3:${colLetter}${2 + models.length}), 0)`
     };
     
     // 3. Final RTGS amount (Round-up) Formula: =IF((D24+D25)>0, CEILING(D24+D25, 1000), 0)
@@ -4096,7 +4096,7 @@ function getDynamicADBalance(adName) {
     }
     return s;
   }, 0);
-  return staticBal + confirmedPOVal;
+  return Math.round(staticBal + confirmedPOVal);
 }
 
 function buildDistributors(role){
@@ -4154,11 +4154,11 @@ function filterMasterBalancesTable() {
     // Calculate PO summary details dynamically
     const adAllocs = localDB.allocations.filter(a => a['AD Name'].toLowerCase() === item['AD Name'].toLowerCase());
     const totalQty = adAllocs.reduce((s, a) => s + (['Confirmed', 'Completed', 'Dispatched'].includes(a.Status) ? (Number(a['Confirmed Qty']) || 0) : 0), 0);
-    const poVal = adAllocs.reduce((s, a) => s + (['Confirmed', 'Completed', 'Dispatched'].includes(a.Status) ? (Number(a['PO Amount']) || Number(a['Allocated Value']) || 0) : 0), 0);
+    const poVal = Math.round(adAllocs.reduce((s, a) => s + (['Confirmed', 'Completed', 'Dispatched'].includes(a.Status) ? (Number(a['PO Amount']) || Number(a['Allocated Value']) || 0) : 0), 0));
     
-    // Dynamic outstanding balance
-    const staticOut = Number(item['Outstanding Balance']) || 0;
-    const dynamicOut = staticOut + poVal;
+    // Dynamic outstanding balance (rounded to integer)
+    const staticOut = Math.round(Number(item['Outstanding Balance']) || 0);
+    const dynamicOut = Math.round(staticOut + poVal);
     
     // Format Credit / Debit balance (Credit is negative, Debit is positive)
     const displayOut = dynamicOut > 0 
@@ -4269,7 +4269,7 @@ function buildRSDDashboard(keepFilters = false){
 
   const confirmedADs=new Set(myAllocs.filter(a=>['Confirmed','Completed','Dispatched'].includes(a.Status)).map(a=>a['AD Name']));
   const pendingADs=new Set(myAllocs.filter(a=>a.Status==='Pending').map(a=>a['AD Name']));
-  const totalVal=myAllocs.reduce((s,a)=>s+(Number(a['PO Amount'])||0),0);
+  const totalVal=Math.round(myAllocs.reduce((s,a)=>s+(Number(a['PO Amount'])||0),0));
 
   document.getElementById('rsdStatADs').innerText=myADUsers.length;
   document.getElementById('rsdStatConfirmed').innerText=confirmedADs.size;
@@ -4433,7 +4433,7 @@ function loadRSDBroadcastHistory(){
 function buildSalesDashboard(){
   document.getElementById('salesRegionTitle').innerText=(currentUser.area||'Region')+' Sales Dashboard';
   const pendingApprovals=localDB.allocations.filter(a=>a['Sales Approval']==='Pending Approval');
-  const totalVal=localDB.allocations.reduce((s,a)=>s+(Number(a['PO Amount'])||0),0);
+  const totalVal=Math.round(localDB.allocations.reduce((s,a)=>s+(Number(a['PO Amount'])||0),0));
   document.getElementById('salesStatPendingCount').innerText=pendingApprovals.length;
   document.getElementById('salesStatTotalValue').innerText='₹'+totalVal.toLocaleString('en-IN');
 
@@ -4576,23 +4576,24 @@ function recalculateADSummary(){
   let models=0,allocTotal=0,poTotal=0;
   inputs.forEach(inp=>{
     const price=Number(inp.dataset.price);const qty=Number(inp.value)||0;
-    const rowTotal=qty*price;
+    const rowTotal=Math.round(qty*price);
     inp.closest('tr').querySelector('.po-row-total').innerText='₹'+rowTotal.toLocaleString('en-IN');
     const raw=localDB.allocations.find(a=>a['AD Name'].toLowerCase()===currentUser.fullName.toLowerCase()&&a['Model Name']===inp.dataset.model);
-    if(raw)allocTotal+=Number(raw['Allocated Value'])||0;
+    if(raw)allocTotal+=Math.round(Number(raw['Allocated Value'])||0);
     if(qty>0)models++;
     poTotal+=rowTotal;
   });
+  poTotal = Math.round(poTotal);
   document.getElementById('adSummaryModels').innerText=models;
-  document.getElementById('adSummaryAllocatedVal').innerText='₹'+allocTotal.toLocaleString('en-IN');
+  document.getElementById('adSummaryAllocatedVal').innerText='₹'+Math.round(allocTotal).toLocaleString('en-IN');
   document.getElementById('adSummaryPOVal').innerText='₹'+poTotal.toLocaleString('en-IN');
   document.getElementById('adSummaryTotal').innerText='₹'+poTotal.toLocaleString('en-IN');
   document.getElementById('adHeroPOVal').innerText='₹'+poTotal.toLocaleString('en-IN');
   const ledger=localDB.distributors.find(d=>d['AD Name'].toLowerCase()===currentUser.fullName.toLowerCase())||{'Credit Limit':300000,'Outstanding Balance':0};
-  const lim=Number(ledger['Credit Limit'])||300000;
-  const staticOut=Number(ledger['Outstanding Balance'])||0;
-  const out = staticOut + poTotal; // Dynamic balance adjusts based on live inputs total
-  const av=lim-out;
+  const lim=Math.round(Number(ledger['Credit Limit'])||300000);
+  const staticOut=Math.round(Number(ledger['Outstanding Balance'])||0);
+  const out = Math.round(staticOut + poTotal); // Dynamic balance adjusts based on live inputs total
+  const av=Math.round(lim-out);
   document.getElementById('adSummaryCreditLimit').innerText='₹'+lim.toLocaleString('en-IN');
   
   const cardBalanceStr = out > 0 
