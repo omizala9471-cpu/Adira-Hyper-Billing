@@ -1402,6 +1402,7 @@
                   <input type="file" id="excelLineItemsFile" accept=".xlsx,.xls" style="display:none;" onchange="parseExcel('lineitems',this);this.value='';">
                 </label>
                 <button class="btn-action" onclick="downloadTemplate('lineitems')" style="display:inline-flex;align-items:center;gap:8px;margin-top:0;"><i data-lucide="download"></i> Download Template</button>
+                <button class="btn-action danger" onclick="deleteAllProducts()"><i data-lucide="trash-2"></i> Delete All</button>
               </div>
             </div>
             <div id="lineItemsUploadStatus" style="margin-top:12px;margin-bottom:12px;display:none;padding:12px;border-radius:8px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:var(--color-success);font-size:0.85rem;"></div>
@@ -4675,6 +4676,26 @@ function deleteProduct(model) {
   savePricesToServer(() => {
     hideLoader();
     alert("Product deleted successfully!");
+    buildLineItemsTable();
+  });
+}
+
+function deleteAllProducts() {
+  if (Object.keys(localDB.prices).length === 0) {
+    alert("Product catalogue is already empty!");
+    return;
+  }
+  if (!confirm("⚠️ WARNING: This will permanently delete ALL products in the catalogue. Are you sure?")) return;
+  if (!confirm("⚠️ Double Confirmation: Are you absolutely sure you want to purge the entire product catalogue?")) return;
+  
+  showLoader('Purging Catalogue', 'Removing all products...');
+  
+  localDB.prices = {};
+  logSystemAction('Delete All Products', 'Purged all items from the product catalogue');
+  
+  savePricesToServer(() => {
+    hideLoader();
+    alert("All products deleted successfully!");
     buildLineItemsTable();
   });
 }
