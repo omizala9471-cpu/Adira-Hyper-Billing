@@ -3904,8 +3904,15 @@ function exportFinalizedPO(role){
   const ads=[...new Set(data.map(a=>a['AD Name']))];
   const models=[...new Set(data.map(a=>a['Model Name']))];
 
-  // Model code mapping (use index as code)
-  const getCode=(model)=>{const idx=models.indexOf(model)+1;return idx*65;};
+  // Model code mapping (extract from parentheses or fallback)
+  const getCode=(model)=>{
+    const match=model.match(/\(([^)]+)\)$/);
+    return match ? match[1] : '';
+  };
+  
+  const getModelNameOnly=(model)=>{
+    return model.replace(/\s*\([^)]+\)$/, '');
+  };
 
   const wb=XLSX.utils.book_new();
   const wsData=[];
@@ -3917,7 +3924,7 @@ function exportFinalizedPO(role){
 
   // Model rows
   models.forEach(model=>{
-    const row=[getCode(model),model];
+    const row=[getCode(model),getModelNameOnly(model)];
     ads.forEach(ad=>{
       const entry=data.find(a=>a['AD Name']===ad&&a['Model Name']===model);
       row.push(entry?Number(entry['Confirmed Qty']||entry['Allocated Qty'])||0:'');
