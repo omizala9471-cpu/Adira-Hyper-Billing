@@ -4050,6 +4050,9 @@ function exportFinalizedPO(role){
     const colIdx = 3 + adIdx; // Start from column 'D'
     const colLetter = getExcelColLetter(colIdx);
     
+    const dist=localDB.distributors.find(d=>d['AD Name'].toLowerCase()===ad.toLowerCase())||{'Outstanding Balance':0};
+    const staticOut=Math.round(Number(dist['Outstanding Balance'])||0);
+    
     // 1. Total Qty Formula: =SUM(D3:D22)
     const qtyCellRef = `${colLetter}${qtyRowIdx}`;
     ws[qtyCellRef] = {
@@ -4064,13 +4067,18 @@ function exportFinalizedPO(role){
       f: `ROUND(SUMPRODUCT($C$3:$C$${2 + models.length}, ${colLetter}3:${colLetter}${2 + models.length}), 0)`
     };
     
-    // 3. Final RTGS amount (Round-up) Formula: =IF((D24+D25)>0, CEILING(D24+D25, 1000), 0)
+    // 3. Credit / Debit Formula (Dynamic Outstanding Balance): =ROUND(staticOut + ValueCell, 0)
+    const credDebCellRef = `${colLetter}${credDebRowIdx}`;
+    ws[credDebCellRef] = {
+      t: 'n',
+      f: `ROUND(${staticOut}+${valCellRef}, 0)`
+    };
+    
+    // 4. Final RTGS amount (Round-up) Formula: =IF(CreditDebitCell>0, CEILING(CreditDebitCell, 1000), 0)
     const rtgsCellRef = `${colLetter}${rtgsRowIdx}`;
-    const valRef = `${colLetter}${valRowIdx}`;
-    const credDebRef = `${colLetter}${credDebRowIdx}`;
     ws[rtgsCellRef] = {
       t: 'n',
-      f: `IF((${valRef}+${credDebRef})>0, CEILING(${valRef}+${credDebRef}, 1000), 0)`
+      f: `IF(${credDebCellRef}>0, CEILING(${credDebCellRef}, 1000), 0)`
     };
   });
 
