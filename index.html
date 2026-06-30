@@ -2163,15 +2163,29 @@
       </h3>
       <button class="modal-close" onclick="closeAddAllocationModal()"><i data-lucide="x"></i></button>
     </div>
-    <div class="form-group" style="margin-bottom:12px;">
-      <label for="newAlloc_adName">Distributor Name (AD)</label>
-      <input type="text" id="newAlloc_adName" list="list_adNames" class="form-control" placeholder="Select or type AD..." style="padding-left:12px;" onchange="autoFillNewAllocDetails()">
-      <datalist id="list_adNames"></datalist>
+    <div id="newAlloc_add_group">
+      <div class="form-group" style="margin-bottom:12px;">
+        <label for="newAlloc_adName">Select Distributors (ADs)</label>
+        <input type="text" id="newAlloc_adName" list="list_adNames" class="form-control" placeholder="Type or select AD name..." style="padding-left:12px;" oninput="onADInput(this)">
+        <datalist id="list_adNames"></datalist>
+        <div id="selected_adNames_container" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"></div>
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label for="newAlloc_modelName">Select Models</label>
+        <input type="text" id="newAlloc_modelName" list="list_models" class="form-control" placeholder="Type or select Model name..." style="padding-left:12px;" oninput="onModelInput(this)">
+        <datalist id="list_models"></datalist>
+        <div id="selected_models_container" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;"></div>
+      </div>
     </div>
-    <div class="form-group" style="margin-bottom:12px;">
-      <label for="newAlloc_modelName">Model Name</label>
-      <input type="text" id="newAlloc_modelName" list="list_models" class="form-control" placeholder="Select or type Model..." style="padding-left:12px;" onchange="autoFillNewAllocDetails()">
-      <datalist id="list_models"></datalist>
+    <div id="newAlloc_edit_group" style="display:none;">
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>Distributor Name (AD)</label>
+        <input type="text" id="editAlloc_adName" class="form-control" readonly style="padding-left:12px;opacity:0.75;background:rgba(255,255,255,0.02);">
+      </div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>Model Name</label>
+        <input type="text" id="editAlloc_modelName" class="form-control" readonly style="padding-left:12px;opacity:0.75;background:rgba(255,255,255,0.02);">
+      </div>
     </div>
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px;">
       <div class="form-group" style="margin-bottom:0;">
@@ -5573,17 +5587,92 @@ function toggleAdvancedFilters(id) {
 
 let editingAllocationId = null;
 
+let selectedADs = [];
+let selectedModels = [];
+
+function onADInput(input) {
+  const val = input.value.trim();
+  const datalist = document.getElementById('list_adNames');
+  const opt = Array.from(datalist.options).find(o => o.value === val);
+  if (opt) {
+    if (!selectedADs.includes(val)) {
+      selectedADs.push(val);
+      renderSelectedADs();
+    }
+    input.value = '';
+    autoFillNewAllocDetails();
+  }
+}
+
+function onModelInput(input) {
+  const val = input.value.trim();
+  const datalist = document.getElementById('list_models');
+  const opt = Array.from(datalist.options).find(o => o.value === val);
+  if (opt) {
+    if (!selectedModels.includes(val)) {
+      selectedModels.push(val);
+      renderSelectedModels();
+    }
+    input.value = '';
+    autoFillNewAllocDetails();
+  }
+}
+
+function renderSelectedADs() {
+  const container = document.getElementById('selected_adNames_container');
+  container.innerHTML = '';
+  selectedADs.forEach(ad => {
+    const badge = document.createElement('div');
+    badge.className = 'role-pill ad';
+    badge.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:4px 8px;margin:2px;font-size:0.78rem;background:rgba(0,212,255,0.15);border:1px solid rgba(0,212,255,0.3);color:#e0f7fa;border-radius:12px;';
+    badge.innerHTML = `<span>${ad}</span><i data-lucide="x" style="width:12px;height:12px;cursor:pointer;" onclick="removeAD('${ad}')"></i>`;
+    container.appendChild(badge);
+  });
+  lucide.createIcons({node: container});
+}
+
+function renderSelectedModels() {
+  const container = document.getElementById('selected_models_container');
+  container.innerHTML = '';
+  selectedModels.forEach(m => {
+    const badge = document.createElement('div');
+    badge.className = 'role-pill sales';
+    badge.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:4px 8px;margin:2px;font-size:0.78rem;background:rgba(164,124,36,0.15);border:1px solid rgba(164,124,36,0.3);color:#fff8e1;border-radius:12px;';
+    badge.innerHTML = `<span>${m}</span><i data-lucide="x" style="width:12px;height:12px;cursor:pointer;" onclick="removeModel('${m}')"></i>`;
+    container.appendChild(badge);
+  });
+  lucide.createIcons({node: container});
+}
+
+function removeAD(ad) {
+  selectedADs = selectedADs.filter(x => x !== ad);
+  renderSelectedADs();
+  autoFillNewAllocDetails();
+}
+
+function removeModel(m) {
+  selectedModels = selectedModels.filter(x => x !== m);
+  renderSelectedModels();
+  autoFillNewAllocDetails();
+}
+
 function openAddAllocationModal() {
   editingAllocationId = null;
   document.getElementById('modalAddAllocationTitle').innerText = 'Add New Allocation';
   document.getElementById('btnSubmitAllocation').innerHTML = '<i data-lucide="check"></i> Add Allocation';
   
+  document.getElementById('newAlloc_add_group').style.display = 'block';
+  document.getElementById('newAlloc_edit_group').style.display = 'none';
+  
+  selectedADs = [];
+  selectedModels = [];
+  renderSelectedADs();
+  renderSelectedModels();
+  
   const adSelect = document.getElementById('newAlloc_adName');
   const modelSelect = document.getElementById('newAlloc_modelName');
   
   if (adSelect && modelSelect) {
-    adSelect.disabled = false;
-    modelSelect.disabled = false;
     adSelect.value = '';
     modelSelect.value = '';
     
@@ -5623,14 +5712,11 @@ function openEditAllocationModal(id) {
   document.getElementById('modalAddAllocationTitle').innerText = 'Edit Allocation';
   document.getElementById('btnSubmitAllocation').innerHTML = '<i data-lucide="check"></i> Save Changes';
   
-  const adSelect = document.getElementById('newAlloc_adName');
-  const modelSelect = document.getElementById('newAlloc_modelName');
+  document.getElementById('newAlloc_add_group').style.display = 'none';
+  document.getElementById('newAlloc_edit_group').style.display = 'block';
   
-  adSelect.value = item['AD Name'];
-  modelSelect.value = item['Model Name'];
-  
-  adSelect.disabled = true;
-  modelSelect.disabled = true;
+  document.getElementById('editAlloc_adName').value = item['AD Name'];
+  document.getElementById('editAlloc_modelName').value = item['Model Name'];
   
   document.getElementById('newAlloc_qty').value = item['Allocated Qty'] || '';
   document.getElementById('newAlloc_price').value = item.Price || '';
@@ -5647,44 +5733,53 @@ function closeAddAllocationModal() {
 }
 
 function autoFillNewAllocDetails() {
-  const adName = document.getElementById('newAlloc_adName').value;
-  const modelName = document.getElementById('newAlloc_modelName').value;
   const qty = Number(document.getElementById('newAlloc_qty').value) || 0;
   
-  if (adName) {
-    const adUser = localDB.users.find(u => u.FullName === adName);
-    if (adUser && adUser.Area) {
-      document.getElementById('newAlloc_area').value = adUser.Area;
-    }
+  if (editingAllocationId) {
+    const curPrice = Number(document.getElementById('newAlloc_price').value) || 0;
+    const total = qty * curPrice;
+    document.getElementById('newAlloc_totalVal').value = total.toLocaleString('en-IN');
+    return;
   }
   
-  if (modelName) {
-    const price = localDB.prices[modelName] || 0;
+  // Auto-fill price if exactly one model is selected and no price is entered yet
+  if (selectedModels.length === 1) {
+    const model = selectedModels[0];
+    const price = localDB.prices[model] || 0;
     if (price && !document.getElementById('newAlloc_price').value) {
       document.getElementById('newAlloc_price').value = price;
     }
   }
   
+  // Auto-fill area if exactly one AD is selected
+  if (selectedADs.length === 1) {
+    const ad = selectedADs[0];
+    const adUser = localDB.users.find(u => u.FullName === ad);
+    if (adUser && adUser.Area) {
+      document.getElementById('newAlloc_area').value = adUser.Area;
+    }
+  }
+  
   const curPrice = Number(document.getElementById('newAlloc_price').value) || 0;
-  const total = qty * curPrice;
+  const numADs = Math.max(1, selectedADs.length);
+  const numModels = Math.max(1, selectedModels.length);
+  const total = qty * curPrice * numADs * numModels;
   document.getElementById('newAlloc_totalVal').value = total.toLocaleString('en-IN');
 }
 
 function saveAllocation() {
-  const adName = document.getElementById('newAlloc_adName').value;
-  const modelName = document.getElementById('newAlloc_modelName').value;
   const qty = Number(document.getElementById('newAlloc_qty').value) || 0;
   const price = Number(document.getElementById('newAlloc_price').value) || 0;
-  const area = document.getElementById('newAlloc_area').value || 'Gujarat';
   
-  if (!adName || !modelName || qty <= 0) {
-    alert("Please select AD, Model, and enter a valid quantity.");
+  if (qty <= 0) {
+    alert("Please enter a valid quantity.");
     return;
   }
   
   showLoader();
   
   if (editingAllocationId) {
+    const area = document.getElementById('newAlloc_area').value || 'Gujarat';
     const item = localDB.allocations.find(a => a.ID === editingAllocationId);
     if (item) {
       item['Allocated Qty'] = qty;
@@ -5698,23 +5793,38 @@ function saveAllocation() {
       item['Last Updated'] = new Date().toISOString();
     }
   } else {
-    const newId = 'M_' + Date.now();
-    const newAlloc = {
-      ID: newId,
-      'AD Name': adName,
-      'Model Name': modelName,
-      'Allocated Qty': qty,
-      'Confirmed Qty': '',
-      'PO Amount': '',
-      'Allocated Value': qty * price,
-      Price: price,
-      Status: 'Pending',
-      'Sales Approval': '',
-      'UTR Number': '',
-      'Payment Verified': '',
-      'Last Updated': new Date().toISOString()
-    };
-    localDB.allocations.push(newAlloc); logSystemAction('Create Allocation', `Allocated ${newAlloc['Allocated Qty']} units of ${newAlloc['Model Name']} to ${newAlloc['AD Name']}`);
+    if (selectedADs.length === 0 || selectedModels.length === 0) {
+      alert("Please select at least one AD and one Model.");
+      hideLoader();
+      return;
+    }
+    
+    selectedADs.forEach(adName => {
+      const adUser = localDB.users.find(u => u.FullName === adName);
+      const area = (adUser ? adUser.Area : '') || document.getElementById('newAlloc_area').value || 'Gujarat';
+      
+      selectedModels.forEach(modelName => {
+        const newId = 'M_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const newAlloc = {
+          ID: newId,
+          'AD Name': adName,
+          'Model Name': modelName,
+          'Allocated Qty': qty,
+          'Confirmed Qty': '',
+          'PO Amount': '',
+          'Allocated Value': qty * price,
+          Price: price,
+          Status: 'Pending',
+          'Sales Approval': '',
+          'UTR Number': '',
+          'Payment Verified': '',
+          Area: area,
+          'Last Updated': new Date().toISOString()
+        };
+        localDB.allocations.push(newAlloc);
+        logSystemAction('Create Allocation', `Allocated ${qty} units of ${modelName} to ${adName}`);
+      });
+    });
   }
   
   saveDataToServer(() => {
