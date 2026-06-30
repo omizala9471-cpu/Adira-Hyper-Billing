@@ -679,3 +679,66 @@ function saveRSDAnnouncement(rsdUsername, subject, message) {
     return { success: false, message: error.toString() };
   }
 }
+
+
+/**
+ * Updates specific allocations by ID without clearing the sheet
+ * Used by non-admin roles to prevent wiping out other ADs' data
+ */
+function updateAllocationsPartial(partialList) {
+  try {
+    const sheet = getOrCreateSheet(SHEETS.ALLOCATIONS);
+    const range = sheet.getDataRange();
+    const data = range.getValues();
+    const headers = data[0];
+    const idIdx = headers.indexOf('ID');
+    
+    if (idIdx === -1) {
+      return { success: false, message: 'ID column not found in Allocations sheet.' };
+    }
+    
+    // Create map of updated items by ID
+    const updateMap = {};
+    partialList.forEach(item => {
+      if (item.ID) {
+        updateMap[item.ID.toString().trim()] = item;
+      }
+    });
+    
+    // Iterate through existing rows and update cells if ID matches
+    for (let i = 1; i < data.length; i++) {
+      const rowId = data[i][idIdx].toString().trim();
+      if (updateMap[rowId]) {
+        const item = updateMap[rowId];
+        
+        headers.forEach((header, colIdx) => {
+          if (header === 'ID') return;
+          
+          let val = '';
+          if (header === 'AD Name') val = item['AD Name'] || '';
+          else if (header === 'Contact Number') val = item['Contact Number'] || '';
+          else if (header === 'Area') val = item.Area || '';
+          else if (header === 'Model Name') val = item['Model Name'] || '';
+          else if (header === 'Allocated Qty') val = Number(item['Allocated Qty']) || 0;
+          else if (header === 'Price') val = Number(item.Price) || 0;
+          else if (header === 'Allocated Value') val = Number(item['Allocated Value']) || 0;
+          else if (header === 'Confirmed Qty') val = item['Confirmed Qty'] !== undefined ? item['Confirmed Qty'] : '';
+          else if (header === 'PO Amount') val = item['PO Amount'] !== undefined ? item['PO Amount'] : '';
+          else if (header === 'Status') val = item.Status || 'Pending';
+          else if (header === 'Last Updated') val = item['Last Updated'] || '';
+          else if (header === 'Sales Approval') val = item['Sales Approval'] || '';
+          else if (header === 'UTR Number') val = item['UTR Number'] || '';
+          else if (header === 'Payment Verified') val = item['Payment Verified'] || 'Pending';
+          else if (header === 'Transporter') val = item.Transporter || '';
+          else if (header === 'LR Number') val = item.LRNumber || '';
+          else if (header === 'Dispatch Date') val = item.DispatchDate || '';
+          
+          sheet.getRange(i + 1, colIdx + 1).setValue(val);
+        });
+      }
+    }
+    return { success: true };
+  } catch (error) {
+    return { success: false, message: 'Partial Update Error: ' + error.toString() };
+  }
+}

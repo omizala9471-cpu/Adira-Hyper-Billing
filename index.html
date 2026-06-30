@@ -1895,11 +1895,11 @@
             <div style="margin:20px 0 14px;">
               <h4 style="font-size:0.78rem;color:var(--color-text-muted);text-transform:uppercase;margin-bottom:12px;">Payment Settlement</h4>
               <div class="form-group" style="margin-bottom:10px;">
-                <label for="adUtrNumber">UTR / Reference ID</label>
+                <label for="adUtrNumber">UTR / Reference ID <span style="font-size:0.68rem;color:var(--color-text-muted);text-transform:none;font-weight:normal;">(Optional)</span></label>
                 <input type="text" id="adUtrNumber" class="form-control" placeholder="Enter bank reference number" style="padding-left:12px;">
               </div>
               <div class="form-group" style="margin-bottom:0;">
-                <label for="adPaymentProof">Bank Receipt / Screenshot</label>
+                <label for="adPaymentProof">Bank Receipt / Screenshot <span style="font-size:0.68rem;color:var(--color-text-muted);text-transform:none;font-weight:normal;">(Optional)</span></label>
                 <input type="file" id="adPaymentProof" class="form-control" style="padding-left:12px;font-size:0.78rem;padding-top:6px;" accept="image/*,.pdf">
               </div>
             </div>
@@ -2713,7 +2713,7 @@ function saveDataToServer(callback) {
     localDB.allocations.forEach(item => {
       upd[item.ID] = item;
     });
-    database.ref('allocations').set(upd)
+    database.ref('allocations').update(upd)
       .then(() => {
         if (callback) callback();
       })
@@ -2723,20 +2723,39 @@ function saveDataToServer(callback) {
       });
   } else if (typeof google !== 'undefined' && google.script && google.script.run) {
     // Google Apps Script mode
-    google.script.run
-      .withSuccessHandler(res => {
-        if (res && res.success) {
-          if (callback) callback();
-        } else {
+    if (currentUser && currentUser.role !== 'admin') {
+      // Partial updates for non-admins to prevent wiping out other ADs' data
+      google.script.run
+        .withSuccessHandler(res => {
+          if (res && res.success) {
+            if (callback) callback();
+          } else {
+            hideLoader();
+            alert('Error saving data to Google Sheets: ' + (res ? res.message : 'Unknown error'));
+          }
+        })
+        .withFailureHandler(e => {
           hideLoader();
-          alert('Error saving data to Google Sheets: ' + (res ? res.message : 'Unknown error'));
-        }
-      })
-      .withFailureHandler(e => {
-        hideLoader();
-        alert('Error communicating with Google Sheets: ' + e.toString());
-      })
-      .saveAllocationsRaw(localDB.allocations);
+          alert('Error communicating with Google Sheets: ' + e.toString());
+        })
+        .updateAllocationsPartial(localDB.allocations);
+    } else {
+      // Full save for admin
+      google.script.run
+        .withSuccessHandler(res => {
+          if (res && res.success) {
+            if (callback) callback();
+          } else {
+            hideLoader();
+            alert('Error saving data to Google Sheets: ' + (res ? res.message : 'Unknown error'));
+          }
+        })
+        .withFailureHandler(e => {
+          hideLoader();
+          alert('Error communicating with Google Sheets: ' + e.toString());
+        })
+        .saveAllocationsRaw(localDB.allocations);
+    }
   } else {
     // Local demo / localStorage fallback
     setTimeout(() => {
