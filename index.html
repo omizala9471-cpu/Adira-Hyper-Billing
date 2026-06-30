@@ -5623,8 +5623,7 @@ function renderSelectedADs() {
   container.innerHTML = '';
   selectedADs.forEach(ad => {
     const badge = document.createElement('div');
-    badge.className = 'role-pill ad';
-    badge.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:4px 8px;margin:2px;font-size:0.78rem;background:rgba(0,212,255,0.15);border:1px solid rgba(0,212,255,0.3);color:#e0f7fa;border-radius:12px;';
+    badge.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:5px 10px;margin:3px;font-size:0.75rem;font-weight:700;background:rgba(0,119,182,0.1);border:1px solid rgba(0,119,182,0.3);color:#0077b6;border-radius:16px;line-height:1;';
     badge.innerHTML = `<span>${ad}</span><i data-lucide="x" style="width:12px;height:12px;cursor:pointer;" onclick="removeAD('${ad}')"></i>`;
     container.appendChild(badge);
   });
@@ -5636,8 +5635,7 @@ function renderSelectedModels() {
   container.innerHTML = '';
   selectedModels.forEach(m => {
     const badge = document.createElement('div');
-    badge.className = 'role-pill sales';
-    badge.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:4px 8px;margin:2px;font-size:0.78rem;background:rgba(164,124,36,0.15);border:1px solid rgba(164,124,36,0.3);color:#fff8e1;border-radius:12px;';
+    badge.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:5px 10px;margin:3px;font-size:0.75rem;font-weight:700;background:rgba(181,110,0,0.1);border:1px solid rgba(181,110,0,0.3);color:#b56e00;border-radius:16px;line-height:1;';
     badge.innerHTML = `<span>${m}</span><i data-lucide="x" style="width:12px;height:12px;cursor:pointer;" onclick="removeModel('${m}')"></i>`;
     container.appendChild(badge);
   });
