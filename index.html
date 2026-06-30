@@ -33,8 +33,8 @@
       --color-rsd-rgb: 249,115,22;
       --color-text-main: #f1f5f9;
       --color-text-muted: #94a3b8;
-      --sidebar-width: 260px;
-      --sidebar-collapsed: 70px;
+      --sidebar-width: 290px;
+      --sidebar-collapsed: 80px;
       --glass-shadow: 0 8px 40px rgba(0,0,0,0.5);
       --transition: all 0.22s cubic-bezier(0.4,0,0.2,1);
     }
@@ -65,7 +65,7 @@
     .app-sidebar.collapsed .sidebar-profile{justify-content:center;padding:16px 0;}
     .sidebar-header{display:flex;align-items:center;gap:10px;padding:20px 16px 12px;border-bottom:1px solid var(--border-color);}
     .sidebar-logo{width:38px;height:38px;object-fit:contain;flex-shrink:0;}
-    .sidebar-title h2{font-size:0.95rem;font-weight:700;color:var(--color-primary);white-space:nowrap;}
+    .sidebar-title h2{font-size:1.05rem;font-weight:700;color:var(--color-primary);white-space:nowrap;}
     .sidebar-title span{font-size:0.72rem;color:var(--color-text-muted);white-space:nowrap;}
     .sidebar-profile{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid var(--border-color);cursor:pointer;transition:var(--transition);}
     .sidebar-profile:hover{background:rgba(255,200,59,0.05);}
@@ -73,14 +73,14 @@
     .profile-details h4{font-size:0.85rem;font-weight:700;color:var(--color-text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;}
     .profile-details span{font-size:0.7rem;color:var(--color-text-muted);}
     .sidebar-nav{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 10px;display:flex;flex-direction:column;gap:3px;}
-    .nav-item{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:10px;color:var(--color-text-muted);text-decoration:none;font-size:0.84rem;font-weight:500;transition:var(--transition);white-space:nowrap;cursor:pointer;border:1px solid transparent;}
-    .nav-item i{width:18px;height:18px;flex-shrink:0;}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:13px 18px;border-radius:10px;color:var(--color-text-muted);text-decoration:none;font-size:0.94rem;font-weight:500;transition:var(--transition);white-space:nowrap;cursor:pointer;border:1px solid transparent;}
+    .nav-item i{width:20px;height:20px;flex-shrink:0;}
     .nav-item:hover{background:rgba(255,255,255,0.05);color:var(--color-text-main);}
     .nav-item.active{background:linear-gradient(135deg,rgba(255,200,59,0.12),rgba(255,200,59,0.06));color:var(--color-primary);border-color:rgba(255,200,59,0.2);}
     .nav-item.active i{color:var(--color-primary);}
     .nav-section-title{font-size:0.65rem;font-weight:700;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:1px;padding:10px 14px 4px;opacity:0.6;}
     .sidebar-footer{padding:12px 10px;border-top:1px solid var(--border-color);}
-    .btn-sidebar-logout{display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.15);border-radius:10px;color:#fca5a5;font-size:0.84rem;font-weight:600;cursor:pointer;transition:var(--transition);}
+    .btn-sidebar-logout{display:flex;align-items:center;gap:10px;width:100%;padding:13px 18px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.15);border-radius:10px;color:#fca5a5;font-size:0.94rem;font-weight:600;cursor:pointer;transition:var(--transition);}
     .btn-sidebar-logout:hover{background:rgba(239,68,68,0.15);}
     .btn-sidebar-logout i{width:18px;height:18px;}
     .sidebar-toggle-btn{position:absolute;bottom:60px;right:-12px;width:24px;height:24px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:101;color:var(--color-text-muted);transition:var(--transition);}
@@ -304,10 +304,10 @@
     /* RESPONSIVE - MOBILE */
     @media(max-width:768px){
       .app-layout{flex-direction:column;}
-      .app-sidebar{position:fixed;left:-280px;top:0;height:100vh;z-index:200;transition:left 0.28s ease;width:260px!important;min-width:260px!important;}
+      .app-sidebar{position:fixed;left:-310px;top:0;height:100vh;z-index:200;transition:left 0.28s ease;width:290px!important;min-width:290px!important;}
       .app-sidebar.mobile-open{left:0;}
       .app-sidebar .nav-label,.app-sidebar .sidebar-title,.app-sidebar .profile-details,.app-sidebar .sidebar-footer-text{display:flex!important;}
-      .app-sidebar .nav-item{justify-content:flex-start!important;padding:11px 14px!important;}
+      .app-sidebar .nav-item{justify-content:flex-start!important;padding:13px 18px!important;}
       .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:199;}
       .sidebar-overlay.show{display:block;}
       .main-wrapper{width:100%;}
@@ -3554,6 +3554,41 @@ function buildAccordionContent(el, adId) {
 
   table.appendChild(tbody);
   wrapper.appendChild(table);
+  
+  // Fetch outstanding ledger balance details for this distributor
+  const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === group.name.toLowerCase()) || { 'Outstanding Balance': 0 };
+  const out = Number(dist['Outstanding Balance']) || 0;
+  
+  // Format Credit / Debit balance (remove Cr suffix)
+  const credDebText = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
+  const credDebColor = out > 0 ? '#ea580c' : (out < 0 ? '#10b981' : '#64748b'); // amber for debit, green for credit
+  
+  // Final RTGS amount (Round-up) calculation
+  const netPayable = out + group.totalPOVal;
+  const finalRtgs = netPayable > 0 ? Math.ceil(netPayable / 1000) * 1000 : 0;
+  
+  // Create summary panel container
+  const summaryPanel = document.createElement('div');
+  summaryPanel.style.cssText = 'margin-top:20px; padding:16px 20px; border-top:1px dashed rgba(0,0,0,0.08); background:rgba(0,0,0,0.02); border-radius:12px; display:flex; flex-direction:column; gap:8px; max-width:440px; margin-left:auto; box-shadow:0 1px 3px rgba(0,0,0,0.02);';
+  summaryPanel.innerHTML = `
+    <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#4b5563; font-weight:500;">
+      <span>Total Qty:</span>
+      <strong style="color:#1f2937; font-size:0.85rem;">${group.totalQty} Units</strong>
+    </div>
+    <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#4b5563; font-weight:500;">
+      <span>Value:</span>
+      <strong style="color:#1f2937; font-size:0.85rem;">₹${group.totalPOVal.toLocaleString('en-IN')}</strong>
+    </div>
+    <div style="display:flex; justify-content:space-between; font-size:0.8rem; color:#4b5563; font-weight:500;">
+      <span>Credit / Debit Balance:</span>
+      <strong style="color:${credDebColor}; font-size:0.85rem;">${credDebText}</strong>
+    </div>
+    <div style="display:flex; justify-content:space-between; font-size:0.85rem; font-weight:800; border-top:1px dashed rgba(0,0,0,0.1); padding-top:8px; color:#111827;">
+      <span>Final RTGS amount (Round-up):</span>
+      <strong style="color:#2563eb; font-size:0.95rem;">₹${finalRtgs.toLocaleString('en-IN')}</strong>
+    </div>
+  `;
+  wrapper.appendChild(summaryPanel);
   el.appendChild(wrapper);
   lucide.createIcons({node: el});
 }
