@@ -1883,11 +1883,11 @@
             <h3 style="border-bottom:1px solid var(--border-color);padding-bottom:12px;margin-bottom:16px;">PO Invoice Detail</h3>
             <div class="summary-row"><span>Models Allocated</span><span id="adSummaryModels">0</span></div>
             <div class="summary-row"><span>Allocated Value</span><span id="adSummaryAllocatedVal">₹0</span></div>
-            <div class="summary-row"><span>Adjusted PO Value</span><span id="adSummaryPOVal">₹0</span></div>
+            <div class="summary-row"><span>Confirmed PO Value</span><span id="adSummaryPOVal">₹0</span></div>
             <div class="summary-row total"><span>Final PO Total</span><span id="adSummaryTotal">₹0</span></div>
             <div class="summary-row" style="display:none;border-top:1px dashed rgba(255,255,255,0.08);margin-top:8px;padding-top:8px;"><span>Credit Limit</span><span id="adSummaryCreditLimit">₹0</span></div>
-            <div class="summary-row" style="border-top:1px dashed rgba(255,255,255,0.08);margin-top:8px;padding-top:8px;border-bottom:1px dashed rgba(255,255,255,0.08);padding-bottom:8px;"><span>Ledger Balance</span><span id="adSummaryOutstanding">₹0</span></div>
-            <div class="summary-row" id="adSummaryTransferRow" style="border-bottom:1px dashed rgba(255,255,255,0.08);padding-bottom:8px;margin-bottom:12px;"><strong>Payment to Make</strong><span id="adSummaryTransfer" style="font-weight:700;color:var(--color-warning);">₹0</span></div>
+            <div class="summary-row" style="border-top:1px dashed rgba(255,255,255,0.08);margin-top:8px;padding-top:8px;border-bottom:1px dashed rgba(255,255,255,0.08);padding-bottom:8px;"><span>Credit/Debit Balance</span><span id="adSummaryOutstanding">₹0</span></div>
+            <div class="summary-row" id="adSummaryTransferRow" style="border-bottom:1px dashed rgba(255,255,255,0.08);padding-bottom:8px;margin-bottom:12px;"><strong>Final RTGS amount (Round-up)</strong><span id="adSummaryTransfer" style="font-weight:700;color:var(--color-warning);">₹0</span></div>
             <div class="summary-row" style="display:none;border-bottom:1px dashed rgba(255,255,255,0.08);padding-bottom:8px;"><span>Available Credit</span><span id="adSummaryAvailableCredit" style="color:var(--color-secondary);font-weight:700;">₹0</span></div>
             <div id="adCreditWarning" style="display:none !important;padding:12px;border-radius:10px;background:rgba(239,68,68,0.1);border:1px solid var(--color-danger);color:#fca5a5;font-size:0.8rem;text-align:center;">
               ⚠️ <strong>Credit Limit Exceeded</strong> by <span id="adCreditWarningAmount">₹0</span>
@@ -3940,13 +3940,34 @@ function exportFinalizedPO(role){
   });
   wsData.push(qtyRow);
 
-  // Total Value row
-  const valRow=['Total Value',''];
+  // Value row
+  const valRow=['Value',''];
   ads.forEach(ad=>{
     const total=data.filter(a=>a['AD Name']===ad).reduce((s,a)=>s+(Number(a['PO Amount']||a['Allocated Value'])||0),0);
     valRow.push(total);
   });
   wsData.push(valRow);
+
+  // Credit / Debit row
+  const credDebRow=['Credit / Debit',''];
+  ads.forEach(ad=>{
+    const dist=localDB.distributors.find(d=>d['AD Name'].toLowerCase()===ad.toLowerCase())||{'Outstanding Balance':0};
+    const out=Number(dist['Outstanding Balance'])||0;
+    credDebRow.push(out);
+  });
+  wsData.push(credDebRow);
+
+  // Final RTGS amount (Round-up) row
+  const rtgsRow=['Final RTGS amount (Round-up)',''];
+  ads.forEach(ad=>{
+    const dist=localDB.distributors.find(d=>d['AD Name'].toLowerCase()===ad.toLowerCase())||{'Outstanding Balance':0};
+    const out=Number(dist['Outstanding Balance'])||0;
+    const poVal=data.filter(a=>a['AD Name']===ad).reduce((s,a)=>s+(Number(a['PO Amount']||a['Allocated Value'])||0),0);
+    const net = out + poVal;
+    const rtgs = net > 0 ? Math.ceil(net / 1000) * 1000 : 0;
+    rtgsRow.push(rtgs);
+  });
+  wsData.push(rtgsRow);
 
   const ws=XLSX.utils.aoa_to_sheet(wsData);
   // Set column widths
@@ -3968,7 +3989,7 @@ function buildDistributors(role){
   localDB.distributors.forEach(item=>{
     const tr=document.createElement('tr');
     const out=Number(item['Outstanding Balance'])||0;
-    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') + ' Cr' : '₹0');
+    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
     const colorStyle = out > 0 ? 'var(--color-warning)' : (out < 0 ? 'var(--color-success)' : 'inherit');
     if(role==='admin'){
       tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td style="color:${colorStyle}">${displayOut}</td><td style="color:var(--color-text-muted);font-size:0.78rem;">${item['Contact Number']||'-'}</td>`;
@@ -4012,7 +4033,7 @@ function filterMasterBalancesTable() {
     const mdCode = u ? u.ADCode || '-' : '-';
     
     const out = Number(item['Outstanding Balance']) || 0;
-    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') + ' Cr' : '₹0');
+    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
     const colorStyle = out > 0 ? 'var(--color-warning)' : (out < 0 ? 'var(--color-success)' : 'inherit');
       
     const tr = document.createElement('tr');
@@ -4035,7 +4056,7 @@ function filterDistributors(role){
   filtered.forEach(item=>{
     const tr=document.createElement('tr');
     const out=Number(item['Outstanding Balance'])||0;
-    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') + ' Cr' : '₹0');
+    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
     const colorStyle = out > 0 ? 'var(--color-warning)' : (out < 0 ? 'var(--color-success)' : 'inherit');
     if(role==='admin'){tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td style="color:${colorStyle}">${displayOut}</td><td style="color:var(--color-text-muted);font-size:0.78rem;">${item['Contact Number']||'-'}</td>`;}
     else{tr.innerHTML=`<td><strong>${item['AD Name']}</strong></td><td>${item.Area||''}</td><td style="color:${colorStyle}">${displayOut}</td>`;}
@@ -4209,7 +4230,7 @@ function buildRSDTerritory(){
     const poVal=allocs.reduce((s,a)=>s+(Number(a['PO Amount'])||0),0);
     const tr=document.createElement('tr');
     const out=Number(dist['Outstanding Balance'])||0;
-    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') + ' Cr' : '₹0');
+    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
     const colorStyle = out > 0 ? 'var(--color-warning)' : (out < 0 ? 'var(--color-success)' : 'inherit');
     tr.innerHTML=`<td><strong>${adUser.FullName}</strong></td><td>${adUser.Area||''}</td><td><code>${adUser.ADCode||'-'}</code></td><td style="color:${colorStyle}">${displayOut}</td><td>${getStatusBadge(status)}</td><td>₹${poVal.toLocaleString('en-IN')}</td>`;
     tbody.appendChild(tr);
@@ -4230,7 +4251,7 @@ function filterRSDTerritory(){
     const poVal=allocs.reduce((s,a)=>s+(Number(a['PO Amount'])||0),0);
     const tr=document.createElement('tr');
     const out=Number(dist['Outstanding Balance'])||0;
-    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') + ' Cr' : '₹0');
+    const displayOut = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
     const colorStyle = out > 0 ? 'var(--color-warning)' : (out < 0 ? 'var(--color-success)' : 'inherit');
     tr.innerHTML=`<td><strong>${adUser.FullName}</strong></td><td>${adUser.Area||''}</td><td><code>${adUser.ADCode||'-'}</code></td><td style="color:${colorStyle}">${displayOut}</td><td>${getStatusBadge(status)}</td><td>₹${poVal.toLocaleString('en-IN')}</td>`;
     tbody.appendChild(tr);
@@ -4436,13 +4457,13 @@ function recalculateADSummary(){
   
   const cardBalanceStr = out > 0 
     ? '₹' + out.toLocaleString('en-IN') + ' Dr' 
-    : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') + ' Cr' : '₹0');
+    : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
     
   document.getElementById('adSummaryOutstanding').innerText = cardBalanceStr;
   document.getElementById('adSummaryAvailableCredit').innerText='₹'+av.toLocaleString('en-IN');
   
   const netPayable = out + poTotal;
-  const transferAmt = Math.max(0, netPayable);
+  const transferAmt = netPayable > 0 ? Math.ceil(netPayable / 1000) * 1000 : 0;
   const trAmtEl = document.getElementById('adSummaryTransfer');
   if (trAmtEl) {
     trAmtEl.innerText = '₹' + transferAmt.toLocaleString('en-IN');
