@@ -3559,15 +3559,14 @@ function buildAccordionContent(el, adId) {
   wrapper.appendChild(table);
   
   // Fetch outstanding ledger balance details for this distributor
-  const dist = localDB.distributors.find(d => d['AD Name'].toLowerCase() === group.name.toLowerCase()) || { 'Outstanding Balance': 0 };
-  const out = Number(dist['Outstanding Balance']) || 0;
+  const out = getDynamicADBalance(group.name);
   
-  // Format Credit / Debit balance (remove Cr suffix)
-  const credDebText = out > 0 ? '₹' + out.toLocaleString('en-IN') + ' Dr' : (out < 0 ? '₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
+  // Format Credit / Debit balance (Credit is negative, Debit is positive, no Dr/Cr suffix)
+  const credDebText = out > 0 ? '₹' + out.toLocaleString('en-IN') : (out < 0 ? '-₹' + Math.abs(out).toLocaleString('en-IN') : '₹0');
   const credDebColor = out > 0 ? '#ea580c' : (out < 0 ? '#10b981' : '#64748b'); // amber for debit, green for credit
   
   // Final RTGS amount (Round-up) calculation
-  const netPayable = out + group.totalPOVal;
+  const netPayable = out;
   const finalRtgs = netPayable > 0 ? Math.ceil(netPayable / 1000) * 1000 : 0;
   
   // Create summary panel container
