@@ -3744,7 +3744,7 @@ function renderSalesOrdersAccordions(data){
       <div onclick="toggleAdAccordion('${adId}')" style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; background:rgba(65, 105, 225, 0.03); cursor:pointer; user-select:none; border-bottom:1px solid rgba(65,105,225,0.06); transition:background 0.2s;">
         <div style="display:flex; align-items:center; gap:12px;">
           <!-- Party-wise Checkbox selection instead of model-wise -->
-          <input type="checkbox" class="party-check" data-ad-name="${group.name}" onclick="event.stopPropagation(); updateBulkCount()" style="width:16px; height:16px; margin-right:4px; display:${bulkMode ? 'inline-block' : 'none'}; cursor:pointer;">
+          <input type="checkbox" class="party-check" data-ad-name="${group.name}" onclick="event.stopPropagation(); updateBulkCount()" style="width:16px; height:16px; margin-right:4px; display:inline-block; cursor:pointer;">
           <i data-lucide="chevron-down" id="icon_${adId}" style="width:18px; height:18px; color:var(--color-primary); transition:transform 0.2s;"></i>
           <div>
             <h4 style="margin:0; font-size:0.95rem; font-weight:800; color:var(--color-text-main);">${group.name}</h4>
@@ -3941,6 +3941,13 @@ function buildLedgerFiltered(tableId,data,role){
 function exportFinalizedPO(role){
   let data=localDB.allocations;
   if(role==='ad'||currentUser.role==='ad')data=data.filter(a=>a['AD Name'].toLowerCase()===currentUser.fullName.toLowerCase());
+  else if(currentUser.role==='admin' || !role) {
+    // Selective export based on checked checkboxes in Admin Sales Orders
+    const checkedADs = Array.from(document.querySelectorAll('.party-check:checked')).map(c => c.dataset.adName);
+    if (checkedADs.length > 0) {
+      data = data.filter(a => checkedADs.includes(a['AD Name']));
+    }
+  }
   else if(role==='rsd'||currentUser.role==='rsd'){
     const onLedgerTab = document.querySelector('#rsdPanel_ledger.active') !== null;
     if (onLedgerTab) {
