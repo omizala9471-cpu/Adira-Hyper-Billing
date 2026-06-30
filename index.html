@@ -2880,7 +2880,7 @@ function loadRoleSpecificView(){
     document.getElementById('viewAdmin').classList.add('active');
     loadDataAndRender(()=>showSubTab('dashboard'));
   }else if(role==='rsd'){
-    ['navItem_dashboard','navItem_report','navItem_ledger','navItem_territory','navItem_broadcast'].forEach(id=>showNavItem(id));
+    ['navItem_dashboard','navItem_report','navItem_territory','navItem_broadcast'].forEach(id=>showNavItem(id));
     document.getElementById('viewRSD').classList.add('active');
     loadDataAndRender(()=>showSubTab('dashboard'));
   }else if(role==='sales'){
