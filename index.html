@@ -4300,8 +4300,11 @@ function buildADDashboard(){
   const graceMin=Number(localDB.settings.gracePeriod)||0;
   let isPastDeadline = false;
   if(confDeadline){
-    const deadlineDate = new Date(new Date(confDeadline).getTime() + graceMin * 60 * 1000);
-    if(new Date() > deadlineDate) isPastDeadline = true;
+    const deadlineDate = parseLocalDeadline(confDeadline);
+    if (deadlineDate) {
+      const finalDeadline = new Date(deadlineDate.getTime() + graceMin * 60 * 1000);
+      if(new Date() > finalDeadline) isPastDeadline = true;
+    }
   }
   
   if(isPastDeadline){
@@ -4420,19 +4423,33 @@ function submitADSelections(){
 // ============================================================
 // COUNTDOWN TIMERS
 // ============================================================
+function parseLocalDeadline(deadlineStr) {
+  if (!deadlineStr) return null;
+  const timePart = deadlineStr.includes('T') ? deadlineStr.split('T')[1] : deadlineStr;
+  const parts = timePart.split(':');
+  if (parts.length < 2) return null;
+  const hours = Number(parts[0]) || 0;
+  const minutes = Number(parts[1]) || 0;
+  
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes, 0, 0);
+}
+
 function startCountdownTimers(){
   if(countdownInterval)clearInterval(countdownInterval);
   function update(){
     const conf=localDB.settings.confirmationDeadline;const pay=localDB.settings.paymentDeadline;
     const graceMin=Number(localDB.settings.gracePeriod)||0;
     
-    let confTarget = null;
-    if (conf) {
-      confTarget = new Date(new Date(conf).getTime() + graceMin * 60 * 1000);
+    let confTarget = parseLocalDeadline(conf);
+    if (confTarget && graceMin) {
+      confTarget = new Date(confTarget.getTime() + graceMin * 60 * 1000);
     }
     
+    const payTarget = parseLocalDeadline(pay);
+    
     document.getElementById('timerConfirm').innerText=confTarget?formatCountdown(confTarget):'Not Set';
-    document.getElementById('timerPayment').innerText=pay?formatCountdown(new Date(pay)):'Not Set';
+    document.getElementById('timerPayment').innerText=payTarget?formatCountdown(payTarget):'Not Set';
   }
   update();countdownInterval=setInterval(update,1000);
 }
