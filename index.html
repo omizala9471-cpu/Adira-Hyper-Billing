@@ -2190,24 +2190,43 @@
         <input type="text" id="editAlloc_modelName" class="form-control" readonly style="padding-left:12px;opacity:0.75;background:rgba(255,255,255,0.02);">
       </div>
     </div>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px;">
-      <div class="form-group" style="margin-bottom:0;">
-        <label for="newAlloc_qty">Allocated Quantity</label>
-        <input type="number" id="newAlloc_qty" class="form-control" min="1" placeholder="e.g. 50" style="padding-left:12px;" oninput="autoFillNewAllocDetails()">
-      </div>
-      <div class="form-group" style="margin-bottom:0;">
-        <label for="newAlloc_price">DP Rate (₹)</label>
-        <input type="number" id="newAlloc_price" class="form-control" min="0" placeholder="e.g. 15000" style="padding-left:12px;" oninput="autoFillNewAllocDetails()">
+    <!-- Dynamic Models Grid for multiple models & quantities -->
+    <div id="manualAllocationsGridContainer" style="margin-bottom:16px; display:none;">
+      <label style="display:block; margin-bottom:8px; font-weight:700;">Enter Quantities per Model:</label>
+      <div style="max-height:220px; overflow-y:auto; padding:8px; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(0,0,0,0.2);">
+        <table style="width:100%; font-size:0.8rem; border-collapse:collapse;" id="manualAllocationsGridTable">
+          <thead>
+            <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left;">
+              <th style="padding-bottom:6px;">Model Name</th>
+              <th style="width:105px; padding-bottom:6px;">Price (₹)</th>
+              <th style="width:90px; padding-bottom:6px;">Qty</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
       </div>
     </div>
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:20px;">
-      <div class="form-group" style="margin-bottom:0;">
-        <label for="newAlloc_area">Area / Territory</label>
-        <input type="text" id="newAlloc_area" class="form-control" placeholder="e.g. Gujarat" style="padding-left:12px;">
+
+    <div id="newAlloc_single_inputs">
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label for="newAlloc_qty">Allocated Quantity</label>
+          <input type="number" id="newAlloc_qty" class="form-control" min="1" placeholder="e.g. 50" style="padding-left:12px;" oninput="autoFillNewAllocDetails()">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label for="newAlloc_price">DP Rate (₹)</label>
+          <input type="number" id="newAlloc_price" class="form-control" min="0" placeholder="e.g. 15000" style="padding-left:12px;" oninput="autoFillNewAllocDetails()">
+        </div>
       </div>
-      <div class="form-group" style="margin-bottom:0;">
-        <label for="newAlloc_totalVal">Total Value (₹)</label>
-        <input type="text" id="newAlloc_totalVal" class="form-control" readonly placeholder="0" style="padding-left:12px; opacity:0.75;">
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:20px;">
+        <div class="form-group" style="margin-bottom:0;">
+          <label for="newAlloc_area">Area / Territory</label>
+          <input type="text" id="newAlloc_area" class="form-control" placeholder="e.g. Gujarat" style="padding-left:12px;">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label for="newAlloc_totalVal">Total Value (₹)</label>
+          <input type="text" id="newAlloc_totalVal" class="form-control" readonly placeholder="0" style="padding-left:12px; opacity:0.75;">
+        </div>
       </div>
     </div>
     <div style="display:flex; justify-content:flex-end; gap:8px;">
@@ -5804,44 +5823,51 @@ function openAddAllocationModal() {
   document.getElementById('newAlloc_add_group').style.display = 'block';
   document.getElementById('newAlloc_edit_group').style.display = 'none';
   
+  // Hide models selection datalist in Add mode (replaced by dynamic grid)
+  const modelsFormGroup = document.getElementById('newAlloc_modelName').closest('.form-group');
+  if (modelsFormGroup) modelsFormGroup.style.display = 'none';
+  
+  // Show grid and hide single inputs
+  document.getElementById('manualAllocationsGridContainer').style.display = 'block';
+  document.getElementById('newAlloc_single_inputs').style.display = 'none';
+  
   selectedADs = [];
   selectedModels = [];
   renderSelectedADs();
-  renderSelectedModels();
   
   const adSelect = document.getElementById('newAlloc_adName');
-  const modelSelect = document.getElementById('newAlloc_modelName');
-  
-  if (adSelect && modelSelect) {
+  if (adSelect) {
     adSelect.value = '';
-    modelSelect.value = '';
-    
     const adDatalist = document.getElementById('list_adNames');
-    const modelDatalist = document.getElementById('list_models');
-    
-    if (adDatalist && modelDatalist) {
+    if (adDatalist) {
       adDatalist.innerHTML = '';
-      modelDatalist.innerHTML = '';
-      
       const adUsers = localDB.users.filter(u => u.Role === 'ad');
       const adNames = [...new Set(adUsers.map(u => u.FullName))].sort();
       adNames.forEach(name => {
         adDatalist.innerHTML += `<option value="${name}">`;
       });
-      
-      const models = Object.keys(localDB.prices).sort();
-      models.forEach(model => {
-        modelDatalist.innerHTML += `<option value="${model}">`;
-      });
     }
-    
-    document.getElementById('newAlloc_qty').value = '';
-    document.getElementById('newAlloc_price').value = '';
-    document.getElementById('newAlloc_area').value = '';
-    document.getElementById('newAlloc_totalVal').value = '0';
-    
-    openModal('modalAddAllocation');
   }
+  
+  // Render all models from catalogue into the grid
+  const tbody = document.querySelector('#manualAllocationsGridTable tbody');
+  if (tbody) {
+    tbody.innerHTML = '';
+    const models = Object.keys(localDB.prices).sort();
+    models.forEach(model => {
+      const price = localDB.prices[model] || 0;
+      tbody.innerHTML += `
+        <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+          <td style="padding:8px 0; font-weight:600; color:var(--color-text-main);">${model}</td>
+          <td style="padding:8px 0;"><input type="number" class="form-control manual-alloc-price-input" data-model="${model}" value="${price}" style="font-size:0.75rem; padding:4px 8px; height:auto; width:95px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1);"></td>
+          <td style="padding:8px 0;"><input type="number" class="form-control manual-alloc-qty-input" data-model="${model}" placeholder="0" style="font-size:0.75rem; padding:4px 8px; height:auto; width:80px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1);" min="0"></td>
+        </tr>
+      `;
+    }
+    );
+  }
+  
+  openModal('modalAddAllocation');
 }
 
 function openEditAllocationModal(id) {
@@ -5854,6 +5880,10 @@ function openEditAllocationModal(id) {
   
   document.getElementById('newAlloc_add_group').style.display = 'none';
   document.getElementById('newAlloc_edit_group').style.display = 'block';
+  
+  // Hide dynamic grid and show single inputs in Edit mode
+  document.getElementById('manualAllocationsGridContainer').style.display = 'none';
+  document.getElementById('newAlloc_single_inputs').style.display = 'block';
   
   document.getElementById('editAlloc_adName').value = item['AD Name'];
   document.getElementById('editAlloc_modelName').value = item['Model Name'];
@@ -5909,17 +5939,16 @@ function autoFillNewAllocDetails() {
 
 function saveAllocation() {
   try {
-    const qty = Number(document.getElementById('newAlloc_qty').value) || 0;
-    const price = Number(document.getElementById('newAlloc_price').value) || 0;
-    
-    if (qty <= 0) {
-      alert("Please enter a valid quantity.");
-      return;
-    }
-    
     showLoader();
     
     if (editingAllocationId) {
+      const qty = Number(document.getElementById('newAlloc_qty').value) || 0;
+      const price = Number(document.getElementById('newAlloc_price').value) || 0;
+      if (qty <= 0) {
+        alert("Please enter a valid quantity.");
+        hideLoader();
+        return;
+      }
       const area = document.getElementById('newAlloc_area').value || 'Gujarat';
       const item = localDB.allocations.find(a => a.ID === editingAllocationId);
       if (item) {
@@ -5934,7 +5963,8 @@ function saveAllocation() {
         item['Last Updated'] = new Date().toISOString();
       }
     } else {
-      // Process remaining text inside inputs before validating arrays
+      // Add Mode
+      // Process remaining text inside inputs
       const adInput = document.getElementById('newAlloc_adName');
       const typedAD = adInput ? adInput.value.trim() : '';
       if (typedAD) {
@@ -5950,42 +5980,47 @@ function saveAllocation() {
         }
       }
       
-      const modelInput = document.getElementById('newAlloc_modelName');
-      const typedModel = modelInput ? modelInput.value.trim() : '';
-      if (typedModel) {
-        const datalist = document.getElementById('list_models');
-        const opt = Array.from(datalist.options).find(o => o.value.toLowerCase() === typedModel.toLowerCase());
-        if (opt) {
-          if (!selectedModels.includes(opt.value)) selectedModels.push(opt.value);
-          modelInput.value = '';
-        } else {
-          alert(`Model "${typedModel}" not found in catalogue.`);
-          hideLoader();
-          return;
-        }
+      if (selectedADs.length === 0) {
+        alert("Please select at least one Distributor (AD).");
+        hideLoader();
+        return;
       }
       
-      if (selectedADs.length === 0 || selectedModels.length === 0) {
-        alert("Please select at least one Distributor and one Model.");
+      // Collect all models with entered quantities from the dynamic grid table
+      const qtyInputs = document.querySelectorAll('.manual-alloc-qty-input');
+      const allocationsToCreate = [];
+      
+      qtyInputs.forEach(input => {
+        const model = input.getAttribute('data-model');
+        const qty = Number(input.value) || 0;
+        if (qty > 0) {
+          const priceInput = document.querySelector(`.manual-alloc-price-input[data-model="${model}"]`);
+          const price = priceInput ? Number(priceInput.value) || 0 : 0;
+          allocationsToCreate.push({ model, qty, price });
+        }
+      });
+      
+      if (allocationsToCreate.length === 0) {
+        alert("Please enter a quantity for at least one model.");
         hideLoader();
         return;
       }
       
       selectedADs.forEach(adName => {
         const adUser = localDB.users.find(u => u.FullName === adName);
-        const area = (adUser ? adUser.Area : '') || document.getElementById('newAlloc_area').value || 'Gujarat';
+        const area = (adUser ? adUser.Area : '') || 'Gujarat';
         
-        selectedModels.forEach(modelName => {
+        allocationsToCreate.forEach(alloc => {
           const newId = 'M_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
           const newAlloc = {
             ID: newId,
             'AD Name': adName,
-            'Model Name': modelName,
-            'Allocated Qty': qty,
+            'Model Name': alloc.model,
+            'Allocated Qty': alloc.qty,
             'Confirmed Qty': '',
             'PO Amount': '',
-            'Allocated Value': qty * price,
-            Price: price,
+            'Allocated Value': alloc.qty * alloc.price,
+            Price: alloc.price,
             Status: 'Pending',
             'Sales Approval': '',
             'UTR Number': '',
@@ -5994,7 +6029,7 @@ function saveAllocation() {
             'Last Updated': new Date().toISOString()
           };
           localDB.allocations.push(newAlloc);
-          logSystemAction('Create Allocation', `Allocated ${qty} units of ${modelName} to ${adName}`);
+          logSystemAction('Create Allocation', `Allocated ${alloc.qty} units of ${alloc.model} to ${adName}`);
         });
       });
     }
