@@ -37,58 +37,6 @@
       --sidebar-collapsed: 70px;
       --glass-shadow: 0 8px 40px rgba(0,0,0,0.5);
       --transition: all 0.22s cubic-bezier(0.4,0,0.2,1);
-      --bg-sidebar: linear-gradient(180deg, rgba(10,16,32,0.98) 0%, rgba(8,12,22,0.99) 100%);
-      --bg-input: rgba(255,255,255,0.04);
-      --btn-submit-bg: linear-gradient(135deg, var(--color-primary), #ff9500);
-      --btn-submit-color: #000;
-      --btn-action-bg: rgba(255, 255, 255, 0.06);
-      --btn-success-color: #6ee7b7;
-      --btn-danger-color: #fca5a5;
-      --btn-info-color: #c4b5fd;
-      --btn-primary-color: var(--color-primary);
-      --btn-warning-color: #fcd34d;
-      --border-td: rgba(255, 255, 255, 0.04);
-      --row-hover-bg: rgba(255, 255, 255, 0.02);
-    }
-    .light-theme {
-      --bg-dark: #f8fafc;
-      --bg-card: rgba(255, 255, 255, 0.95);
-      --bg-card-hover: rgba(255, 255, 255, 1);
-      --border-color: rgba(148, 163, 184, 0.12);
-      --border-hover: rgba(79, 70, 229, 0.3);
-      --color-primary: #4f46e5;
-      --color-primary-rgb: 79,70,229;
-      --color-secondary: #0284c7;
-      --color-success: #15803d;
-      --color-warning: #b45309;
-      --color-danger: #b91c1c;
-      --color-info: #6d28d9;
-      --color-rsd: #c2410c;
-      --color-text-main: #0f172a;
-      --color-text-muted: #64748b;
-      --bg-sidebar: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
-      --bg-input: #f1f5f9;
-      --glass-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05), 0 4px 10px -3px rgba(15, 23, 42, 0.02);
-      --btn-submit-bg: linear-gradient(135deg, #4f46e5, #06b6d4);
-      --btn-submit-color: #ffffff;
-      --btn-action-bg: rgba(0, 0, 0, 0.03);
-      --btn-success-color: #166534;
-      --btn-danger-color: #991b1b;
-      --btn-info-color: #5b21b6;
-      --btn-primary-color: var(--color-primary);
-      --btn-warning-color: #854d0e;
-      --border-td: rgba(15, 23, 42, 0.05);
-      --row-hover-bg: rgba(15, 23, 42, 0.015);
-    }
-    .light-theme .login-screen {
-      background: radial-gradient(ellipse at 20% 50%,rgba(79,70,229,0.04) 0%,transparent 50%), radial-gradient(ellipse at 80% 20%,rgba(6,182,212,0.04) 0%,transparent 50%), #f8fafc;
-    }
-    .light-theme .login-card {
-      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
-    }
-    .light-theme .login-logo img {
-      filter: none;
-      mix-blend-mode: normal;
     }
     *{box-sizing:border-box;margin:0;padding:0;font-family:'Plus Jakarta Sans',sans-serif;}
     body{background-color:var(--bg-dark);color:var(--color-text-main);min-height:100vh;display:flex;flex-direction:column;overflow-x:hidden;}
@@ -110,7 +58,7 @@
     .app-layout.pre-login{display:none;}
 
     /* SIDEBAR */
-    .app-sidebar{width:var(--sidebar-width);min-width:var(--sidebar-width);height:100vh;background:var(--bg-sidebar);border-right:1px solid var(--border-color);display:flex;flex-direction:column;flex-shrink:0;transition:width 0.25s ease,min-width 0.25s ease;overflow:hidden;position:relative;z-index:100;}
+    .app-sidebar{width:var(--sidebar-width);min-width:var(--sidebar-width);height:100vh;background:linear-gradient(180deg,rgba(10,16,32,0.98) 0%,rgba(8,12,22,0.99) 100%);border-right:1px solid var(--border-color);display:flex;flex-direction:column;flex-shrink:0;transition:width 0.25s ease,min-width 0.25s ease;overflow:hidden;position:relative;z-index:100;}
     .app-sidebar.collapsed{width:var(--sidebar-collapsed);min-width:var(--sidebar-collapsed);}
     .app-sidebar.collapsed .sidebar-title,.app-sidebar.collapsed .profile-details,.app-sidebar.collapsed .nav-label,.app-sidebar.collapsed .sidebar-footer-text{display:none;}
     .app-sidebar.collapsed .nav-item{justify-content:center;padding:14px 0;}
@@ -140,7 +88,7 @@
 
     /* MAIN CONTENT */
     .main-wrapper{flex:1;display:flex;flex-direction:column;overflow:hidden;}
-    .top-bar{display:none;align-items:center;justify-content:space-between;padding:12px 24px;background:var(--bg-card);border-bottom:1px solid var(--border-color);backdrop-filter:blur(12px);position:sticky;top:0;z-index:90;gap:12px;}
+    .top-bar{display:none;align-items:center;justify-content:space-between;padding:12px 24px;background:rgba(10,16,32,0.95);border-bottom:1px solid var(--border-color);backdrop-filter:blur(12px);position:sticky;top:0;z-index:90;gap:12px;}
     .top-bar-left{display:flex;align-items:center;gap:14px;}
     .btn-menu-toggle{background:none;border:1px solid var(--border-color);border-radius:8px;padding:7px;color:var(--color-text-muted);cursor:pointer;display:flex;align-items:center;transition:var(--transition);}
     .btn-menu-toggle:hover{color:var(--color-primary);border-color:var(--color-primary);}
@@ -169,7 +117,7 @@
     .input-wrapper{position:relative;}
     .input-wrapper i, .input-wrapper svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--color-text-muted);pointer-events:none;}
     .input-wrapper input{padding-left:38px;}
-    .form-control{width:100%;background:var(--bg-input);border:1px solid var(--border-color);border-radius:10px;padding:11px 14px;color:var(--color-text-main);font-size:0.88rem;transition:var(--transition);outline:none;}
+    .form-control{width:100%;background:rgba(255,255,255,0.04);border:1px solid var(--border-color);border-radius:10px;padding:11px 14px;color:var(--color-text-main);font-size:0.88rem;transition:var(--transition);outline:none;}
     .form-control:focus{border-color:var(--color-primary);background:rgba(255,200,59,0.04);box-shadow:0 0 0 3px rgba(255,200,59,0.1);}
     select.form-control{background-color:rgb(8,14,28);cursor:pointer;color:var(--color-text-main);}
     select.form-control option{background-color:rgb(8,14,28)!important;color:var(--color-text-main)!important;padding:8px 12px;}
@@ -177,10 +125,10 @@
     textarea.form-control{resize:vertical;min-height:100px;}
 
     /* BUTTONS */
-    .btn-submit{width:100%;padding:13px;background:var(--btn-submit-bg);color:var(--btn-submit-color);font-weight:800;font-size:0.9rem;border:none;border-radius:12px;cursor:pointer;transition:var(--transition);margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;}
+    .btn-submit{width:100%;padding:13px;background:linear-gradient(135deg,var(--color-primary),#ff9500);color:#000;font-weight:800;font-size:0.9rem;border:none;border-radius:12px;cursor:pointer;transition:var(--transition);margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px;}
     .btn-submit:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(255,200,59,0.35);}
     .btn-action{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:var(--btn-action-bg);border:1px solid var(--border-color);border-radius:8px;color:var(--color-text-main);font-size:0.8rem;font-weight:600;cursor:pointer;transition:var(--transition);white-space:nowrap;}
-    .btn-action:hover{background:var(--bg-input);border-color:var(--border-hover);}
+    .btn-action:hover{background:rgba(255,255,255,0.04);border-color:var(--border-hover);}
     .btn-action i{width:14px;height:14px;}
     .btn-action.success{background:rgba(16,185,129,0.1);border-color:rgba(16,185,129,0.3);color:var(--btn-success-color);}
     .btn-action.success:hover{background:rgba(16,185,129,0.2);}
@@ -215,14 +163,14 @@
     .table-container{overflow-x:auto;border-radius:12px;}
     table{width:100%;border-collapse:collapse;font-size:0.82rem;}
     th{padding:10px 14px;text-align:left;font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--color-text-muted);border-bottom:1px solid var(--border-color);white-space:nowrap;}
-    td{padding:10px 14px;border-bottom:1px solid var(--border-td);vertical-align:middle;}
-    tr:hover td{background:var(--row-hover-bg);}
+    td{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle;}
+    tr:hover td{background:rgba(255,255,255,0.02);}
     tr:last-child td{border-bottom:none;}
     .checkbox-col{width:40px;text-align:center;}
     input[type="checkbox"]{width:16px;height:16px;cursor:pointer;accent-color:var(--color-primary);}
 
     /* SEARCH */
-    .search-bar{display:flex;align-items:center;gap:8px;background:var(--bg-input);border:1px solid var(--border-color);border-radius:10px;padding:8px 14px;transition:var(--transition);}
+    .search-bar{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid var(--border-color);border-radius:10px;padding:8px 14px;transition:var(--transition);}
     .search-bar:focus-within{border-color:var(--color-primary);background:rgba(255,200,59,0.04);}
     .search-bar i{width:16px;height:16px;color:var(--color-text-muted);flex-shrink:0;}
     .search-bar input{background:none;border:none;outline:none;color:var(--color-text-main);font-size:0.85rem;width:100%;}
@@ -866,16 +814,11 @@
         </div>
       </div>
       <div class="top-bar-actions" style="display:flex; align-items:center; gap:10px;">
-        <!-- Theme Toggle Button -->
-        <button id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Day/Night Mode" style="background:var(--bg-input); border:1px solid var(--border-color); color:var(--color-text-muted); width:34px; height:34px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; outline:none; padding:0;">
-          <i data-lucide="sun" id="themeToggleIcon" style="width:16px; height:16px;"></i>
-        </button>
-
-        <div class="sidebar-profile" onclick="openPasswordModal()" style="display:flex; align-items:center; gap:10px; padding:4px 10px; border-radius:8px; background:var(--bg-input); border:1px solid var(--border-color); cursor:pointer; transition:var(--transition); margin:0; border-bottom: none !important;">
+        <div class="sidebar-profile" onclick="openPasswordModal()" style="display:flex; align-items:center; gap:10px; padding:4px 10px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); cursor:pointer; transition:var(--transition); margin:0; border-bottom: none !important;">
           <div class="profile-avatar" id="sidebarAvatar" style="width:28px; height:28px; min-width:28px; border-radius:6px; background:linear-gradient(135deg, #b9caff, #4169e1); display:flex; align-items:center; justify-content:center; font-size:0.8rem; font-weight:800; color:#151821; flex-shrink:0;">K</div>
           <div class="profile-details" style="display:flex; flex-direction:column; justify-content:center;">
-            <h4 id="sidebarUserName" style="font-size:0.78rem; font-weight:700; color:var(--color-text-main); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px; line-height:1.2;">Keyur Udani</h4>
-            <span id="sidebarUserRole" class="role-pill admin" style="font-size:0.58rem; padding:1px 4px; border-radius:4px; margin-top:1px; display:inline-block; width:fit-content; background:var(--bg-input); border:1px solid var(--border-color); color:var(--color-text-main); line-height:1.1;">ADMIN</span>
+            <h4 id="sidebarUserName" style="font-size:0.78rem; font-weight:700; color:#ffffff; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:120px; line-height:1.2;">Keyur Udani</h4>
+            <span id="sidebarUserRole" class="role-pill admin" style="font-size:0.58rem; padding:1px 4px; border-radius:4px; margin-top:1px; display:inline-block; width:fit-content; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.18); color:#ffffff; line-height:1.1;">ADMIN</span>
           </div>
         </div>
         
@@ -2719,30 +2662,7 @@ let _adminTableData=[]; // for table filtering
 // ============================================================
 // INIT
 // ============================================================
-function toggleTheme() {
-  const isLight = document.body.classList.toggle('light-theme');
-  localStorage.setItem('adira_theme', isLight ? 'light' : 'dark');
-  updateThemeIcon();
-}
-
-function updateThemeIcon() {
-  const icon = document.getElementById('themeToggleIcon');
-  if (!icon) return;
-  const isLight = document.body.classList.contains('light-theme');
-  if (isLight) {
-    icon.setAttribute('data-lucide', 'moon');
-  } else {
-    icon.setAttribute('data-lucide', 'sun');
-  }
-  lucide.createIcons({ node: document.getElementById('themeToggleBtn') });
-}
-
 window.addEventListener('DOMContentLoaded',()=>{
-  const savedTheme = localStorage.getItem('adira_theme');
-  if (savedTheme === 'light') {
-    document.body.classList.add('light-theme');
-  }
-  updateThemeIcon();
   lucide.createIcons();
   // Load localDB
   try{
